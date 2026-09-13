@@ -1,0 +1,63 @@
+# Dependencies
+node_modules/
+/.pnp
+.pnp.js
+.yarn/cache
+.yarn/unplugged
+.yarn/build-state.yml
+.yarn/install-state.gz
+.pnp.*
+
+# Next.js & Build outputs
+.next/
+out/
+build/
+dist/
+
+# Environment Variables & Secrets (CRITICAL: Do NOT remove)
+.env
+.env*
+!.env.example
+*.pem
+*.key
+*.cert
+*.pfx
+service-account*.json
+credentials*.json
+
+# TypeScript & Cache
+*.tsbuildinfo
+next-env.d.ts
+.turbo/
+.cache/
+
+# Debug & Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Vercel
+.vercel
+
+# OS System Files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDE & Editor Configurations / Local Agent Data
+.vscode/
+.idea/
+*.swp
+*.swo
+.freebuff/
+.qodo/
+
+# Scratch & Temporary Folders
+note.txt
+project brain/
+images of project/
+prompts and goals/

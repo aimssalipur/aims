@@ -1,0 +1,111 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 222.2 84% 4.9%;
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 84% 4.9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 84% 4.9%;
+    --primary-foreground: 210 40% 98%;
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 222.2 47.4% 11.2%;
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+    --accent: 210 40% 96.1%;
+    --accent-foreground: 222.2 47.4% 11.2%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 221.2 83.2% 53.3%;
+    --radius: 0.75rem;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: "rlig" 1, "calt" 1;
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+    -webkit-box-sizing: border-box;
+  }
+
+  p,
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6,
+  span,
+  a,
+  label,
+  button,
+  li {
+    overflow-wrap: break-word;
+    word-wrap: break-word;
+    word-break: break-word;
+    -webkit-hyphens: auto;
+    hyphens: auto;
+  }
+}
+
+@layer components {
+  .glass-card {
+    @apply bg-white/80 backdrop-blur-md border border-white/40 shadow-xl;
+  }
+
+  .glass-card-dark {
+    @apply bg-aims-navy/10 backdrop-blur-md border border-white/20 shadow-xl;
+  }
+
+  .gradient-text {
+    @apply bg-clip-text text-transparent bg-aims-gradient;
+  }
+
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2 px-6 py-3 bg-aims-navy text-white font-semibold rounded-xl shadow-lg hover:bg-aims-navy/90 hover:shadow-xl hover:-translate-y-0.5 transition-all duration-200;
+  }
+
+  .btn-secondary {
+    @apply inline-flex items-center justify-center gap-2 px-6 py-3 bg-aims-green text-white font-semibold rounded-xl shadow-lg hover:bg-aims-green/90 hover:shadow-xl hover:-translate-y-0.5 transition-all duration-200;
+  }
+
+  .btn-outline {
+    @apply inline-flex items-center justify-center gap-2 px-6 py-3 bg-white text-aims-navy font-semibold rounded-xl border-2 border-aims-navy/20 hover:border-aims-navy hover:bg-aims-navy/5 transition-all duration-200;
+  }
+
+  .section-padding {
+    @apply py-12 sm:py-16 md:py-24 px-4 sm:px-6 lg:px-8;
+  }
+
+  .hero-gradient {
+    background: linear-gradient(180deg, rgba(30, 58, 138, 0.08) 0%, rgba(5, 150, 105, 0.05) 50%, rgba(255, 255, 255, 1) 100%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, ::before, ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

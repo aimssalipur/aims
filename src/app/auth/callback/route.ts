@@ -1,3 +1,7 @@
+/**
+ * Supabase Auth Callback Route Handler
+ * Exchanges authorization code for session and handles role-based redirection on Vercel
+ */
 import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
 

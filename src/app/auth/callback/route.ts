@@ -2,10 +2,20 @@ import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
 
 export async function GET(request: Request) {
-  const { searchParams, origin } = new URL(request.url);
-  const code = searchParams.get("code");
-  const role = searchParams.get("role") || "student"; // Default to student
-  const next = searchParams.get("next") || `/${role}`;
+  const requestUrl = new URL(request.url);
+  const code = requestUrl.searchParams.get("code");
+  const role = requestUrl.searchParams.get("role") || "student"; // Default to student
+  const next = requestUrl.searchParams.get("next") || `/${role}`;
+
+  // Robust origin resolution for Vercel deployment
+  const forwardedHost = request.headers.get("x-forwarded-host");
+  const isLocalEnv = process.env.NODE_ENV === "development";
+  let origin = requestUrl.origin;
+  if (!isLocalEnv && forwardedHost) {
+    origin = `https://${forwardedHost}`;
+  } else if (!isLocalEnv && process.env.NEXT_PUBLIC_SITE_URL) {
+    origin = process.env.NEXT_PUBLIC_SITE_URL;
+  }
 
   if (code) {
     const supabase = createClient();

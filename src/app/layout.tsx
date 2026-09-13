@@ -1,14 +1,22 @@
-import type { Metadata } from "next"
+import type { Metadata, Viewport } from "next"
 import { Inter } from "next/font/google"
 import "./globals.css"
 import { Toaster } from "@/components/ui/toaster"
 import { PagePreloader } from "@/components/page-preloader"
+import { PwaInstallPrompt } from "@/components/pwa-install-prompt"
 
 const inter = Inter({
   subsets: ["latin"],
   display: "swap",
   variable: "--font-inter",
 })
+
+export const viewport: Viewport = {
+  themeColor: "#1E3A8A",
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 5,
+}
 
 export const metadata: Metadata = {
   title: {
@@ -36,6 +44,15 @@ export const metadata: Metadata = {
   creator: "AIMS Salipur",
   publisher: "AIMS Salipur",
   metadataBase: new URL("https://aimssalipur.com"),
+  manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "AIMS Salipur",
+  },
+  formatDetection: {
+    telephone: false,
+  },
   openGraph: {
     type: "website",
     locale: "en_IN",
@@ -62,10 +79,14 @@ export const metadata: Metadata = {
       "Empowering nursing professionals to crack OSSSC, NORCET, ESIC, MNS, RRB, and OJEE exams.",
     images: ["/logo.png"],
   },
-  themeColor: "#1E3A8A",
   icons: {
     icon: [
+      { url: "/icon-192.png", sizes: "192x192", type: "image/png" },
+      { url: "/icon-512.png", sizes: "512x512", type: "image/png" },
       { url: "/logo.png" },
+    ],
+    apple: [
+      { url: "/apple-touch-icon.png", sizes: "180x180", type: "image/png" },
     ],
   },
 }
@@ -77,11 +98,20 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={inter.variable}>
+      <head>
+        <link rel="manifest" href="/manifest.json" />
+        <meta name="mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="application-name" content="AIMS Salipur" />
+        <meta name="apple-mobile-web-app-title" content="AIMS Salipur" />
+      </head>
       <body className={`${inter.className} antialiased min-h-screen flex flex-col bg-white`}>
         <PagePreloader />
         {children}
+        <PwaInstallPrompt />
         <Toaster />
       </body>
     </html>
   )
 }
+

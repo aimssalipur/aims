@@ -181,22 +181,22 @@ export default function AccountantTransactionsPage() {
   };
 
   return (
-    <div className="space-y-6 lg:space-y-8 max-w-[1440px] mx-auto">
+    <div className="space-y-4 sm:space-y-6 lg:space-y-8 max-w-[1440px] mx-auto">
       {/* Top Banner Header */}
-      <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-5">
+      <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3 sm:gap-5">
         <div>
-          <h1 className="text-2xl md:text-3xl font-extrabold text-slate-900 tracking-tight flex items-center gap-2">
+          <h1 className="text-xl sm:text-2xl md:text-3xl font-extrabold text-slate-900 tracking-tight flex items-center gap-2">
             Ledger & Transactions 💸
           </h1>
-          <p className="text-slate-500 mt-2 text-base font-semibold">
+          <p className="text-slate-500 mt-1 text-xs sm:text-base font-semibold">
             Track operational costs, salaries, and course revenue logs.
           </p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3">
           <Dialog open={addOpen} onOpenChange={setAddOpen}>
             <DialogTrigger asChild>
-              <Button size="lg" className="gap-2 h-11 shadow-lg shadow-indigo-600/20 bg-gradient-to-r from-indigo-600 to-violet-700 hover:from-indigo-700 hover:to-violet-800 text-white border-0 font-bold rounded-xl">
-                <PlusCircle className="h-4.5 w-4.5" />
+              <Button size="sm" className="gap-1.5 sm:gap-2 h-9 sm:h-11 text-xs sm:text-sm px-3.5 sm:px-5 shadow-lg shadow-indigo-600/20 bg-gradient-to-r from-indigo-600 to-violet-700 hover:from-indigo-700 hover:to-violet-800 text-white border-0 font-bold rounded-xl">
+                <PlusCircle className="h-4 w-4" />
                 Add Transaction
               </Button>
             </DialogTrigger>
@@ -311,23 +311,23 @@ export default function AccountantTransactionsPage() {
 
       {/* Filter and Ledger Table */}
       <Card className="border-slate-100 overflow-hidden bg-white">
-        <CardHeader className="p-5 md:p-6 border-b border-slate-100 flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <CardHeader className="p-3.5 sm:p-5 md:p-6 border-b border-slate-100 flex-col md:flex-row md:items-center md:justify-between gap-3 sm:gap-4">
           <div className="md:max-w-md flex-1">
             <div className="relative">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4.5 w-4.5 text-slate-400" />
+              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
               <Input
                 placeholder="Search description..."
-                className="pl-12 h-12 text-sm font-semibold rounded-xl"
+                className="pl-10 h-10 sm:h-12 text-xs sm:text-sm font-semibold rounded-xl"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
             </div>
           </div>
-          <div className="flex flex-wrap items-center gap-3">
+          <div className="grid grid-cols-2 sm:flex sm:flex-wrap items-center gap-2 sm:gap-3 w-full md:w-auto">
             {/* Type Filter */}
             <Select value={typeFilter} onValueChange={setTypeFilter}>
-              <SelectTrigger className="h-11 w-40 rounded-xl gap-2 font-semibold">
-                <Filter className="h-4 w-4 text-slate-400 shrink-0" />
+              <SelectTrigger className="h-9 sm:h-11 w-full sm:w-40 rounded-xl gap-1.5 text-xs sm:text-sm font-semibold">
+                <Filter className="h-3.5 w-3.5 text-slate-400 shrink-0" />
                 <SelectValue placeholder="All Entry Types" />
               </SelectTrigger>
               <SelectContent>
@@ -339,8 +339,8 @@ export default function AccountantTransactionsPage() {
 
             {/* Category Filter */}
             <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-              <SelectTrigger className="h-11 w-44 rounded-xl gap-2 font-semibold">
-                <Filter className="h-4 w-4 text-slate-400 shrink-0" />
+              <SelectTrigger className="h-9 sm:h-11 w-full sm:w-44 rounded-xl gap-1.5 text-xs sm:text-sm font-semibold">
+                <Filter className="h-3.5 w-3.5 text-slate-400 shrink-0" />
                 <SelectValue placeholder="All Categories" />
               </SelectTrigger>
               <SelectContent>
@@ -356,53 +356,53 @@ export default function AccountantTransactionsPage() {
         {/* Ledger List */}
         <div className="p-0">
           {loading ? (
-            <div className="p-12 text-center text-slate-400 font-semibold flex items-center justify-center gap-2">
+            <div className="p-8 sm:p-12 text-center text-slate-400 font-semibold text-xs sm:text-sm flex items-center justify-center gap-2">
               <span className="h-4 w-4 rounded-full border-2 border-indigo-600 border-t-transparent animate-spin" />
               Fetching entries...
             </div>
           ) : txs.length === 0 ? (
-            <div className="p-12 text-center text-slate-400 font-semibold">No operational entries logged matching criteria.</div>
+            <div className="p-8 sm:p-12 text-center text-slate-400 font-semibold text-xs sm:text-sm">No operational entries logged matching criteria.</div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full text-left text-sm border-collapse">
+              <table className="w-full text-left text-xs sm:text-sm border-collapse min-w-[620px]">
                 <thead>
-                  <tr className="border-b border-slate-100 text-slate-400 uppercase text-[10px] font-bold tracking-wider bg-slate-50/50">
-                    <th className="py-4 px-6">Date</th>
-                    <th className="py-4 px-6">Description</th>
-                    <th className="py-4 px-6">Category</th>
-                    <th className="py-4 px-6">Reference / Ref</th>
-                    <th className="py-4 px-6">Recorded By</th>
-                    <th className="py-4 px-6 text-right">Amount</th>
-                    <th className="py-4 px-6 text-center">Actions</th>
+                  <tr className="border-b border-slate-100 text-slate-400 uppercase text-[9px] sm:text-[10px] font-bold tracking-wider bg-slate-50/50">
+                    <th className="py-2.5 sm:py-4 px-3 sm:px-6">Date</th>
+                    <th className="py-2.5 sm:py-4 px-3 sm:px-6">Description</th>
+                    <th className="py-2.5 sm:py-4 px-3 sm:px-6">Category</th>
+                    <th className="py-2.5 sm:py-4 px-3 sm:px-6">Reference / Ref</th>
+                    <th className="py-2.5 sm:py-4 px-3 sm:px-6">Recorded By</th>
+                    <th className="py-2.5 sm:py-4 px-3 sm:px-6 text-right">Amount</th>
+                    <th className="py-2.5 sm:py-4 px-3 sm:px-6 text-center">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 font-semibold text-slate-600 bg-white">
                   {txs.map((tx: any) => (
                     <tr key={tx.id} className="hover:bg-slate-50/50 transition-colors">
-                      <td className="py-4 px-6 font-medium text-slate-500">
+                      <td className="py-2.5 sm:py-4 px-3 sm:px-6 font-medium text-slate-500 whitespace-nowrap">
                         {new Date(tx.date).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
                       </td>
-                      <td className="py-4 px-6 text-slate-900 font-bold max-w-sm truncate">{tx.description}</td>
-                      <td className="py-4 px-6">
-                        <Badge variant="outline" className="capitalize border-slate-200 py-1 px-2.5">
+                      <td className="py-2.5 sm:py-4 px-3 sm:px-6 text-slate-900 font-bold max-w-xs truncate">{tx.description}</td>
+                      <td className="py-2.5 sm:py-4 px-3 sm:px-6">
+                        <Badge variant="outline" className="capitalize border-slate-200 py-0.5 sm:py-1 px-2 sm:px-2.5 text-[10px] sm:text-xs">
                           {tx.category}
                         </Badge>
                       </td>
-                      <td className="py-4 px-6 text-slate-400 font-mono text-xs">{tx.reference_no || "N/A"}</td>
-                      <td className="py-4 px-6 text-slate-500 font-normal">
+                      <td className="py-2.5 sm:py-4 px-3 sm:px-6 text-slate-400 font-mono text-[10px] sm:text-xs whitespace-nowrap">{tx.reference_no || "N/A"}</td>
+                      <td className="py-2.5 sm:py-4 px-3 sm:px-6 text-slate-500 font-normal whitespace-nowrap">
                         {tx.recorded_by_profile?.full_name || "System Log"}
                       </td>
-                      <td className={`py-4 px-6 text-right font-extrabold text-base ${tx.type === "income" ? "text-emerald-600" : "text-rose-600"}`}>
+                      <td className={`py-2.5 sm:py-4 px-3 sm:px-6 text-right font-extrabold text-xs sm:text-base whitespace-nowrap ${tx.type === "income" ? "text-emerald-600" : "text-rose-600"}`}>
                         {tx.type === "income" ? "+" : "-"}{formatCurrency(tx.amount)}
                       </td>
-                      <td className="py-4 px-6 text-center">
+                      <td className="py-2.5 sm:py-4 px-3 sm:px-6 text-center">
                         <Button
                           variant="ghost"
                           size="icon"
                           onClick={() => handleDelete(tx.id)}
-                          className="h-8 w-8 text-rose-500 hover:bg-rose-50 hover:text-rose-600 rounded-lg"
+                          className="h-7 w-7 sm:h-8 sm:w-8 text-rose-500 hover:bg-rose-50 hover:text-rose-600 rounded-lg"
                         >
-                          <Trash2 className="h-4.5 w-4.5" />
+                          <Trash2 className="h-3.5 w-3.5 sm:h-4.5 sm:w-4.5" />
                         </Button>
                       </td>
                     </tr>

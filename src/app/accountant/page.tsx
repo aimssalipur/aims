@@ -158,69 +158,69 @@ export default function AccountantOverviewPage() {
             }}
           />
         </div>
-        <div className="relative p-6 md:p-8 lg:p-10 grid lg:grid-cols-3 gap-6 items-center">
-          <div className="lg:col-span-2 space-y-4">
-            <Badge className="bg-white/15 text-white border-0 backdrop-blur w-fit gap-1.5 font-bold">
+        <div className="relative p-4 sm:p-6 md:p-8 lg:p-10 grid lg:grid-cols-3 gap-4 sm:gap-6 items-center">
+          <div className="lg:col-span-2 space-y-3 sm:space-y-4">
+            <Badge className="bg-white/15 text-white border-0 backdrop-blur w-fit gap-1 sm:gap-1.5 font-bold text-[10px] sm:text-xs">
               <Landmark className="h-3 w-3" /> Financial Command Center
             </Badge>
-            <h1 className="text-2xl md:text-4xl font-extrabold tracking-tight leading-tight">
+            <h1 className="text-xl sm:text-2xl md:text-4xl font-extrabold tracking-tight leading-tight">
               Finance & Ledger overview 📈
               <br />
-              <span className="text-white/80 font-medium text-lg md:text-xl">
+              <span className="text-white/80 font-medium text-xs sm:text-lg md:text-xl">
                 AIMS Salipur operational cash flow & fee verifications dashboard.
               </span>
             </h1>
-            <div className="flex gap-3 pt-2">
-              <Button asChild size="sm" className="bg-white text-indigo-700 hover:bg-slate-100 font-bold rounded-xl h-10 shadow-lg">
+            <div className="flex flex-wrap gap-2 sm:gap-3 pt-1 sm:pt-2">
+              <Button asChild size="sm" className="bg-white text-indigo-700 hover:bg-slate-100 font-bold rounded-xl h-9 sm:h-10 text-xs sm:text-sm shadow-lg">
                 <Link href="/accountant/transactions">
-                  <PlusCircle className="h-4.5 w-4.5 mr-1.5" /> Log Transaction
+                  <PlusCircle className="h-3.5 w-3.5 sm:h-4.5 sm:w-4.5 mr-1.5" /> Log Transaction
                 </Link>
               </Button>
-              <Button asChild size="sm" className="bg-white/10 text-white hover:bg-white/15 border-white/20 font-bold rounded-xl h-10">
+              <Button asChild size="sm" className="bg-white/10 text-white hover:bg-white/15 border-white/20 font-bold rounded-xl h-9 sm:h-10 text-xs sm:text-sm">
                 <Link href="/accountant/fees">
                   Verify Student Fees
                 </Link>
               </Button>
             </div>
           </div>
-          <div className="bg-white/10 backdrop-blur rounded-3xl p-5 border border-white/15 space-y-3 flex flex-col justify-between">
+          <div className="bg-white/10 backdrop-blur rounded-2xl sm:rounded-3xl p-3.5 sm:p-5 border border-white/15 space-y-2 sm:space-y-3 flex flex-col justify-between">
             <div className="flex items-center justify-between">
               <Badge className="bg-emerald-500/20 border-0 text-emerald-100 w-fit text-[10px] font-bold uppercase tracking-widest">
                 Realtime Sync
               </Badge>
-              <Button variant="ghost" size="icon" onClick={fetchSummary} className="h-8 w-8 text-white hover:bg-white/10">
-                <RefreshCw className="h-4 w-4" />
+              <Button variant="ghost" size="icon" onClick={fetchSummary} className="h-7 w-7 sm:h-8 sm:w-8 text-white hover:bg-white/10">
+                <RefreshCw className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
               </Button>
             </div>
             <div>
-              <div className="text-xs font-semibold text-white/70">Current Cash Reserve</div>
-              <div className="text-3xl font-extrabold tracking-tight mt-1">{formatCurrency(metrics.netProfit)}</div>
+              <div className="text-[11px] sm:text-xs font-semibold text-white/70">Current Cash Reserve</div>
+              <div className="text-xl sm:text-3xl font-extrabold tracking-tight mt-0.5 sm:mt-1">{formatCurrency(metrics.netProfit)}</div>
             </div>
           </div>
         </div>
       </Card>
 
       {/* Metrics Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-5">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4 md:gap-5">
         {statCards.map((m) => {
           const Icon = m.icon;
           return (
             <Card key={m.label} className={`group overflow-hidden border ${m.border} hover:shadow-xl transition-all duration-300 hover:-translate-y-1 bg-white`}>
-              <CardContent className="p-5 md:p-6">
-                <div className="flex items-center gap-4">
-                  <div className={`h-12 w-12 shrink-0 rounded-2xl ${m.bg} ${m.color} flex items-center justify-center shadow-inner group-hover:scale-110 transition-transform`}>
-                    <Icon className="h-6 w-6" strokeWidth={2.1} />
+              <CardContent className="p-3 sm:p-5 md:p-6">
+                <div className="flex items-center gap-2.5 sm:gap-4">
+                  <div className={`h-8 w-8 sm:h-12 sm:w-12 shrink-0 rounded-xl sm:rounded-2xl ${m.bg} ${m.color} flex items-center justify-center shadow-inner group-hover:scale-110 transition-transform`}>
+                    <Icon className="h-4.5 w-4.5 sm:h-6 sm:w-6" strokeWidth={2.1} />
                   </div>
-                  <div>
-                    <div className="text-2xl font-extrabold text-slate-900 tracking-tight">
+                  <div className="min-w-0">
+                    <div className="text-base sm:text-2xl font-extrabold text-slate-900 tracking-tight truncate">
                       {m.value}
                     </div>
-                    <div className="text-xs font-bold uppercase tracking-wider text-slate-500 mt-0.5">
+                    <div className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-slate-500 mt-0.5 truncate">
                       {m.label}
                     </div>
                   </div>
                 </div>
-                <p className="text-xs text-slate-400 mt-4 border-t pt-2 font-medium">
+                <p className="text-[10px] sm:text-xs text-slate-400 mt-2 sm:mt-4 border-t pt-1.5 sm:pt-2 font-medium truncate">
                   {m.desc}
                 </p>
               </CardContent>
@@ -230,7 +230,7 @@ export default function AccountantOverviewPage() {
       </div>
 
       {/* Quick Tools & Shortcuts */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-6">
         <Card className="border-slate-100 bg-white hover:shadow-md transition-shadow">
           <CardHeader className="pb-3">
             <CardTitle className="text-sm font-extrabold text-slate-900 uppercase tracking-wider flex items-center gap-2">
@@ -294,15 +294,15 @@ export default function AccountantOverviewPage() {
       </div>
 
       {/* Charts Section */}
-      <div className="grid lg:grid-cols-3 gap-6">
+      <div className="grid lg:grid-cols-3 gap-4 sm:gap-6">
         {/* Cashflow Trend */}
         <Card className="lg:col-span-2 border-slate-100">
-          <CardHeader>
-            <CardTitle className="text-base font-extrabold text-slate-900">Cash Flow Trends (Last 6 Months)</CardTitle>
-            <CardDescription className="font-semibold text-slate-400">Monthly breakdown of revenues vs operational expenditures</CardDescription>
+          <CardHeader className="p-4 sm:p-6 pb-2 sm:pb-4">
+            <CardTitle className="text-sm sm:text-base font-extrabold text-slate-900">Cash Flow Trends (Last 6 Months)</CardTitle>
+            <CardDescription className="text-xs font-semibold text-slate-400">Monthly breakdown of revenues vs operational expenditures</CardDescription>
           </CardHeader>
-          <CardContent>
-            <div className="h-80 w-full">
+          <CardContent className="p-3 sm:p-6 pt-0 sm:pt-0">
+            <div className="h-60 sm:h-80 w-full">
               {data?.chartData && data.chartData.length > 0 ? (
                 <ResponsiveContainer width="100%" height="100%">
                   <AreaChart data={data.chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
@@ -317,19 +317,19 @@ export default function AccountantOverviewPage() {
                       </linearGradient>
                     </defs>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />
-                    <XAxis dataKey="month" tickLine={false} axisLine={false} style={{ fontSize: 11, fontWeight: 600, fill: "#94A3B8" }} />
-                    <YAxis tickLine={false} axisLine={false} style={{ fontSize: 11, fontWeight: 600, fill: "#94A3B8" }} />
+                    <XAxis dataKey="month" tickLine={false} axisLine={false} style={{ fontSize: 10, fontWeight: 600, fill: "#94A3B8" }} />
+                    <YAxis tickLine={false} axisLine={false} style={{ fontSize: 10, fontWeight: 600, fill: "#94A3B8" }} />
                     <Tooltip
                       contentStyle={{ background: "#fff", border: "1px solid #F1F5F9", borderRadius: 12, boxShadow: "0 10px 15px -3px rgba(0,0,0,0.05)" }}
                       formatter={(value) => [formatCurrency(Number(value)), ""]}
                     />
-                    <Legend iconType="circle" wrapperStyle={{ fontSize: 12, fontWeight: 600, paddingTop: 10 }} />
-                    <Area type="monotone" name="Inflow (Revenue)" dataKey="revenue" stroke="#10B981" strokeWidth={2.5} fillOpacity={1} fill="url(#revGrad)" />
-                    <Area type="monotone" name="Outflow (Expense)" dataKey="expenses" stroke="#EF4444" strokeWidth={2.5} fillOpacity={1} fill="url(#expGrad)" />
+                    <Legend iconType="circle" wrapperStyle={{ fontSize: 11, fontWeight: 600, paddingTop: 6 }} />
+                    <Area type="monotone" name="Inflow (Revenue)" dataKey="revenue" stroke="#10B981" strokeWidth={2} fillOpacity={1} fill="url(#revGrad)" />
+                    <Area type="monotone" name="Outflow (Expense)" dataKey="expenses" stroke="#EF4444" strokeWidth={2} fillOpacity={1} fill="url(#expGrad)" />
                   </AreaChart>
                 </ResponsiveContainer>
               ) : (
-                <div className="flex h-full items-center justify-center text-slate-400 font-semibold">No monthly data logged yet.</div>
+                <div className="flex h-full items-center justify-center text-slate-400 font-semibold text-xs sm:text-sm">No monthly data logged yet.</div>
               )}
             </div>
           </CardContent>
@@ -337,12 +337,12 @@ export default function AccountantOverviewPage() {
 
         {/* Expenses Distribution */}
         <Card className="border-slate-100">
-          <CardHeader>
-            <CardTitle className="text-base font-extrabold text-slate-900">Operational Expenditure Breakdown</CardTitle>
-            <CardDescription className="font-semibold text-slate-400">Total expense allocation by operational category</CardDescription>
+          <CardHeader className="p-4 sm:p-6 pb-2 sm:pb-4">
+            <CardTitle className="text-sm sm:text-base font-extrabold text-slate-900">Operational Expenditure Breakdown</CardTitle>
+            <CardDescription className="text-xs font-semibold text-slate-400">Total expense allocation by operational category</CardDescription>
           </CardHeader>
-          <CardContent className="flex flex-col items-center justify-center">
-            <div className="h-60 w-full relative flex items-center justify-center">
+          <CardContent className="flex flex-col items-center justify-center p-3 sm:p-6 pt-0 sm:pt-0">
+            <div className="h-52 sm:h-60 w-full relative flex items-center justify-center">
               {data?.pieData && data.pieData.length > 0 ? (
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
@@ -350,8 +350,8 @@ export default function AccountantOverviewPage() {
                       data={data.pieData}
                       cx="50%"
                       cy="50%"
-                      innerRadius={60}
-                      outerRadius={80}
+                      innerRadius={50}
+                      outerRadius={75}
                       paddingAngle={3}
                       dataKey="value"
                     >
@@ -363,17 +363,17 @@ export default function AccountantOverviewPage() {
                   </PieChart>
                 </ResponsiveContainer>
               ) : (
-                <div className="text-slate-400 font-semibold">No expense records found.</div>
+                <div className="text-slate-400 font-semibold text-xs sm:text-sm">No expense records found.</div>
               )}
             </div>
-            <div className="w-full space-y-1.5 mt-2 border-t pt-4">
+            <div className="w-full space-y-1 mt-1 border-t pt-3">
               {data?.pieData?.map((entry: any, index: number) => (
-                <div key={entry.name} className="flex items-center justify-between text-xs">
-                  <div className="flex items-center gap-2 font-semibold text-slate-600">
-                    <span className="h-2 w-2 rounded-full" style={{ backgroundColor: COLORS[index % COLORS.length] }} />
-                    {entry.name}
+                <div key={entry.name} className="flex items-center justify-between text-[11px] sm:text-xs">
+                  <div className="flex items-center gap-1.5 font-semibold text-slate-600 truncate mr-2">
+                    <span className="h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: COLORS[index % COLORS.length] }} />
+                    <span className="truncate">{entry.name}</span>
                   </div>
-                  <div className="font-bold text-slate-900">{formatCurrency(entry.value)}</div>
+                  <div className="font-bold text-slate-900 shrink-0">{formatCurrency(entry.value)}</div>
                 </div>
               ))}
             </div>
@@ -383,25 +383,25 @@ export default function AccountantOverviewPage() {
 
       {/* Recent Ledger Transactions */}
       <Card className="border-slate-100">
-        <CardHeader className="flex flex-row items-center justify-between">
+        <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 sm:p-6 pb-2 sm:pb-4">
           <div>
-            <CardTitle className="text-base font-extrabold text-slate-900">Recent Transactions</CardTitle>
-            <CardDescription className="font-semibold text-slate-400">A snapshot of the latest logged income and expenditures</CardDescription>
+            <CardTitle className="text-sm sm:text-base font-extrabold text-slate-900">Recent Transactions</CardTitle>
+            <CardDescription className="text-xs font-semibold text-slate-400">A snapshot of the latest logged income and expenditures</CardDescription>
           </div>
-          <Button asChild variant="outline" size="sm" className="font-bold rounded-xl">
+          <Button asChild variant="outline" size="sm" className="font-bold rounded-xl h-8 sm:h-9 text-xs w-fit">
             <Link href="/accountant/transactions">View Ledger</Link>
           </Button>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-0 sm:p-6 sm:pt-0">
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm border-collapse">
+            <table className="w-full text-left text-xs sm:text-sm border-collapse min-w-[560px]">
               <thead>
-                <tr className="border-b border-slate-100 text-slate-400 uppercase text-[10px] font-bold tracking-wider">
-                  <th className="py-3 px-4">Date</th>
-                  <th className="py-3 px-4">Description</th>
-                  <th className="py-3 px-4">Category</th>
-                  <th className="py-3 px-4">Method / Ref</th>
-                  <th className="py-3 px-4 text-right">Amount</th>
+                <tr className="border-b border-slate-100 text-slate-400 uppercase text-[9px] sm:text-[10px] font-bold tracking-wider">
+                  <th className="py-2.5 sm:py-3 px-3 sm:px-4">Date</th>
+                  <th className="py-2.5 sm:py-3 px-3 sm:px-4">Description</th>
+                  <th className="py-2.5 sm:py-3 px-3 sm:px-4">Category</th>
+                  <th className="py-2.5 sm:py-3 px-3 sm:px-4">Method / Ref</th>
+                  <th className="py-2.5 sm:py-3 px-3 sm:px-4 text-right">Amount</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50 font-semibold text-slate-600">
@@ -412,17 +412,17 @@ export default function AccountantOverviewPage() {
                 ) : (
                   recentTx.map((tx: any) => (
                     <tr key={tx.id} className="hover:bg-slate-50/50 transition-colors">
-                      <td className="py-3.5 px-4 font-medium text-slate-500">
+                      <td className="py-2.5 sm:py-3.5 px-3 sm:px-4 font-medium text-slate-500 whitespace-nowrap">
                         {new Date(tx.date).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
                       </td>
-                      <td className="py-3.5 px-4 text-slate-900 max-w-xs truncate">{tx.description}</td>
-                      <td className="py-3.5 px-4">
-                        <Badge variant="outline" className="capitalize border-slate-200">
+                      <td className="py-2.5 sm:py-3.5 px-3 sm:px-4 text-slate-900 max-w-xs truncate">{tx.description}</td>
+                      <td className="py-2.5 sm:py-3.5 px-3 sm:px-4">
+                        <Badge variant="outline" className="capitalize border-slate-200 text-[10px] sm:text-xs">
                           {tx.category}
                         </Badge>
                       </td>
-                      <td className="py-3.5 px-4 text-slate-400 font-mono text-xs">{tx.reference_no || "N/A"}</td>
-                      <td className={`py-3.5 px-4 text-right font-extrabold text-base ${tx.type === "income" ? "text-emerald-600" : "text-rose-600"}`}>
+                      <td className="py-2.5 sm:py-3.5 px-3 sm:px-4 text-slate-400 font-mono text-[10px] sm:text-xs whitespace-nowrap">{tx.reference_no || "N/A"}</td>
+                      <td className={`py-2.5 sm:py-3.5 px-3 sm:px-4 text-right font-extrabold text-xs sm:text-base whitespace-nowrap ${tx.type === "income" ? "text-emerald-600" : "text-rose-600"}`}>
                         {tx.type === "income" ? "+" : "-"}{formatCurrency(tx.amount)}
                       </td>
                     </tr>

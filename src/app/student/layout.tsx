@@ -52,7 +52,7 @@ export default async function StudentLayout({
       <DashboardSidebar role={role} user={currentUser} />
       <div className="flex-1 flex flex-col min-w-0 min-h-screen">
         <DashboardTopbar role={role} userName={currentUser.full_name} />
-        <main className="flex-1 pt-16 lg:pt-0 px-4 sm:px-6 xl:px-8 py-6 lg:py-8 overflow-x-hidden">
+        <main className="flex-1 pt-14 lg:pt-0 px-3 sm:px-6 xl:px-8 py-3.5 sm:py-6 lg:py-8 overflow-x-hidden">
           {children}
         </main>
       </div>

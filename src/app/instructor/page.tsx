@@ -95,72 +95,74 @@ export default function InstructorDashboard() {
             }}
           />
         </div>
-        <div className="relative grid lg:grid-cols-3 gap-6 p-6 md:p-8 lg:p-10">
-          <div className="lg:col-span-2 space-y-4">
-            <Badge className="bg-white/15 text-white border-0 backdrop-blur w-fit">
+        <div className="relative grid lg:grid-cols-3 gap-4 sm:gap-6 p-4 sm:p-6 md:p-8 lg:p-10">
+          <div className="lg:col-span-2 space-y-3 sm:space-y-4">
+            <Badge className="bg-white/15 text-white border-0 backdrop-blur w-fit text-[10px] sm:text-xs py-0.5 px-2 sm:px-2.5">
               <Award className="h-3 w-3 mr-1" /> Faculty Spotlight
             </Badge>
-            <h2 className="text-2xl md:text-4xl font-extrabold leading-tight">
+            <h2 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-extrabold leading-tight">
               Welcome back, Dr. Priyanka! 👩‍⚕️
               <br />
-              <span className="text-white/85 font-semibold text-xl md:text-2xl">
+              <span className="text-white/85 font-semibold text-sm sm:text-lg md:text-2xl">
                 Your students are making fantastic progress this semester.
               </span>
             </h2>
-            <div className="flex flex-wrap gap-3 pt-2">
+            <div className="flex flex-wrap gap-2.5 sm:gap-3 pt-1 sm:pt-2">
               <Button
                 variant="outline"
-                className="bg-white text-aims-green hover:bg-slate-50 gap-2 shadow-lg"
+                size="sm"
+                className="bg-white text-aims-green hover:bg-slate-50 gap-1.5 sm:gap-2 shadow-lg h-9 sm:h-11 px-3.5 sm:px-5 text-xs sm:text-sm font-bold"
                 asChild
               >
                 <Link href="/instructor/announcements">
-                  <Plus className="h-4.5 w-4.5" />
+                  <Plus className="h-4 w-4 sm:h-4.5 sm:w-4.5" />
                   Post Announcement
                 </Link>
               </Button>
               <Button
                 variant="outline"
-                className="bg-white/10 text-white border-white/30 hover:bg-white/20 backdrop-blur gap-2"
+                size="sm"
+                className="bg-white/10 text-white border-white/30 hover:bg-white/20 backdrop-blur gap-1.5 sm:gap-2 h-9 sm:h-11 px-3.5 sm:px-5 text-xs sm:text-sm font-bold"
                 asChild
               >
                 <Link href="/instructor/courses">
-                  <FileEdit className="h-4.5 w-4.5" />
+                  <FileEdit className="h-4 w-4 sm:h-4.5 sm:w-4.5" />
                   Edit Course Content
                 </Link>
               </Button>
             </div>
           </div>
-          <div className="space-y-5 bg-white/10 backdrop-blur rounded-2xl p-6 border border-white/15">
+          <div className="space-y-4 sm:space-y-5 bg-white/10 backdrop-blur rounded-xl sm:rounded-2xl p-4 sm:p-6 border border-white/15">
             <div className="flex items-center justify-between">
-              <span className="font-bold text-white/90">Weekly Activity</span>
-              <span className="text-xs font-bold px-2 py-1 rounded-full bg-white/20">
+              <span className="font-bold text-white/90 text-xs sm:text-sm">Weekly Activity</span>
+              <span className="text-[10px] sm:text-xs font-bold px-2 py-0.5 sm:py-1 rounded-full bg-white/20">
                 Mon - Sun
               </span>
             </div>
             {/* Simple bar chart */}
-            <div className="flex items-end justify-between gap-2 h-28 pt-2">
+            <div className="flex items-end justify-between gap-1.5 sm:gap-2 h-24 sm:h-28 pt-2">
               {[45, 72, 60, 88, 75, 40, 30].map((h, i) => (
                 <div key={i} className="flex-1 flex flex-col items-center gap-1.5">
                   <div
                     className="w-full rounded-lg bg-gradient-to-t from-white/40 to-white shadow-inner"
                     style={{ height: `${h}%` }}
                   />
-                  <span className="text-[10px] font-bold text-white/75">
+                  <span className="text-[9px] sm:text-[10px] font-bold text-white/75">
                     {["M", "T", "W", "T", "F", "S", "S"][i]}
                   </span>
                 </div>
               ))}
             </div>
-            <div className="grid grid-cols-2 gap-4 pt-4 border-t border-white/15">
+            <div className="grid grid-cols-2 gap-3 sm:gap-4 pt-3 sm:pt-4 border-t border-white/15">
               <div>
-                <div className="text-2xl font-extrabold">18.5h</div>
-                <div className="text-[10px] font-bold uppercase text-white/70 tracking-wider">
+                <div className="text-lg sm:text-2xl font-extrabold">18.5h</div>
+                <div className="text-[9px] sm:text-[10px] font-bold uppercase text-white/70 tracking-wider">
                   Teaching Time
                 </div>
               </div>
               <div>
-                <div className="text-2xl font-extrabold">92%</div>
-                <div className="text-[10px] font-bold uppercase text-white/70 tracking-wider">
+                <div className="text-lg sm:text-2xl font-extrabold">92%</div>
+                <div className="text-[9px] sm:text-[10px] font-bold uppercase text-white/70 tracking-wider">
                   Student Rating
                 </div>
               </div>
@@ -170,7 +172,7 @@ export default function InstructorDashboard() {
       </Card>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-5">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4 md:gap-5">
         {stats.map((s) => {
           const Icon = s.icon;
           return (
@@ -178,7 +180,7 @@ export default function InstructorDashboard() {
               key={s.label}
               className="group overflow-hidden border-slate-100 hover:shadow-xl transition-all duration-300 hover:-translate-y-1"
             >
-              <CardContent className="p-5 md:p-6 relative overflow-hidden">
+              <CardContent className="p-3.5 sm:p-5 md:p-6 relative overflow-hidden">
                 <div
                   className={cn(
                     "absolute -top-10 -right-10 h-28 w-28 rounded-full opacity-0 group-hover:opacity-100 transition-opacity",
@@ -188,21 +190,21 @@ export default function InstructorDashboard() {
                 <div className="relative">
                   <div
                     className={cn(
-                      "h-12 w-12 rounded-2xl flex items-center justify-center mb-4 shadow-md",
+                      "h-8 w-8 sm:h-12 sm:w-12 rounded-xl sm:rounded-2xl flex items-center justify-center mb-2 sm:mb-4 shadow-sm sm:shadow-md",
                       s.bg,
                       s.color
                     )}
                   >
-                    <Icon className="h-6 w-6" strokeWidth={2.1} />
+                    <Icon className="h-4 w-4 sm:h-6 sm:w-6" strokeWidth={2.1} />
                   </div>
-                  <p className="text-sm font-semibold text-slate-500 mb-1">
+                  <p className="text-xs sm:text-sm font-semibold text-slate-500 mb-0.5 sm:mb-1 truncate">
                     {s.label}
                   </p>
-                  <h3 className="text-3xl md:text-4xl font-extrabold text-slate-900 tracking-tight mb-1">
+                  <h3 className="text-xl sm:text-3xl md:text-4xl font-extrabold text-slate-900 tracking-tight mb-0.5 sm:mb-1">
                     {s.value}
                   </h3>
-                  <p className="text-xs font-bold text-aims-green flex items-center gap-1">
-                    <TrendingUp className="h-3 w-3" /> {s.sub}
+                  <p className="text-[10px] sm:text-xs font-bold text-aims-green flex items-center gap-1">
+                    <TrendingUp className="h-2.5 w-2.5 sm:h-3 sm:w-3" /> {s.sub}
                   </p>
                 </div>
               </CardContent>

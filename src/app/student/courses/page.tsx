@@ -55,24 +55,24 @@ export default function StudentCoursesPage() {
   );
 
   return (
-    <div className="space-y-6 lg:space-y-8 max-w-[1400px] mx-auto">
-      <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-5">
+    <div className="space-y-4 sm:space-y-6 lg:space-y-8 max-w-[1400px] mx-auto">
+      <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3 sm:gap-5">
         <div>
-          <h1 className="text-2xl md:text-3xl font-extrabold text-slate-900 tracking-tight">
+          <h1 className="text-xl sm:text-2xl md:text-3xl font-extrabold text-slate-900 tracking-tight">
             My Courses 📚
           </h1>
-          <p className="text-slate-500 mt-2 text-base">
+          <p className="text-slate-500 mt-1 text-xs sm:text-base">
             Continue learning. You&apos;re enrolled in {myCourses.length} programs.
           </p>
         </div>
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3">
           <div className="relative">
             <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
             <Input
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               placeholder="Search courses..."
-              className="pl-10 h-11 w-full sm:w-64"
+              className="pl-10 h-10 sm:h-11 w-full sm:w-64 text-xs sm:text-sm"
             />
           </div>
           {searchTerm && (
@@ -80,7 +80,7 @@ export default function StudentCoursesPage() {
               variant="ghost"
               size="sm"
               onClick={() => setSearchTerm("")}
-              className="text-xs font-semibold text-slate-500"
+              className="text-xs font-semibold text-slate-500 h-8"
             >
               Clear
             </Button>
@@ -88,25 +88,25 @@ export default function StudentCoursesPage() {
         </div>
       </div>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <div className="flex items-center justify-between gap-4 flex-wrap">
-          <TabsList className="h-11 bg-slate-100 p-1.5 gap-1">
-            <TabsTrigger value="all" className="h-8 px-4 text-xs font-bold">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4 sm:space-y-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-4">
+          <TabsList className="h-auto flex-wrap sm:h-11 bg-slate-100 p-1 sm:p-1.5 gap-1 w-full sm:w-auto">
+            <TabsTrigger value="all" className="h-7 sm:h-8 px-2.5 sm:px-4 text-[11px] sm:text-xs font-bold flex-1 sm:flex-initial">
               All ({filteredCourses.length})
             </TabsTrigger>
-            <TabsTrigger value="in-progress" className="h-8 px-4 text-xs font-bold">
+            <TabsTrigger value="in-progress" className="h-7 sm:h-8 px-2.5 sm:px-4 text-[11px] sm:text-xs font-bold flex-1 sm:flex-initial">
               In Progress ({filteredCourses.filter((c) => c.progress > 0 && c.progress < 100).length})
             </TabsTrigger>
-            <TabsTrigger value="completed" className="h-8 px-4 text-xs font-bold">
+            <TabsTrigger value="completed" className="h-7 sm:h-8 px-2.5 sm:px-4 text-[11px] sm:text-xs font-bold flex-1 sm:flex-initial">
               Completed ({filteredCourses.filter((c) => c.progress >= 100).length})
             </TabsTrigger>
-            <TabsTrigger value="favorites" className="h-8 px-4 text-xs font-bold">
+            <TabsTrigger value="favorites" className="h-7 sm:h-8 px-2.5 sm:px-4 text-[11px] sm:text-xs font-bold flex-1 sm:flex-initial">
               Favorites (2)
             </TabsTrigger>
           </TabsList>
-          <div className="text-sm font-semibold text-slate-500 flex items-center gap-2">
-            <BarChart3 className="h-4 w-4" />
-            Avg Progress: <span className="text-aims-green font-extrabold text-base">58%</span>
+          <div className="text-xs sm:text-sm font-semibold text-slate-500 flex items-center gap-1.5 sm:gap-2">
+            <BarChart3 className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+            Avg Progress: <span className="text-aims-green font-extrabold text-xs sm:text-base">58%</span>
           </div>
         </div>
 
@@ -125,7 +125,7 @@ export default function StudentCoursesPage() {
               </Button>
             </div>
           ) : (
-            <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3.5 sm:gap-6">
               {filteredCourses.map((course, idx) => (
               <Card
                 key={course.id}
@@ -140,7 +140,7 @@ export default function StudentCoursesPage() {
                     className="object-cover transition-transform duration-700 group-hover:scale-110"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-slate-900/80 via-slate-900/20 to-transparent" />
-                  <div className="absolute top-4 left-4 flex flex-wrap gap-2">
+                  <div className="absolute top-3 left-3 sm:top-4 sm:left-4 flex flex-wrap gap-1.5 sm:gap-2">
                     <Badge
                       variant={
                         course.category === "Recruitment"
@@ -149,23 +149,23 @@ export default function StudentCoursesPage() {
                           ? "warning"
                           : "secondary"
                       }
-                      className="text-xs font-bold px-2.5 py-1 shadow-sm"
+                      className="text-[10px] sm:text-xs font-bold px-2 sm:px-2.5 py-0.5 sm:py-1 shadow-sm"
                     >
                       {course.category === "Lecturer" ? "Lecturer & Tutor" : course.category + " Exam"}
                     </Badge>
                     {course.progress >= 100 && (
-                      <Badge variant="success" className="text-xs font-bold px-2.5 py-1 shadow-sm bg-white/95">
+                      <Badge variant="success" className="text-[10px] sm:text-xs font-bold px-2 sm:px-2.5 py-0.5 sm:py-1 shadow-sm bg-white/95">
                         <CheckCircle2 className="h-3 w-3 mr-1" /> Completed
                       </Badge>
                     )}
                   </div>
                   <button className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300 bg-slate-900/40 backdrop-blur-sm">
-                    <div className="h-16 w-16 rounded-full bg-white shadow-2xl flex items-center justify-center scale-90 group-hover:scale-100 transition-transform duration-300">
-                      <PlayCircle className="h-7 w-7 text-aims-navy ml-1" fill="currentColor" />
+                    <div className="h-12 w-12 sm:h-16 sm:w-16 rounded-full bg-white shadow-2xl flex items-center justify-center scale-90 group-hover:scale-100 transition-transform duration-300">
+                      <PlayCircle className="h-5 w-5 sm:h-7 sm:w-7 text-aims-navy ml-0.5 sm:ml-1" fill="currentColor" />
                     </div>
                   </button>
-                  <div className="absolute bottom-4 left-4 right-4 flex items-end justify-between text-white">
-                    <div className="flex items-center gap-3 text-xs font-bold drop-shadow-md">
+                  <div className="absolute bottom-3 left-3 right-3 sm:bottom-4 sm:left-4 sm:right-4 flex items-end justify-between text-white">
+                    <div className="flex items-center gap-2 sm:gap-3 text-[11px] sm:text-xs font-bold drop-shadow-md">
                       <span className="flex items-center gap-1">
                         <PlayCircle className="h-3.5 w-3.5" />
                         {course.completed}/{course.lectures}
@@ -175,22 +175,22 @@ export default function StudentCoursesPage() {
                         {course.lectures * 1.2}h
                       </span>
                     </div>
-                    <div className="text-lg font-extrabold drop-shadow-md">
+                    <div className="text-base sm:text-lg font-extrabold drop-shadow-md">
                       {formatProgress(course.progress)}
                     </div>
                   </div>
                 </div>
-                <CardHeader className="p-5 pb-3">
-                  <CardTitle className="text-lg font-extrabold leading-tight text-slate-900 group-hover:text-aims-navy transition-colors line-clamp-2 min-h-[3.5rem]">
+                <CardHeader className="p-3.5 sm:p-5 pb-2 sm:pb-3">
+                  <CardTitle className="text-base sm:text-lg font-extrabold leading-tight text-slate-900 group-hover:text-aims-navy transition-colors line-clamp-2 min-h-0 sm:min-h-[3.5rem]">
                     {course.title}
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="p-5 pt-0 space-y-4">
-                  <CardDescription className="text-sm text-slate-600 leading-relaxed line-clamp-2 min-h-[2.5rem]">
+                <CardContent className="p-3.5 sm:p-5 pt-0 space-y-3 sm:space-y-4">
+                  <CardDescription className="text-xs sm:text-sm text-slate-600 leading-relaxed line-clamp-2 min-h-0 sm:min-h-[2.5rem]">
                     {course.description}
                   </CardDescription>
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between text-xs font-bold">
+                  <div className="space-y-1.5 sm:space-y-2">
+                    <div className="flex items-center justify-between text-[11px] sm:text-xs font-bold">
                       <span className="text-slate-500">Your Progress</span>
                       <span
                         className={cn(
@@ -204,16 +204,16 @@ export default function StudentCoursesPage() {
                         {formatProgress(course.progress)}
                       </span>
                     </div>
-                    <Progress value={course.progress} className="h-2" />
+                    <Progress value={course.progress} className="h-1.5 sm:h-2" />
                   </div>
-                  <div className="flex items-center justify-between pt-2">
-                    <div className="flex items-center gap-2.5">
-                      <Avatar className="h-8 w-8 ring-2 ring-white shadow-sm">
+                  <div className="flex items-center justify-between pt-1 sm:pt-2">
+                    <div className="flex items-center gap-2 sm:gap-2.5">
+                      <Avatar className="h-7 w-7 sm:h-8 sm:w-8 ring-2 ring-white shadow-sm">
                         <AvatarImage
                           src={course.instructor?.avatar_url || ""}
                           alt={course.instructor?.full_name || ""}
                         />
-                        <AvatarFallback className="text-[10px] font-bold">
+                        <AvatarFallback className="text-[9px] sm:text-[10px] font-bold">
                           {initials(course.instructor?.full_name || "Faculty")}
                         </AvatarFallback>
                       </Avatar>
@@ -221,19 +221,19 @@ export default function StudentCoursesPage() {
                         <div className="text-xs font-bold text-slate-700">
                           {course.instructor?.full_name || "Expert Faculty"}
                         </div>
-                        <div className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold">
+                        <div className="text-[9px] sm:text-[10px] text-slate-500 uppercase tracking-wider font-semibold">
                           Instructor
                         </div>
                       </div>
                     </div>
-                    <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-500">
-                      <Users className="h-3.5 w-3.5" />
+                    <div className="flex items-center gap-1 text-xs font-semibold text-slate-500">
+                      <Users className="h-3 w-3" />
                       {40 + idx * 3}
                     </div>
                   </div>
                 </CardContent>
-                <CardFooter className="p-5 pt-0 mt-auto flex gap-3">
-                  <Button variant="primary" size="sm" className="flex-1 gap-1.5 h-10" asChild>
+                <CardFooter className="p-3.5 sm:p-5 pt-0 mt-auto flex gap-2 sm:gap-3">
+                  <Button variant="primary" size="sm" className="flex-1 gap-1.5 h-9 sm:h-10 text-xs sm:text-sm" asChild>
                     <Link href={`/student/courses/${course.id}`}>
                       {course.progress === 0 ? "Start Learning" : "Continue"}
                       <ArrowRight className="h-3.5 w-3.5" />
@@ -242,9 +242,9 @@ export default function StudentCoursesPage() {
                   <Button
                     variant="outline"
                     size="icon"
-                    className="h-10 w-10 shrink-0 border-slate-200"
+                    className="h-9 w-9 sm:h-10 sm:w-10 shrink-0 border-slate-200"
                   >
-                    <FileText className="h-4 w-4 text-slate-500" />
+                    <FileText className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-slate-500" />
                   </Button>
                 </CardFooter>
               </Card>

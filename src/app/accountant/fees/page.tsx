@@ -260,22 +260,22 @@ export default function AccountantFeesPage() {
   });
 
   return (
-    <div className="space-y-6 lg:space-y-8 max-w-[1440px] mx-auto">
+    <div className="space-y-4 sm:space-y-6 lg:space-y-8 max-w-[1440px] mx-auto">
       {/* Top Banner Header */}
-      <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-5">
+      <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3 sm:gap-5">
         <div>
-          <h1 className="text-2xl md:text-3xl font-extrabold text-slate-900 tracking-tight flex items-center gap-2">
+          <h1 className="text-xl sm:text-2xl md:text-3xl font-extrabold text-slate-900 tracking-tight flex items-center gap-2">
             Student Fees Verification 🎓
           </h1>
-          <p className="text-slate-500 mt-2 text-base font-semibold">
+          <p className="text-slate-500 mt-1 text-xs sm:text-base font-semibold">
             Approve online fee payments, verify deposit receipts, and log office cash payments.
           </p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3">
           <Dialog open={logOpen} onOpenChange={setLogOpen}>
             <DialogTrigger asChild>
-              <Button size="lg" className="gap-2 h-11 shadow-lg shadow-indigo-600/20 bg-gradient-to-r from-indigo-600 to-purple-700 hover:from-indigo-700 hover:to-purple-800 text-white border-0 font-bold rounded-xl">
-                <PlusCircle className="h-4.5 w-4.5" />
+              <Button size="sm" className="gap-1.5 sm:gap-2 h-9 sm:h-11 text-xs sm:text-sm px-3.5 sm:px-5 shadow-lg shadow-indigo-600/20 bg-gradient-to-r from-indigo-600 to-purple-700 hover:from-indigo-700 hover:to-purple-800 text-white border-0 font-bold rounded-xl">
+                <PlusCircle className="h-4 w-4" />
                 Record Cash/Office Fee
               </Button>
             </DialogTrigger>
@@ -379,22 +379,22 @@ export default function AccountantFeesPage() {
 
       {/* Main Panel Content */}
       <Card className="border-slate-100 overflow-hidden bg-white">
-        <CardHeader className="p-5 md:p-6 border-b border-slate-100 flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <CardHeader className="p-3.5 sm:p-5 md:p-6 border-b border-slate-100 flex-col md:flex-row md:items-center md:justify-between gap-3 sm:gap-4">
           <div className="md:max-w-md flex-1">
             <div className="relative">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4.5 w-4.5 text-slate-400" />
+              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
               <Input
                 placeholder="Search student, email, reference ID..."
-                className="pl-12 h-12 text-sm font-semibold rounded-xl"
+                className="pl-10 h-10 sm:h-12 text-xs sm:text-sm font-semibold rounded-xl"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
             </div>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto">
             <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="h-11 w-48 rounded-xl gap-2 font-semibold">
-                <Filter className="h-4 w-4 text-slate-400 shrink-0" />
+              <SelectTrigger className="h-9 sm:h-11 w-full sm:w-48 rounded-xl gap-1.5 text-xs sm:text-sm font-semibold">
+                <Filter className="h-3.5 w-3.5 text-slate-400 shrink-0" />
                 <SelectValue placeholder="Filter by status" />
               </SelectTrigger>
               <SelectContent>
@@ -410,78 +410,78 @@ export default function AccountantFeesPage() {
         {/* Payments Ledger Table */}
         <div className="p-0">
           {loading ? (
-            <div className="p-12 text-center text-slate-400 font-semibold flex items-center justify-center gap-2">
+            <div className="p-8 sm:p-12 text-center text-slate-400 font-semibold text-xs sm:text-sm flex items-center justify-center gap-2">
               <span className="h-4 w-4 rounded-full border-2 border-indigo-600 border-t-transparent animate-spin" />
               Loading student payments logs...
             </div>
           ) : filteredFees.length === 0 ? (
-            <div className="p-12 text-center text-slate-400 font-semibold">No student fee logs found matching requirements.</div>
+            <div className="p-8 sm:p-12 text-center text-slate-400 font-semibold text-xs sm:text-sm">No student fee logs found matching requirements.</div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full text-left text-sm border-collapse">
+              <table className="w-full text-left text-xs sm:text-sm border-collapse min-w-[660px]">
                 <thead>
-                  <tr className="border-b border-slate-100 text-slate-400 uppercase text-[10px] font-bold tracking-wider bg-slate-50/50">
-                    <th className="py-4 px-6">Date</th>
-                    <th className="py-4 px-6">Student</th>
-                    <th className="py-4 px-6">Course / Prog</th>
-                    <th className="py-4 px-6">Method / Reference</th>
-                    <th className="py-4 px-6 text-right">Amount</th>
-                    <th className="py-4 px-6 text-center">Status</th>
-                    <th className="py-4 px-6 text-center">Actions</th>
+                  <tr className="border-b border-slate-100 text-slate-400 uppercase text-[9px] sm:text-[10px] font-bold tracking-wider bg-slate-50/50">
+                    <th className="py-2.5 sm:py-4 px-3 sm:px-6">Date</th>
+                    <th className="py-2.5 sm:py-4 px-3 sm:px-6">Student</th>
+                    <th className="py-2.5 sm:py-4 px-3 sm:px-6">Course / Prog</th>
+                    <th className="py-2.5 sm:py-4 px-3 sm:px-6">Method / Reference</th>
+                    <th className="py-2.5 sm:py-4 px-3 sm:px-6 text-right">Amount</th>
+                    <th className="py-2.5 sm:py-4 px-3 sm:px-6 text-center">Status</th>
+                    <th className="py-2.5 sm:py-4 px-3 sm:px-6 text-center">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 font-semibold text-slate-600 bg-white">
                   {filteredFees.map((fee: any) => (
                     <tr key={fee.id} className="hover:bg-slate-50/50 transition-colors">
-                      <td className="py-4 px-6 font-medium text-slate-500">
+                      <td className="py-2.5 sm:py-4 px-3 sm:px-6 font-medium text-slate-500 whitespace-nowrap">
                         {new Date(fee.payment_date).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
                       </td>
-                      <td className="py-4 px-6">
-                        <div className="text-slate-900 font-bold">{fee.student?.full_name || "N/A"}</div>
-                        <div className="text-slate-400 text-xs font-medium">{fee.student?.email || ""}</div>
+                      <td className="py-2.5 sm:py-4 px-3 sm:px-6">
+                        <div className="text-slate-900 font-bold text-xs sm:text-sm">{fee.student?.full_name || "N/A"}</div>
+                        <div className="text-slate-400 text-[10px] sm:text-xs font-medium">{fee.student?.email || ""}</div>
                       </td>
-                      <td className="py-4 px-6 text-slate-500 font-normal">
+                      <td className="py-2.5 sm:py-4 px-3 sm:px-6 text-slate-500 font-normal">
                         {fee.student?.course_of_interest || "AIMS Professional Program"}
                       </td>
-                      <td className="py-4 px-6">
+                      <td className="py-2.5 sm:py-4 px-3 sm:px-6">
                         <div className="flex flex-col gap-0.5">
-                          <span>{fee.payment_method}</span>
-                          <span className="font-mono text-slate-400 text-xs">{fee.transaction_id || "No Tx ID"}</span>
+                          <span className="font-semibold">{fee.payment_method}</span>
+                          <span className="font-mono text-slate-400 text-[10px] sm:text-xs">{fee.transaction_id || "No Tx ID"}</span>
                         </div>
                       </td>
-                      <td className="py-4 px-6 text-right font-extrabold text-slate-950 text-base">
+                      <td className="py-2.5 sm:py-4 px-3 sm:px-6 text-right font-extrabold text-slate-950 text-xs sm:text-base whitespace-nowrap">
                         {formatCurrency(fee.amount_paid)}
                       </td>
-                      <td className="py-4 px-6 text-center">
+                      <td className="py-2.5 sm:py-4 px-3 sm:px-6 text-center">
                         <div className="flex flex-col items-center justify-center gap-1">
                           {fee.status === "pending" && (
-                            <Badge className="bg-amber-100 text-amber-700 border-amber-200 gap-1.5 px-2 py-0.5 rounded-full">
-                              <Clock className="h-3 w-3" /> Pending
+                            <Badge className="bg-amber-100 text-amber-700 border-amber-200 gap-1 px-1.5 sm:px-2 py-0.5 text-[9px] sm:text-[10px] rounded-full">
+                              <Clock className="h-2.5 w-2.5 sm:h-3 sm:w-3" /> Pending
                             </Badge>
                           )}
                           {fee.status === "verified" && (
-                            <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200 gap-1.5 px-2 py-0.5 rounded-full">
-                              <CheckCircle2 className="h-3 w-3" /> Verified
+                            <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200 gap-1 px-1.5 sm:px-2 py-0.5 text-[9px] sm:text-[10px] rounded-full">
+                              <CheckCircle2 className="h-2.5 w-2.5 sm:h-3 sm:w-3" /> Verified
                             </Badge>
                           )}
                           {fee.status === "rejected" && (
-                            <Badge className="bg-rose-100 text-rose-700 border-rose-200 gap-1.5 px-2 py-0.5 rounded-full">
-                              <XCircle className="h-3 w-3" /> Rejected
+                            <Badge className="bg-rose-100 text-rose-700 border-rose-200 gap-1 px-1.5 sm:px-2 py-0.5 text-[9px] sm:text-[10px] rounded-full">
+                              <XCircle className="h-2.5 w-2.5 sm:h-3 sm:w-3" /> Rejected
                             </Badge>
                           )}
                           {fee.remarks && (
-                            <span className="text-[10px] text-slate-400 max-w-[150px] truncate block" title={fee.remarks}>
+                            <span className="text-[9px] sm:text-[10px] text-slate-400 max-w-[130px] truncate block" title={fee.remarks}>
                               "{fee.remarks}"
                             </span>
                           )}
                         </div>
                       </td>
-                      <td className="py-4 px-6 text-center">
+                      <td className="py-2.5 sm:py-4 px-3 sm:px-6 text-center">
                         {fee.status === "pending" ? (
-                          <div className="flex items-center justify-center gap-1.5">
+                          <div className="flex items-center justify-center gap-1 sm:gap-1.5">
                             <Button
                               size="sm"
-                              className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg h-9 font-bold px-3"
+                              className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg h-7 sm:h-9 font-bold px-2 sm:px-3 text-[11px] sm:text-xs"
                               onClick={() => handleVerify(fee.id)}
                             >
                               Verify
@@ -489,14 +489,14 @@ export default function AccountantFeesPage() {
                             <Button
                               size="sm"
                               variant="outline"
-                              className="border-rose-200 text-rose-600 hover:bg-rose-50 hover:text-rose-750 rounded-lg h-9 font-bold px-3"
+                              className="border-rose-200 text-rose-600 hover:bg-rose-50 hover:text-rose-700 rounded-lg h-7 sm:h-9 font-bold px-2 sm:px-3 text-[11px] sm:text-xs"
                               onClick={() => openRejectDialog(fee.id)}
                             >
                               Reject
                             </Button>
                           </div>
                         ) : (
-                          <div className="text-slate-400 text-xs font-normal">
+                          <div className="text-slate-400 text-[10px] sm:text-xs font-normal">
                             Processed by
                             <span className="block font-bold text-slate-500">
                               {fee.verifier?.full_name || "Accountant"}

@@ -87,7 +87,7 @@ export default function AdminUsersPage() {
 
   const fetchUsers = async () => {
     try {
-      const response = await fetch("/api/admin/users");
+      const response = await fetch("/api/admin/users", { cache: "no-store" });
       const data = await response.json();
       if (Array.isArray(data)) {
         setUsers(data);
@@ -242,6 +242,9 @@ export default function AdminUsersPage() {
           variant: "destructive",
         });
       } else {
+        setUsers((prev) =>
+          prev.map((u) => (u.id === userId ? { ...u, approved: true, roles: u.roles?.length ? u.roles : ["student"] } : u))
+        );
         toast({
           title: "User approved ✅",
           description: "Student application has been approved and account activated.",
@@ -330,21 +333,21 @@ export default function AdminUsersPage() {
   });
 
   return (
-    <div className="space-y-6 lg:space-y-8 max-w-[1440px] mx-auto">
-      <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-5">
+    <div className="space-y-4 sm:space-y-6 lg:space-y-8 max-w-[1440px] mx-auto">
+      <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3 sm:gap-5">
         <div>
-          <h1 className="text-2xl md:text-3xl font-extrabold text-slate-900 tracking-tight">
+          <h1 className="text-xl sm:text-2xl md:text-3xl font-extrabold text-slate-900 tracking-tight">
             User Management 👥
           </h1>
-          <p className="text-slate-500 mt-2 text-base">
+          <p className="text-slate-500 mt-1 text-xs sm:text-base">
             Manage students, faculty, and admin accounts
           </p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3">
           <Dialog open={addOpen} onOpenChange={setAddOpen}>
             <DialogTrigger asChild>
-              <Button variant="primary" size="lg" className="gap-2 h-11 shadow-lg shadow-amber-600/20 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 border-0">
-                <UserPlus className="h-4.5 w-4.5" />
+              <Button variant="primary" size="sm" className="gap-1.5 sm:gap-2 h-9 sm:h-11 text-xs sm:text-sm px-3.5 sm:px-5 shadow-lg shadow-amber-600/20 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 border-0">
+                <UserPlus className="h-4 w-4" />
                 Add User
               </Button>
             </DialogTrigger>
@@ -423,21 +426,21 @@ export default function AdminUsersPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-5">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4 md:gap-5">
         {stats.map((s) => {
           const Icon = s.icon;
           return (
             <Card key={s.label} className="group overflow-hidden border-slate-100 hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
-              <CardContent className="p-5 md:p-6">
-                <div className="flex items-center gap-4">
-                  <div className={`h-12 w-12 shrink-0 rounded-2xl ${s.ring} ${s.col} flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform`}>
-                    <Icon className="h-6 w-6" strokeWidth={2.1} />
+              <CardContent className="p-3 sm:p-5 md:p-6">
+                <div className="flex items-center gap-2.5 sm:gap-4">
+                  <div className={`h-8 w-8 sm:h-12 sm:w-12 shrink-0 rounded-xl sm:rounded-2xl ${s.ring} ${s.col} flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform`}>
+                    <Icon className="h-4 w-4 sm:h-6 sm:w-6" strokeWidth={2.1} />
                   </div>
-                  <div>
-                    <div className="text-3xl font-extrabold text-slate-900 tracking-tight">
+                  <div className="min-w-0">
+                    <div className="text-xl sm:text-3xl font-extrabold text-slate-900 tracking-tight truncate">
                       {s.value}
                     </div>
-                    <div className="text-xs font-bold uppercase tracking-wider text-slate-500 mt-0.5">
+                    <div className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-slate-500 mt-0.5 truncate">
                       {s.label}
                     </div>
                   </div>
@@ -449,7 +452,7 @@ export default function AdminUsersPage() {
       </div>
 
       <Card className="border-slate-100 overflow-hidden">
-        <CardHeader className="p-5 md:p-6 border-b border-slate-100 flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <CardHeader className="p-3.5 sm:p-5 md:p-6 border-b border-slate-100 flex-col md:flex-row md:items-center md:justify-between gap-3 sm:gap-4">
           <div className="md:max-w-md">
             <div className="relative">
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4.5 w-4.5 text-slate-400" />
@@ -552,8 +555,9 @@ export default function AdminUsersPage() {
                       <TableCell>
                         <div className="text-sm font-semibold text-slate-700 truncate max-w-[220px]">
                           {(u.roles?.includes("admin") || u.role === "admin") && "Management & Operations"}
-                          {(u.roles?.includes("instructor") || u.role === "instructor") && !u.roles?.includes("admin") && (u.course_of_interest || "Medical Department")}
-                          {(u.roles?.includes("student") || u.role === "student") && !u.roles?.includes("instructor") && !u.roles?.includes("admin") && (u.course_of_interest || "—")}
+                          {(u.roles?.includes("accountant") || u.role === "accountant") && !u.roles?.includes("admin") && "Finance & Ledger Operations"}
+                          {(u.roles?.includes("instructor") || u.role === "instructor") && !u.roles?.includes("admin") && !u.roles?.includes("accountant") && (u.course_of_interest || "Medical Department")}
+                          {(u.roles?.includes("student") || u.role === "student") && !u.roles?.includes("instructor") && !u.roles?.includes("accountant") && !u.roles?.includes("admin") && (u.course_of_interest || "—")}
                         </div>
                       </TableCell>
                       <TableCell>
@@ -610,6 +614,10 @@ export default function AdminUsersPage() {
                                 <GraduationCap className="h-4 w-4 text-aims-green" />
                                 {u.roles?.includes("instructor") ? "✓ Instructor (Click to Remove)" : "Add Instructor Role"}
                               </DropdownMenuItem>
+                              <DropdownMenuItem className="gap-2" onClick={() => handleToggleRole(u.id, "accountant", u.roles)}>
+                                <DollarSign className="h-4 w-4 text-indigo-600" />
+                                {u.roles?.includes("accountant") ? "✓ Accountant (Click to Remove)" : "Add Accountant Role"}
+                              </DropdownMenuItem>
                               <DropdownMenuItem className="gap-2" onClick={() => handleToggleRole(u.id, "student", u.roles)}>
                                 <UserCircle className="h-4 w-4 text-aims-navy" />
                                 {u.roles?.includes("student") ? "✓ Student (Click to Remove)" : "Add Student Role"}
@@ -631,48 +639,48 @@ export default function AdminUsersPage() {
         </div>
 
         {/* Mobile cards */}
-        <div className="lg:hidden grid sm:grid-cols-2 gap-4 p-5 md:p-6">
+        <div className="lg:hidden grid sm:grid-cols-2 gap-2.5 sm:gap-4 p-3 sm:p-5 md:p-6">
           {loading ? (
-            <div className="col-span-full text-center text-slate-500 font-semibold">Loading users...</div>
+            <div className="col-span-full text-center text-slate-500 font-semibold py-8 text-xs sm:text-sm">Loading users...</div>
           ) : filteredUsers.length === 0 ? (
-            <div className="col-span-full text-center text-slate-500 font-semibold">No users found.</div>
+            <div className="col-span-full text-center text-slate-500 font-semibold py-8 text-xs sm:text-sm">No users found.</div>
           ) : (
             filteredUsers.map((u) => (
-              <Card key={u.id} className="border-slate-100 overflow-hidden">
-                <CardContent className="p-4 space-y-3">
-                  <div className="flex items-start gap-3">
-                    <Avatar className="h-11 w-11 ring-2 ring-white shadow-sm">
+              <Card key={u.id} className="border-slate-100 overflow-hidden shadow-none hover:shadow-sm">
+                <CardContent className="p-3 sm:p-4 space-y-2.5 sm:space-y-3">
+                  <div className="flex items-start gap-2.5 sm:gap-3">
+                    <Avatar className="h-9 w-9 sm:h-11 sm:w-11 ring-2 ring-white shadow-sm shrink-0">
                       <AvatarImage src={u.avatar_url || ""} />
-                      <AvatarFallback className="text-xs font-bold text-white bg-gradient-to-br from-aims-navy to-aims-green">
+                      <AvatarFallback className="text-[10px] sm:text-xs font-bold text-white bg-gradient-to-br from-aims-navy to-aims-green">
                         {initials(u.full_name)}
                       </AvatarFallback>
                     </Avatar>
-                    <div className="flex-1 min-w-0 space-y-1">
-                      <div className="flex items-center justify-between gap-2">
-                        <h4 className="font-extrabold text-slate-900 truncate leading-tight">
+                    <div className="flex-1 min-w-0 space-y-0.5">
+                      <div className="flex items-center justify-between gap-1.5">
+                        <h4 className="font-extrabold text-xs sm:text-sm text-slate-900 truncate leading-tight">
                           {u.full_name}
                         </h4>
                         {renderRoleBadges(u)}
                       </div>
-                      <p className="text-[11px] text-slate-500 font-medium truncate">
+                      <p className="text-[10px] sm:text-[11px] text-slate-500 font-medium truncate">
                         {u.email}
                       </p>
                     </div>
                   </div>
                   <div className="pt-2 border-t border-slate-100 flex items-center justify-between">
                     {u.approved === false ? (
-                      <Badge variant="warning" className="text-[10px] font-bold bg-amber-50 text-amber-700 border-amber-200">
+                      <Badge variant="warning" className="text-[9px] sm:text-[10px] font-bold bg-amber-50 text-amber-700 border-amber-200">
                         Pending Approval
                       </Badge>
                     ) : (
-                      <Badge variant="success" className="text-[10px] font-bold">Active</Badge>
+                      <Badge variant="success" className="text-[9px] sm:text-[10px] font-bold">Active</Badge>
                     )}
-                    <div className="flex items-center gap-1.5">
+                    <div className="flex items-center gap-1 sm:gap-1.5">
                       {u.approved === false && (
                         <Button
                           variant="outline"
                           size="sm"
-                          className="h-8 text-xs border-emerald-200 text-emerald-700 hover:bg-emerald-50 gap-1 rounded-lg px-2.5 font-semibold"
+                          className="h-7 sm:h-8 text-[11px] sm:text-xs border-emerald-200 text-emerald-700 hover:bg-emerald-50 gap-1 rounded-lg px-2 sm:px-2.5 font-semibold"
                           onClick={() => handleApproveUser(u.id)}
                         >
                           Approve
@@ -680,7 +688,7 @@ export default function AdminUsersPage() {
                       )}
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100">
+                          <Button variant="ghost" size="icon" className="h-7 w-7 sm:h-8 sm:w-8 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100">
                             <MoreHorizontal className="h-3.5 w-3.5" />
                           </Button>
                         </DropdownMenuTrigger>
@@ -701,6 +709,10 @@ export default function AdminUsersPage() {
                           <DropdownMenuItem className="gap-2" onClick={() => handleToggleRole(u.id, "instructor", u.roles)}>
                             <GraduationCap className="h-4 w-4 text-aims-green" />
                             {u.roles?.includes("instructor") ? "✓ Instructor (Click to Remove)" : "Add Instructor Role"}
+                          </DropdownMenuItem>
+                          <DropdownMenuItem className="gap-2" onClick={() => handleToggleRole(u.id, "accountant", u.roles)}>
+                            <DollarSign className="h-4 w-4 text-indigo-600" />
+                            {u.roles?.includes("accountant") ? "✓ Accountant (Click to Remove)" : "Add Accountant Role"}
                           </DropdownMenuItem>
                           <DropdownMenuItem className="gap-2" onClick={() => handleToggleRole(u.id, "student", u.roles)}>
                             <UserCircle className="h-4 w-4 text-aims-navy" />

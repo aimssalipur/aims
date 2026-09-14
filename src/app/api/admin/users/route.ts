@@ -3,6 +3,8 @@ import { NextResponse } from "next/server";
 import { requireRole } from "@/lib/server-auth";
 import type { UserRole } from "@/lib/types";
 
+export const dynamic = "force-dynamic";
+
 const VALID_ROLES = new Set(["admin", "student", "instructor", "accountant"]);
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -11,8 +13,8 @@ export async function GET() {
   const { context, errorResponse } = await requireRole(["admin"]);
   if (errorResponse) return errorResponse;
 
-  const supabase = createClient();
-  const { data: profiles, error } = await supabase
+  const supabaseAdmin = createAdminClient();
+  const { data: profiles, error } = await supabaseAdmin
     .from("profiles")
     .select("*, user_roles(role)")
     .order("created_at", { ascending: false });
@@ -87,8 +89,7 @@ export async function POST(request: Request) {
     await new Promise((resolve) => setTimeout(resolve, 500));
 
     // Fetch and return the newly created profile with roles
-    const supabase = createClient();
-    const { data: profile } = await supabase
+    const { data: profile } = await supabaseAdmin
       .from("profiles")
       .select("*, user_roles(role)")
       .eq("id", authData.user.id)
@@ -123,12 +124,12 @@ export async function PUT(request: Request) {
       );
     }
 
-    const supabase = createClient();
+    const supabaseAdmin = createAdminClient();
 
     // 1. Update approved status if provided
     if (approved !== undefined) {
       const isApproved = Boolean(approved);
-      const { error: profileError } = await supabase
+      const { error: profileError } = await supabaseAdmin
         .from("profiles")
         .update({ approved: isApproved })
         .eq("id", id);
@@ -138,10 +139,32 @@ export async function PUT(request: Request) {
       }
 
       // Sync auth metadata approved flag
-      const supabaseAdmin = createAdminClient();
       await supabaseAdmin.auth.admin.updateUserById(id, {
         user_metadata: { approved: isApproved },
       });
+
+      // If approving user, ensure they have at least one active role in user_roles and profiles
+      if (isApproved) {
+        const { data: existingRoles } = await supabaseAdmin
+          .from("user_roles")
+          .select("role")
+          .eq("user_id", id);
+
+        if (!existingRoles || existingRoles.length === 0) {
+          await supabaseAdmin
+            .from("user_roles")
+            .insert({ user_id: id, role: "student" });
+
+          await supabaseAdmin
+            .from("profiles")
+            .update({ role: "student" })
+            .eq("id", id);
+
+          await supabaseAdmin.auth.admin.updateUserById(id, {
+            user_metadata: { role: "student", approved: true },
+          });
+        }
+      }
     }
 
     // 2. Update roles if provided
@@ -164,7 +187,7 @@ export async function PUT(request: Request) {
       }
 
       // 1. Delete current roles in user_roles
-      const { error: deleteError } = await supabase
+      const { error: deleteError } = await supabaseAdmin
         .from("user_roles")
         .delete()
         .eq("user_id", id);
@@ -179,7 +202,7 @@ export async function PUT(request: Request) {
         role,
       }));
 
-      const { error: insertError } = await supabase
+      const { error: insertError } = await supabaseAdmin
         .from("user_roles")
         .insert(rolesToInsert);
 
@@ -189,7 +212,7 @@ export async function PUT(request: Request) {
 
       // 3. Set the default/active role in profiles to the first selected role
       const activeRole = roles[0];
-      const { error: profileError } = await supabase
+      const { error: profileError } = await supabaseAdmin
         .from("profiles")
         .update({ role: activeRole })
         .eq("id", id);
@@ -199,14 +222,13 @@ export async function PUT(request: Request) {
       }
 
       // 4. Update role in auth user metadata for consistency
-      const supabaseAdmin = createAdminClient();
       await supabaseAdmin.auth.admin.updateUserById(id, {
         user_metadata: { role: activeRole },
       });
     }
 
     // Fetch and return updated profile with roles
-    const { data: updatedProfile, error: getError } = await supabase
+    const { data: updatedProfile, error: getError } = await supabaseAdmin
       .from("profiles")
       .select("*, user_roles(role)")
       .eq("id", id)
@@ -223,7 +245,7 @@ export async function PUT(request: Request) {
     return NextResponse.json(updatedProfile);
   } catch (err: any) {
     return NextResponse.json(
-      { error: "Failed to update user roles." },
+      { error: "Failed to update user profile or roles." },
       { status: 500 }
     );
   }

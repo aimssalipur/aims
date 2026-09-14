@@ -76,7 +76,7 @@ export function DashboardTopbar({ role, userName }: DashboardTopbarProps) {
   };
 
   return (
-    <div className="sticky top-0 z-20 bg-white/80 backdrop-blur-xl border-b border-slate-100/80">
+    <div className="hidden lg:block sticky top-0 z-20 bg-white/80 backdrop-blur-xl border-b border-slate-100/80">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 px-4 sm:px-6 xl:px-8 py-4 sm:py-5">
         {/* Left: Greeting */}
         <div className="flex items-start sm:items-center gap-3">

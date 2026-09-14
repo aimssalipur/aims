@@ -283,20 +283,20 @@ export default function InstructorCoursesPage() {
   };
 
   return (
-    <div className="space-y-6 lg:space-y-8 max-w-[1400px] mx-auto">
-      <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-5">
+    <div className="space-y-4 sm:space-y-6 lg:space-y-8 max-w-[1400px] mx-auto">
+      <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3 sm:gap-5">
         <div>
-          <h1 className="text-2xl md:text-3xl font-extrabold text-slate-900 tracking-tight">
+          <h1 className="text-xl sm:text-2xl md:text-3xl font-extrabold text-slate-900 tracking-tight">
             Manage My Courses 📝
           </h1>
-          <p className="text-slate-500 mt-2 text-base">
+          <p className="text-slate-500 mt-1 text-xs sm:text-base">
             {myCourses.length} active courses · {myCourses.reduce((a, b) => a + b.enrolled, 0)} total students
           </p>
         </div>
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger asChild>
-            <Button variant="primary" size="lg" className="gap-2 h-11 bg-aims-green hover:bg-aims-green/90 shadow-lg shadow-aims-green/20">
-              <Plus className="h-4.5 w-4.5" />
+            <Button variant="primary" size="sm" className="gap-1.5 sm:gap-2 h-9 sm:h-11 text-xs sm:text-sm px-3.5 sm:px-5 bg-aims-green hover:bg-aims-green/90 shadow-lg shadow-aims-green/20">
+              <Plus className="h-4 w-4" />
               Add New Course
             </Button>
           </DialogTrigger>
@@ -400,7 +400,7 @@ export default function InstructorCoursesPage() {
         </Dialog>
       </div>
 
-      <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3.5 sm:gap-6">
         {myCourses.map((course, idx) => (
           <Card
             key={course.id}
@@ -415,19 +415,19 @@ export default function InstructorCoursesPage() {
                 className="object-cover transition-transform duration-700 group-hover:scale-110"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-slate-900/70 via-transparent to-transparent" />
-              <div className="absolute top-4 left-4 flex gap-2">
+              <div className="absolute top-3 left-3 sm:top-4 sm:left-4 flex gap-2">
                 <Badge
                   variant={["default", "secondary", "warning", "gold"][idx] as any}
-                  className="text-xs font-bold px-3 py-1 shadow-sm border-0"
+                  className="text-[10px] sm:text-xs font-bold px-2 sm:px-3 py-0.5 sm:py-1 shadow-sm border-0"
                 >
                   {["Active", "Active", "Active", "Draft"][idx]}
                 </Badge>
               </div>
-              <div className="absolute top-4 right-4">
+              <div className="absolute top-3 right-3 sm:top-4 sm:right-4">
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <button className="h-9 w-9 rounded-xl bg-white/90 backdrop-blur text-slate-700 flex items-center justify-center shadow-md hover:bg-white transition-colors">
-                      <MoreHorizontal className="h-4.5 w-4.5" />
+                    <button className="h-7 w-7 sm:h-9 sm:w-9 rounded-xl bg-white/90 backdrop-blur text-slate-700 flex items-center justify-center shadow-md hover:bg-white transition-colors">
+                      <MoreHorizontal className="h-3.5 w-3.5 sm:h-4.5 sm:w-4.5" />
                     </button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="w-52">
@@ -447,42 +447,42 @@ export default function InstructorCoursesPage() {
                   </DropdownMenuContent>
                 </DropdownMenu>
               </div>
-              <div className="absolute bottom-4 left-4 right-4 flex items-center justify-between text-white">
-                <div className="flex items-center gap-3 text-xs font-bold drop-shadow-md">
+              <div className="absolute bottom-3 left-3 right-3 sm:bottom-4 sm:left-4 sm:right-4 flex items-center justify-between text-white">
+                <div className="flex items-center gap-2 sm:gap-3 text-[11px] sm:text-xs font-bold drop-shadow-md">
                   <span className="flex items-center gap-1">
                     <Users className="h-3.5 w-3.5" />
                     {course.enrolled} Enrolled
                   </span>
                 </div>
-                <div className="text-lg font-extrabold drop-shadow-md">
+                <div className="text-base sm:text-lg font-extrabold drop-shadow-md">
                   {course.avgProgress}% avg
                 </div>
               </div>
             </div>
-            <CardHeader className="p-5 pb-3">
-              <CardTitle className="text-lg font-extrabold leading-tight line-clamp-2 group-hover:text-aims-green transition-colors">
+            <CardHeader className="p-3.5 sm:p-5 pb-2 sm:pb-3">
+              <CardTitle className="text-base sm:text-lg font-extrabold leading-tight line-clamp-2 group-hover:text-aims-green transition-colors">
                 {course.title}
               </CardTitle>
             </CardHeader>
-            <CardContent className="p-5 pt-0 space-y-4 flex-1">
-              <CardDescription className="text-sm text-slate-600 leading-relaxed line-clamp-2 min-h-[2.5rem]">
+            <CardContent className="p-3.5 sm:p-5 pt-0 space-y-3 sm:space-y-4 flex-1">
+              <CardDescription className="text-xs sm:text-sm text-slate-600 leading-relaxed line-clamp-2 min-h-0 sm:min-h-[2.5rem]">
                 {course.description}
               </CardDescription>
-              <div className="space-y-2">
-                <div className="flex items-center justify-between text-xs font-bold">
+              <div className="space-y-1.5 sm:space-y-2">
+                <div className="flex items-center justify-between text-[11px] sm:text-xs font-bold">
                   <span className="text-slate-500 flex items-center gap-1">
                     <TrendingUp className="h-3 w-3" /> Student Completion Rate
                   </span>
                   <span className="text-emerald-600 font-extrabold">{course.avgProgress}%</span>
                 </div>
-                <Progress value={course.avgProgress} className="h-2" />
+                <Progress value={course.avgProgress} className="h-1.5 sm:h-2" />
               </div>
             </CardContent>
-            <CardFooter className="p-5 pt-0 mt-auto flex gap-3">
+            <CardFooter className="p-3.5 sm:p-5 pt-0 mt-auto flex gap-2 sm:gap-3">
               <Button 
                 variant="outline" 
                 onClick={() => handleOpenLiveDialog(course)}
-                className="flex-1 gap-2 h-10 border-slate-200 hover:bg-slate-50 font-bold text-xs"
+                className="flex-1 gap-1.5 sm:gap-2 h-9 sm:h-10 border-slate-200 hover:bg-slate-50 font-bold text-[11px] sm:text-xs"
               >
                 <Video className="h-3.5 w-3.5 text-emerald-600" />
                 Live Session
@@ -490,7 +490,7 @@ export default function InstructorCoursesPage() {
               <Button 
                 variant="outline" 
                 onClick={() => handleOpenResourceDialog(course)}
-                className="flex-1 gap-2 h-10 border-slate-200 hover:bg-slate-50 font-bold text-xs"
+                className="flex-1 gap-1.5 sm:gap-2 h-9 sm:h-10 border-slate-200 hover:bg-slate-50 font-bold text-[11px] sm:text-xs"
               >
                 <Youtube className="h-3.5 w-3.5 text-red-500" />
                 Upload IFrame

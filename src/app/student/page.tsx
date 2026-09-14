@@ -103,25 +103,26 @@ export default function StudentDashboard() {
             }}
           />
         </div>
-        <div className="relative grid lg:grid-cols-3 gap-6 p-6 md:p-8 lg:p-10">
-          <div className="lg:col-span-2 space-y-4">
-            <Badge className="bg-white/15 text-white border-0 backdrop-blur w-fit">
+        <div className="relative grid lg:grid-cols-3 gap-4 sm:gap-6 p-4 sm:p-6 md:p-8 lg:p-10">
+          <div className="lg:col-span-2 space-y-3 sm:space-y-4">
+            <Badge className="bg-white/15 text-white border-0 backdrop-blur w-fit text-[10px] sm:text-xs py-0.5 px-2 sm:px-2.5">
               <Award className="h-3 w-3 mr-1" /> Star Student · Top 10%
             </Badge>
-            <h2 className="text-2xl md:text-4xl font-extrabold leading-tight">
+            <h2 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-extrabold leading-tight">
               Keep going, Riya!
               <br />
-              <span className="text-white/85 font-semibold text-xl md:text-2xl">
+              <span className="text-white/85 font-semibold text-sm sm:text-lg md:text-2xl">
                 You're {avgProgress}% close to your semester goal.
               </span>
             </h2>
-            <div className="flex flex-wrap items-center gap-4 pt-2">
+            <div className="flex flex-wrap items-center gap-2.5 sm:gap-4 pt-1 sm:pt-2">
               <Link href="/student/courses">
                 <Button
                   variant="secondary"
-                  className="bg-white text-aims-navy hover:bg-slate-100 gap-2 shadow-xl"
+                  size="sm"
+                  className="bg-white text-aims-navy hover:bg-slate-100 gap-1.5 sm:gap-2 shadow-xl h-9 sm:h-11 px-3.5 sm:px-5 text-xs sm:text-sm font-bold"
                 >
-                  <PlayCircle className="h-4.5 w-4.5" />
+                  <PlayCircle className="h-4 w-4 sm:h-4.5 sm:w-4.5" />
                   Continue Learning
                 </Button>
               </Link>
@@ -129,45 +130,45 @@ export default function StudentDashboard() {
                 href="https://wa.me/919437959054"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 px-5 h-11 rounded-xl bg-white/10 hover:bg-white/20 border border-white/20 backdrop-blur-sm font-semibold transition-all"
+                className="inline-flex items-center gap-1.5 sm:gap-2 px-3.5 sm:px-5 h-9 sm:h-11 rounded-xl bg-white/10 hover:bg-white/20 border border-white/20 backdrop-blur-sm text-xs sm:text-sm font-semibold transition-all"
               >
-                <MessageCircle className="h-4.5 w-4.5" />
+                <MessageCircle className="h-3.5 w-3.5 sm:h-4.5 sm:w-4.5" />
                 Talk to Counselor
               </a>
             </div>
           </div>
-          <div className="lg:col-span-1 flex flex-col justify-between gap-5 bg-white/10 backdrop-blur rounded-2xl p-6 border border-white/15">
+          <div className="lg:col-span-1 flex flex-col justify-between gap-4 sm:gap-5 bg-white/10 backdrop-blur rounded-xl sm:rounded-2xl p-4 sm:p-6 border border-white/15">
             <div>
-              <div className="flex items-center justify-between mb-3">
-                <span className="text-white/85 font-bold">Daily Goal</span>
-                <span className="text-xs font-bold px-2 py-1 rounded-full bg-white/20">
+              <div className="flex items-center justify-between mb-2 sm:mb-3">
+                <span className="text-white/85 font-bold text-xs sm:text-sm">Daily Goal</span>
+                <span className="text-[10px] sm:text-xs font-bold px-2 py-0.5 sm:py-1 rounded-full bg-white/20">
                   Day 14/120
                 </span>
               </div>
-              <h3 className="text-4xl font-extrabold mb-2">
-                75<span className="text-xl font-bold text-white/60">%</span>
+              <h3 className="text-2xl sm:text-4xl font-extrabold mb-1.5 sm:mb-2">
+                75<span className="text-base sm:text-xl font-bold text-white/60">%</span>
               </h3>
-              <Progress value={75} className="h-2.5 bg-white/20 [&>div]:bg-gradient-to-r [&>div]:from-aims-gold [&>div]:to-aims-green" />
-              <p className="mt-3 text-sm text-white/75 leading-relaxed">
+              <Progress value={75} className="h-2 sm:h-2.5 bg-white/20 [&>div]:bg-gradient-to-r [&>div]:from-aims-gold [&>div]:to-aims-green" />
+              <p className="mt-2 sm:mt-3 text-xs sm:text-sm text-white/75 leading-relaxed">
                 📚 Study for 1 more hour today to complete your daily goal.
               </p>
             </div>
-            <div className="grid grid-cols-3 gap-3 pt-4 border-t border-white/15">
+            <div className="grid grid-cols-3 gap-2 sm:gap-3 pt-3 sm:pt-4 border-t border-white/15">
               <div className="text-center">
-                <div className="text-2xl font-extrabold">12h</div>
-                <div className="text-[10px] font-bold uppercase text-white/65 tracking-wider">
+                <div className="text-lg sm:text-2xl font-extrabold">12h</div>
+                <div className="text-[9px] sm:text-[10px] font-bold uppercase text-white/65 tracking-wider">
                   This Week
                 </div>
               </div>
               <div className="text-center">
-                <div className="text-2xl font-extrabold">28</div>
-                <div className="text-[10px] font-bold uppercase text-white/65 tracking-wider">
+                <div className="text-lg sm:text-2xl font-extrabold">28</div>
+                <div className="text-[9px] sm:text-[10px] font-bold uppercase text-white/65 tracking-wider">
                   Lessons
                 </div>
               </div>
               <div className="text-center">
-                <div className="text-2xl font-extrabold">8</div>
-                <div className="text-[10px] font-bold uppercase text-white/65 tracking-wider">
+                <div className="text-lg sm:text-2xl font-extrabold">8</div>
+                <div className="text-[9px] sm:text-[10px] font-bold uppercase text-white/65 tracking-wider">
                   Quizzes
                 </div>
               </div>
@@ -177,7 +178,7 @@ export default function StudentDashboard() {
       </Card>
 
       {/* Stats Row */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-5">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4 md:gap-5">
         {statCards.map((stat) => {
           const Icon = stat.icon;
           return (
@@ -185,7 +186,7 @@ export default function StudentDashboard() {
               key={stat.label}
               className="group overflow-hidden border-slate-100 hover:shadow-xl transition-all duration-300 hover:-translate-y-1"
             >
-              <CardContent className="p-5 md:p-6 relative overflow-hidden">
+              <CardContent className="p-3.5 sm:p-5 md:p-6 relative overflow-hidden">
                 <div
                   className={cn(
                     "absolute -top-10 -right-10 h-28 w-28 rounded-full opacity-0 group-hover:opacity-100 transition-opacity",
@@ -195,21 +196,21 @@ export default function StudentDashboard() {
                 <div className="relative">
                   <div
                     className={cn(
-                      "h-12 w-12 rounded-2xl flex items-center justify-center mb-4 shadow-md",
+                      "h-8 w-8 sm:h-12 sm:w-12 rounded-xl sm:rounded-2xl flex items-center justify-center mb-2 sm:mb-4 shadow-sm sm:shadow-md",
                       stat.bg,
                       stat.color
                     )}
                   >
-                    <Icon className="h-6 w-6" strokeWidth={2.1} />
+                    <Icon className="h-4 w-4 sm:h-6 sm:w-6" strokeWidth={2.1} />
                   </div>
-                  <p className="text-sm font-semibold text-slate-500 mb-1">
+                  <p className="text-xs sm:text-sm font-semibold text-slate-500 mb-0.5 sm:mb-1 truncate">
                     {stat.label}
                   </p>
-                  <h3 className="text-3xl md:text-4xl font-extrabold text-slate-900 tracking-tight mb-1">
+                  <h3 className="text-xl sm:text-3xl md:text-4xl font-extrabold text-slate-900 tracking-tight mb-0.5 sm:mb-1">
                     {stat.value}
                   </h3>
-                  <p className="text-xs font-bold text-aims-green flex items-center gap-1">
-                    <TrendingUp className="h-3 w-3" /> {stat.sub}
+                  <p className="text-[10px] sm:text-xs font-bold text-aims-green flex items-center gap-1">
+                    <TrendingUp className="h-2.5 w-2.5 sm:h-3 sm:w-3" /> {stat.sub}
                   </p>
                 </div>
               </CardContent>

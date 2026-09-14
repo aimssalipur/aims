@@ -276,198 +276,196 @@ export function DashboardSidebar({ role, user }: DashboardSidebarProps) {
           );
         })}
 
-        {/* Quick links - only desktop */}
-        {!mobile && (
-          <>
-            <div className="px-2 pt-6 pb-1.5 mt-4 text-[10px] font-bold uppercase tracking-widest text-white/50 border-t border-white/10 pt-4">
-              Quick Links
-            </div>
+        {/* Quick links */}
+        <div className={cn("px-2 pt-3 pb-1 mt-2 border-t", mobile ? "border-slate-100" : "border-white/10")}>
+          <div className={cn("px-2 pb-1.5 text-[9px] font-bold uppercase tracking-widest", mobile ? "text-slate-400" : "text-white/50")}>
+            Quick Navigation
+          </div>
+          <div className="grid grid-cols-2 gap-1.5">
             <Link
               href="/"
-              className="flex items-center gap-3 px-3.5 py-2.5 rounded-xl font-semibold text-sm text-white/60 hover:text-white hover:bg-white/10 transition-all duration-200"
+              onClick={() => mobile && setSheetOpen(false)}
+              className={cn(
+                "flex items-center justify-center gap-1.5 py-2 px-2.5 rounded-xl font-bold text-xs transition-all duration-200",
+                mobile
+                  ? "bg-slate-100 text-slate-700 hover:bg-slate-200"
+                  : "bg-white/10 text-white/85 hover:bg-white/20 hover:text-white"
+              )}
             >
-              <div className="h-8.5 w-8.5 rounded-lg bg-white/10 flex items-center justify-center">
-                <Home className="h-4 w-4" />
-              </div>
-              Main Website
+              <Home className="h-3.5 w-3.5 shrink-0" />
+              <span>Main Site</span>
             </Link>
             <Link
               href={role === "instructor" ? "/instructor/courses" : role === "admin" ? "/admin" : "/student/courses"}
-              className="flex items-center gap-3 px-3.5 py-2.5 rounded-xl font-semibold text-sm text-white/60 hover:text-white hover:bg-white/10 transition-all duration-200"
+              onClick={() => mobile && setSheetOpen(false)}
+              className={cn(
+                "flex items-center justify-center gap-1.5 py-2 px-2.5 rounded-xl font-bold text-xs transition-all duration-200",
+                mobile
+                  ? "bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200/60"
+                  : "bg-emerald-500/20 text-emerald-200 hover:bg-emerald-500/30 border border-emerald-400/20"
+              )}
             >
-              <div className="h-8.5 w-8.5 rounded-lg bg-white/10 flex items-center justify-center">
-                <Video className="h-4.5 w-4.5" />
-              </div>
-              Live Class
+              <Video className="h-3.5 w-3.5 shrink-0" />
+              <span>Live Class</span>
             </Link>
-          </>
-        )}
+          </div>
+        </div>
       </nav>
 
-      {/* Bottom user card */}
+      {/* Bottom user card & Active Panel Switcher (Optimized for both Mobile & Desktop) */}
       <div
         className={cn(
-          "p-4 border-t mt-auto",
-          mobile ? "border-slate-100" : "border-white/10"
+          "p-2.5 sm:p-3 border-t mt-auto",
+          mobile ? "border-slate-100 bg-white" : "border-white/10"
         )}
       >
-        {mobile ? (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <button className="w-full flex items-center gap-3 p-2 rounded-xl hover:bg-slate-50 transition-colors">
-                <Avatar className="h-10 w-10 ring-2 ring-aims-navy/20">
-                  <AvatarImage src={user.avatar_url || ""} alt={user.full_name} />
-                  <AvatarFallback className="text-sm font-bold">
-                    {initials(user.full_name)}
-                  </AvatarFallback>
-                </Avatar>
-                <div className="flex-1 min-w-0 text-left">
-                  <div className="font-extrabold text-sm text-slate-900 truncate">
-                    {user.full_name}
-                  </div>
-                  <div className="text-xs text-slate-500 truncate">
-                    {user.email}
-                  </div>
-                </div>
-                <ChevronRight className="h-4 w-4 text-slate-400" />
-              </button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56">
-              <DropdownMenuLabel>My Account</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              {user.roles && user.roles.length > 1 && (
-                <>
-                  <DropdownMenuLabel className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest px-2 py-1.5">
-                    Switch View
-                  </DropdownMenuLabel>
-                  {user.roles.includes("admin") && role !== "admin" && (
-                    <DropdownMenuItem asChild>
-                      <Link href="/admin" className="font-semibold text-xs text-amber-700">
-                        Admin Dashboard
-                      </Link>
-                    </DropdownMenuItem>
-                  )}
-                  {user.roles.includes("instructor") && role !== "instructor" && (
-                    <DropdownMenuItem asChild>
-                      <Link href="/instructor" className="font-semibold text-xs text-emerald-700">
-                        Instructor Panel
-                      </Link>
-                    </DropdownMenuItem>
-                  )}
-                  {user.roles.includes("student") && role !== "student" && (
-                    <DropdownMenuItem asChild>
-                      <Link href="/student" className="font-semibold text-xs text-blue-700">
-                        Student Portal
-                      </Link>
-                    </DropdownMenuItem>
-                  )}
-                  <DropdownMenuSeparator />
-                </>
-              )}
-              <DropdownMenuItem asChild>
-                <Link href={`/${role}/profile`}>
-                  <UserIcon className="h-4 w-4 mr-2" /> Profile
-                </Link>
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={handleLogout} className="text-red-600 focus:text-red-600 focus:bg-red-50">
-                <LogOut className="h-4 w-4 mr-2" /> Sign Out
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        ) : (
-          <div className="rounded-2xl bg-white/10 backdrop-blur-sm p-4 ring-1 ring-white/15">
-            <div className="flex items-start gap-3 mb-3">
-              <Avatar className="h-11 w-11 ring-2 ring-white/30 shadow-lg">
-                <AvatarImage src={user.avatar_url || ""} alt={user.full_name} />
-                <AvatarFallback className="text-sm font-bold bg-white text-aims-navy">
-                  {initials(user.full_name)}
-                </AvatarFallback>
-              </Avatar>
-              <div className="flex-1 min-w-0">
-                <div className="font-extrabold text-sm text-white truncate">
-                  {user.full_name}
-                </div>
-                <div className="text-xs text-white/70 truncate">
-                  {user.email}
-                </div>
+        <div
+          className={cn(
+            "rounded-2xl p-2.5 sm:p-3 transition-all",
+            mobile
+              ? "bg-slate-50 border border-slate-200/80 shadow-2xs"
+              : "bg-white/10 backdrop-blur-sm ring-1 ring-white/15"
+          )}
+        >
+          {/* User info row */}
+          <div className="flex items-center gap-2.5 mb-2.5">
+            <Avatar className={cn("h-9 w-9 shrink-0 ring-2 shadow-xs", mobile ? "ring-aims-navy/20" : "ring-white/30")}>
+              <AvatarImage src={user.avatar_url || ""} alt={user.full_name} />
+              <AvatarFallback className={cn("text-xs font-bold", mobile ? "bg-aims-navy text-white" : "bg-white text-aims-navy")}>
+                {initials(user.full_name)}
+              </AvatarFallback>
+            </Avatar>
+            <div className="flex-1 min-w-0">
+              <div className={cn("font-black text-xs sm:text-sm leading-tight truncate", mobile ? "text-slate-900" : "text-white")}>
+                {user.full_name}
+              </div>
+              <div className={cn("text-[10px] sm:text-[11px] font-medium leading-tight truncate mt-0.5", mobile ? "text-slate-500" : "text-white/70")}>
+                {user.email}
               </div>
             </div>
-
-            {/* Role Switcher Grid */}
-            {user.roles && user.roles.length > 1 && (
-              <div className="mb-3">
-                <div className="text-[10px] font-bold uppercase tracking-wider text-white/50 mb-1">
-                  Active Panel
-                </div>
-                <div className={cn("grid gap-1 bg-black/25 p-1 rounded-xl border border-white/10", user.roles.length > 3 ? "grid-cols-4" : "grid-cols-3")}>
-                  {user.roles.includes("student") ? (
-                    <Link
-                      href="/student"
-                      className={cn(
-                        "text-[10px] font-extrabold text-center py-1.5 rounded-lg transition-all duration-200",
-                        role === "student"
-                          ? "bg-white text-aims-navy shadow"
-                          : "text-white/60 hover:text-white hover:bg-white/5"
-                      )}
-                    >
-                      Student
-                    </Link>
-                  ) : <span />}
-                  {user.roles.includes("instructor") ? (
-                    <Link
-                      href="/instructor"
-                      className={cn(
-                        "text-[10px] font-extrabold text-center py-1.5 rounded-lg transition-all duration-200",
-                        role === "instructor"
-                          ? "bg-white text-emerald-800 shadow"
-                          : "text-white/60 hover:text-white hover:bg-white/5"
-                      )}
-                    >
-                      Staff
-                    </Link>
-                  ) : <span />}
-                  {user.roles.includes("accountant") ? (
-                    <Link
-                      href="/accountant"
-                      className={cn(
-                        "text-[10px] font-extrabold text-center py-1.5 rounded-lg transition-all duration-200",
-                        role === "accountant"
-                          ? "bg-white text-indigo-900 shadow"
-                          : "text-white/60 hover:text-white hover:bg-white/5"
-                      )}
-                    >
-                      Finance
-                    </Link>
-                  ) : <span />}
-                  {user.roles.includes("admin") ? (
-                    <Link
-                      href="/admin"
-                      className={cn(
-                        "text-[10px] font-extrabold text-center py-1.5 rounded-lg transition-all duration-200",
-                        role === "admin"
-                          ? "bg-white text-amber-800 shadow"
-                          : "text-white/60 hover:text-white hover:bg-white/5"
-                      )}
-                    >
-                      Admin
-                    </Link>
-                  ) : <span />}
-                </div>
-              </div>
-            )}
-
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleLogout}
-              className="w-full h-9 bg-white/10 border-white/20 text-white hover:bg-white hover:text-aims-navy hover:border-white gap-2 backdrop-blur-sm"
+            <Link
+              href={`/${role}/profile`}
+              onClick={() => mobile && setSheetOpen(false)}
+              className={cn(
+                "h-7 w-7 rounded-lg flex items-center justify-center transition-colors shrink-0",
+                mobile
+                  ? "bg-slate-200/70 text-slate-600 hover:bg-slate-300"
+                  : "bg-white/10 text-white/80 hover:bg-white/20 hover:text-white"
+              )}
+              title="Edit Profile"
             >
-              <LogOut className="h-3.5 w-3.5" />
-              Sign Out
-            </Button>
+              <UserIcon className="h-3.5 w-3.5" />
+            </Link>
           </div>
-        )}
+
+          {/* Active Panel Switcher Grid */}
+          {user.roles && user.roles.length > 1 && (
+            <div className="mb-2">
+              <div className="flex items-center justify-between mb-1 px-0.5">
+                <span className={cn("text-[9px] font-black uppercase tracking-widest", mobile ? "text-slate-400" : "text-white/60")}>
+                  Active Panel
+                </span>
+                <span className="flex h-1.5 w-1.5 rounded-full bg-emerald-500" />
+              </div>
+              <div
+                className={cn(
+                  "grid gap-1 p-1 rounded-xl",
+                  user.roles.length > 3 ? "grid-cols-4" : user.roles.length === 3 ? "grid-cols-3" : "grid-cols-2",
+                  mobile
+                    ? "bg-slate-200/70 border border-slate-300/40"
+                    : "bg-black/30 border border-white/10"
+                )}
+              >
+                {user.roles.includes("student") && (
+                  <Link
+                    href="/student"
+                    onClick={() => mobile && setSheetOpen(false)}
+                    className={cn(
+                      "text-[10px] font-extrabold text-center py-1.5 px-0.5 rounded-lg transition-all truncate",
+                      role === "student"
+                        ? mobile
+                          ? "bg-white text-aims-navy shadow-xs font-black ring-1 ring-slate-200"
+                          : "bg-white text-aims-navy shadow font-black"
+                        : mobile
+                          ? "text-slate-600 hover:text-slate-900 hover:bg-white/50"
+                          : "text-white/65 hover:text-white hover:bg-white/10"
+                    )}
+                  >
+                    Student
+                  </Link>
+                )}
+                {user.roles.includes("instructor") && (
+                  <Link
+                    href="/instructor"
+                    onClick={() => mobile && setSheetOpen(false)}
+                    className={cn(
+                      "text-[10px] font-extrabold text-center py-1.5 px-0.5 rounded-lg transition-all truncate",
+                      role === "instructor"
+                        ? mobile
+                          ? "bg-white text-emerald-800 shadow-xs font-black ring-1 ring-slate-200"
+                          : "bg-white text-emerald-800 shadow font-black"
+                        : mobile
+                          ? "text-slate-600 hover:text-slate-900 hover:bg-white/50"
+                          : "text-white/65 hover:text-white hover:bg-white/10"
+                    )}
+                  >
+                    Staff
+                  </Link>
+                )}
+                {user.roles.includes("accountant") && (
+                  <Link
+                    href="/accountant"
+                    onClick={() => mobile && setSheetOpen(false)}
+                    className={cn(
+                      "text-[10px] font-extrabold text-center py-1.5 px-0.5 rounded-lg transition-all truncate",
+                      role === "accountant"
+                        ? mobile
+                          ? "bg-white text-indigo-900 shadow-xs font-black ring-1 ring-slate-200"
+                          : "bg-white text-indigo-900 shadow font-black"
+                        : mobile
+                          ? "text-slate-600 hover:text-slate-900 hover:bg-white/50"
+                          : "text-white/65 hover:text-white hover:bg-white/10"
+                    )}
+                  >
+                    Finance
+                  </Link>
+                )}
+                {user.roles.includes("admin") && (
+                  <Link
+                    href="/admin"
+                    onClick={() => mobile && setSheetOpen(false)}
+                    className={cn(
+                      "text-[10px] font-extrabold text-center py-1.5 px-0.5 rounded-lg transition-all truncate",
+                      role === "admin"
+                        ? mobile
+                          ? "bg-white text-amber-800 shadow-xs font-black ring-1 ring-slate-200"
+                          : "bg-white text-amber-800 shadow font-black"
+                        : mobile
+                          ? "text-slate-600 hover:text-slate-900 hover:bg-white/50"
+                          : "text-white/65 hover:text-white hover:bg-white/10"
+                    )}
+                  >
+                    Admin
+                  </Link>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Sign out button */}
+          <button
+            onClick={handleLogout}
+            className={cn(
+              "w-full h-8 text-[11px] font-extrabold rounded-xl flex items-center justify-center gap-1.5 transition-all",
+              mobile
+                ? "bg-rose-50 border border-rose-200/80 text-rose-600 hover:bg-rose-100 hover:text-rose-700"
+                : "bg-white/10 border border-white/15 text-white hover:bg-rose-600 hover:border-rose-600 hover:text-white"
+            )}
+          >
+            <LogOut className="h-3 w-3" />
+            <span>Sign Out</span>
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -489,35 +487,33 @@ export function DashboardSidebar({ role, user }: DashboardSidebarProps) {
         </div>
       </aside>
 
-      {/* Mobile header */}
-      <div className="lg:hidden fixed top-0 inset-x-0 z-40 bg-white/90 backdrop-blur-xl border-b border-slate-100">
-        <div className="flex items-center justify-between h-16 px-4">
+      {/* Mobile header: Sleek, compact & modern h-14 bar */}
+      <div className="lg:hidden fixed top-0 inset-x-0 z-40 bg-white/95 backdrop-blur-xl border-b border-slate-200/80">
+        <div className="flex items-center justify-between h-14 px-3 sm:px-4">
           <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
             <SheetTrigger asChild>
-              <Button variant="ghost" size="icon" aria-label="Open menu">
-                <Menu className="h-6 w-6 text-slate-700" />
+              <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl text-slate-700 hover:bg-slate-100" aria-label="Open menu">
+                <Menu className="h-5 w-5" />
               </Button>
             </SheetTrigger>
-            <SheetContent side="left" className="w-[85%] sm:w-96 p-0 bg-white">
-              <SheetHeader className="p-0">
-                <NavContent mobile />
-              </SheetHeader>
+            <SheetContent side="left" className="w-[82%] max-w-[320px] p-0 bg-white flex flex-col h-full border-r border-slate-200">
+              <NavContent mobile />
             </SheetContent>
           </Sheet>
 
           <Logo size="sm" />
 
-          <div className="flex items-center gap-1.5">
-            <Button asChild variant="ghost" size="icon" className="relative h-10 w-10 text-slate-600">
+          <div className="flex items-center gap-1">
+            <Button asChild variant="ghost" size="icon" className="relative h-9 w-9 rounded-xl text-slate-600 hover:bg-slate-100">
               <Link href={role === "student" ? "/student/announcements" : role === "instructor" ? "/instructor/announcements" : role === "admin" ? "/admin/announcements" : "/accountant/reports"} title="Announcements">
-                <Bell className="h-5 w-5" />
+                <Bell className="h-4.5 w-4.5" />
                 <span className="absolute top-2 right-2 h-2 w-2 rounded-full bg-red-500 ring-2 ring-white" />
               </Link>
             </Button>
             <Link href={`/${role}/profile`} className="cursor-pointer" title="My Profile">
-              <Avatar className="h-9 w-9 ring-2 ring-aims-navy/20 hover:scale-105 transition-transform">
+              <Avatar className="h-8 w-8 ring-2 ring-aims-navy/20 hover:scale-105 transition-transform">
                 <AvatarImage src={user.avatar_url || ""} alt={user.full_name} />
-                <AvatarFallback className="text-xs font-bold bg-aims-navy text-white">
+                <AvatarFallback className="text-[10px] font-bold bg-aims-navy text-white">
                   {initials(user.full_name)}
                 </AvatarFallback>
               </Avatar>

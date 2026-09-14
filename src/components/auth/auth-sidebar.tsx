@@ -40,7 +40,7 @@ export function AuthSidebar() {
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/15 backdrop-blur border border-white/20 mb-6">
             <Award className="h-4 w-4 text-amber-300" />
             <span className="text-sm font-bold uppercase tracking-wider">
-              INC Approved Institute
+              Premier Coaching Academy
             </span>
           </div>
           <h1 className="text-4xl xl:text-5xl font-extrabold leading-[1.1] mb-5 tracking-tight">

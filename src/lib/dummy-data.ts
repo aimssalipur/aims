@@ -371,7 +371,7 @@ export const dummyCourses: Course[] = [
           name: "Part 2: Nursing Education & Teaching Aptitude",
           marks: "20-30 Marks",
           questions: "20-30 Questions",
-          topics: ["Principles of Education", "Methods of Teaching (Lecture, Demo, Case study)", "Curriculum Development (INC Syllabus)", "Evaluation Methods & Educational Technology", "Guidance & Counseling"]
+          topics: ["Principles of Education", "Methods of Teaching (Lecture, Demo, Case study)", "Curriculum Development (Standard Nursing Syllabus)", "Evaluation Methods & Educational Technology", "Guidance & Counseling"]
         },
         {
           name: "Part 3: Research & Statistics",

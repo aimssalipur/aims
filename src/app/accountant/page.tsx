@@ -18,7 +18,7 @@ import {
   Briefcase,
   FileCheck2,
   Calendar,
-  Sparkles,
+  Landmark,
   RefreshCw,
   PlusCircle,
   Clock,
@@ -161,7 +161,7 @@ export default function AccountantOverviewPage() {
         <div className="relative p-6 md:p-8 lg:p-10 grid lg:grid-cols-3 gap-6 items-center">
           <div className="lg:col-span-2 space-y-4">
             <Badge className="bg-white/15 text-white border-0 backdrop-blur w-fit gap-1.5 font-bold">
-              <Sparkles className="h-3 w-3" /> Financial Command Center
+              <Landmark className="h-3 w-3" /> Financial Command Center
             </Badge>
             <h1 className="text-2xl md:text-4xl font-extrabold tracking-tight leading-tight">
               Finance & Ledger overview 📈

@@ -8,7 +8,7 @@ import {
   Search,
   Settings,
   CalendarDays,
-  Sparkles,
+  GraduationCap,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -81,7 +81,7 @@ export function DashboardTopbar({ role, userName }: DashboardTopbarProps) {
         {/* Left: Greeting */}
         <div className="flex items-start sm:items-center gap-3">
           <div className="hidden sm:flex h-12 w-12 shrink-0 rounded-2xl bg-gradient-to-br from-aims-navy/10 to-aims-green/10 items-center justify-center">
-            <Sparkles className="h-6 w-6 text-aims-navy" strokeWidth={2} />
+            <GraduationCap className="h-6 w-6 text-aims-navy" strokeWidth={2} />
           </div>
           <div>
             <div className="flex flex-wrap items-center gap-2 mb-1">
@@ -100,7 +100,7 @@ export function DashboardTopbar({ role, userName }: DashboardTopbarProps) {
               <span className="font-medium">{today}</span>
               <span className="text-slate-300">·</span>
               <span className="hidden sm:inline font-medium">
-                Ready for another productive day at AIMS ✨
+                Ready for another productive day at AIMS
               </span>
             </div>
           </div>

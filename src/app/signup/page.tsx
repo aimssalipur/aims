@@ -17,6 +17,7 @@ import {
   GraduationCap,
   ArrowRight,
   CheckCircle2,
+  ShieldCheck,
   Eye,
   EyeOff,
   MessageCircle,
@@ -146,8 +147,8 @@ Please approve my email in the system. Thank you!`;
 
       // 2. Redirect to WhatsApp immediately
       toast({
-        title: "Application received! 🎉",
-        description: "Redirecting to WhatsApp to activate your account...",
+        title: "Application Received Successfully",
+        description: "Welcome to AIMS! Our admissions officer will contact you shortly.",
         variant: "success",
       });
 
@@ -192,7 +193,7 @@ Please approve my email in the system. Thank you!`;
                 </span>
               </div>
               <h1 className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-slate-900 tracking-tight mb-2">
-                Begin Your Journey ✨
+                Begin Your Nursing Journey
               </h1>
               <p className="text-slate-600 text-sm sm:text-base leading-relaxed break-words">
                 Apply for admission at AIMS. Fill in your details and our
@@ -428,12 +429,16 @@ Please approve my email in the system. Thank you!`;
               </div>
 
             {/* Trust strip */}
-            <div className="mt-8 sm:mt-10 flex flex-wrap items-center justify-center gap-4 sm:gap-6 text-slate-400">
-              {["🔒 SSL Secure", "🛡️ Data Protected", "⚡ Quick Response"].map((t) => (
-                <span key={t} className="text-xs font-bold whitespace-nowrap">
-                  {t}
-                </span>
-              ))}
+            <div className="mt-8 sm:mt-10 flex flex-wrap items-center justify-center gap-4 sm:gap-6 text-slate-500">
+              <span className="inline-flex items-center gap-1.5 text-xs font-semibold">
+                <Lock className="h-3.5 w-3.5 text-aims-green" /> SSL Encrypted
+              </span>
+              <span className="inline-flex items-center gap-1.5 text-xs font-semibold">
+                <ShieldCheck className="h-3.5 w-3.5 text-aims-navy" /> Data Protected
+              </span>
+              <span className="inline-flex items-center gap-1.5 text-xs font-semibold">
+                <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" /> Verified Institute
+              </span>
             </div>
           </div>
         </div>

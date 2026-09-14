@@ -17,7 +17,7 @@ import {
   BookOpen,
   CalendarDays,
   Clock,
-  Sparkles,
+  GraduationCap,
   BookmarkPlus,
   BookmarkCheck,
   Share2,
@@ -41,7 +41,7 @@ import { formatDate } from "@/lib/utils";
 import { useToast } from "@/components/ui/use-toast";
 
 const announceTypeIcon: Record<string, any> = {
-  Admission: Sparkles,
+  Admission: GraduationCap,
   Academic: BookOpen,
   Event: CalendarDays,
   Exam: AlertCircle,

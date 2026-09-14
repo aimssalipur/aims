@@ -6,12 +6,12 @@ import { Button } from "@/components/ui/button";
 import {
   Download,
   X,
-  Sparkles,
+  GraduationCap,
   Smartphone,
   Share,
   PlusSquare,
   ShieldCheck,
-  Zap,
+  CheckCircle2,
   Bell,
 } from "lucide-react";
 
@@ -169,24 +169,24 @@ export function PwaInstallPrompt() {
 
         {/* Header: App Brand Info */}
         <div className="flex items-start gap-3.5 mb-3.5 pr-6">
-          <div className="relative h-12 w-12 sm:h-14 sm:w-14 shrink-0 rounded-2xl bg-gradient-to-br from-aims-navy to-blue-700 p-1.5 shadow-md shadow-aims-navy/25 flex items-center justify-center border border-white/40">
+          <div className="relative h-14 w-14 sm:h-16 sm:w-16 shrink-0 rounded-full bg-white p-1 shadow-lg ring-2 ring-slate-200/90 flex items-center justify-center border border-slate-100">
             <Image
               src="/logo.png"
               alt="AIMS Salipur Logo"
-              width={56}
-              height={56}
-              className="object-contain brightness-110 drop-shadow-sm"
+              width={64}
+              height={64}
+              className="rounded-full object-contain drop-shadow-sm"
               priority
             />
-            <span className="absolute -bottom-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-emerald-500 text-white ring-2 ring-white">
-              <ShieldCheck className="h-2.5 w-2.5" />
+            <span className="absolute bottom-0 right-0 flex h-4 w-4 sm:h-4.5 sm:w-4.5 items-center justify-center rounded-full bg-emerald-500 text-white ring-2 ring-white shadow-sm">
+              <ShieldCheck className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
             </span>
           </div>
 
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-1.5 mb-0.5">
               <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-aims-navy/10 text-[10px] font-extrabold uppercase tracking-wider text-aims-navy">
-                <Sparkles className="h-2.5 w-2.5 text-amber-500" />
+                <GraduationCap className="h-2.5 w-2.5 text-aims-navy" />
                 Official Web App
               </span>
             </div>
@@ -208,7 +208,7 @@ export function PwaInstallPrompt() {
         {/* Feature Pills */}
         <div className="grid grid-cols-3 gap-1.5 mb-4 text-[11px] font-semibold text-slate-600">
           <div className="flex items-center gap-1 px-2 py-1.5 rounded-xl bg-slate-50 border border-slate-100">
-            <Zap className="h-3 w-3 text-amber-500 shrink-0" />
+            <CheckCircle2 className="h-3 w-3 text-emerald-600 shrink-0" />
             <span className="truncate">Fast &amp; Offline</span>
           </div>
           <div className="flex items-center gap-1 px-2 py-1.5 rounded-xl bg-slate-50 border border-slate-100">

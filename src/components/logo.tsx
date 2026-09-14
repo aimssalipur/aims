@@ -10,30 +10,30 @@ interface LogoProps {
 
 export function Logo({ className, showText = true, size = "md" }: LogoProps) {
   const sizes = {
-    sm: { logo: 56, text: "text-base" },
-    md: { logo: 72, text: "text-lg sm:text-xl" },
-    lg: { logo: 108, text: "text-2xl sm:text-3xl" },
+    sm: { logo: 56, text: "text-base sm:text-lg", sub: "text-[10px]" },
+    md: { logo: 76, text: "text-xl sm:text-2xl", sub: "text-xs" },
+    lg: { logo: 110, text: "text-2xl sm:text-3xl", sub: "text-sm" },
   }
 
   return (
-    <Link href="/" className={cn("flex items-center gap-4 group", className)}>
-      <div className="relative transition-transform duration-300 group-hover:scale-105 shrink-0">
+    <Link href="/" className={cn("flex items-center gap-3.5 group select-none", className)}>
+      <div className="relative transition-transform duration-300 group-hover:scale-105 shrink-0 rounded-full bg-white shadow-md ring-1 ring-slate-200/90 p-0.5 flex items-center justify-center">
         <Image
           src="/logo.png"
           alt="AIMS - Achyutanand Institute of Medical Science Logo"
           width={sizes[size].logo}
           height={sizes[size].logo}
-          className="drop-shadow-lg object-contain"
+          className="rounded-full object-contain drop-shadow-sm"
           priority
           quality={100}
         />
       </div>
       {showText && (
         <div className="flex flex-col leading-tight">
-          <span className={cn("font-extrabold text-aims-navy tracking-tight", sizes[size].text)}>
+          <span className={cn("font-black text-aims-navy tracking-tight", sizes[size].text)}>
             AIMS
           </span>
-          <span className="text-[10px] sm:text-xs text-slate-500 font-bold uppercase tracking-wider leading-tight mt-0.5">
+          <span className={cn("text-slate-600 font-bold uppercase tracking-wider leading-tight mt-0.5", sizes[size].sub)}>
             Achyutanand Institute<br />of Medical Science
           </span>
         </div>

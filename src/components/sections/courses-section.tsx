@@ -98,7 +98,7 @@ export function CoursesSection() {
             </h2>
           </div>
           <p className="courses-text-reveal md:max-w-sm text-slate-600 text-xs sm:text-base leading-relaxed">
-            Prepare for top government nursing recruitments with comprehensive INC
+            Prepare for top government nursing recruitments with comprehensive
             syllabus coverage, weekly mock series, and mentorship.
           </p>
         </div>

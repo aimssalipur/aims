@@ -109,7 +109,7 @@ export default function StudentDashboard() {
               <Award className="h-3 w-3 mr-1" /> Star Student · Top 10%
             </Badge>
             <h2 className="text-2xl md:text-4xl font-extrabold leading-tight">
-              Keep going, Riya! 🎉
+              Keep going, Riya!
               <br />
               <span className="text-white/85 font-semibold text-xl md:text-2xl">
                 You're {avgProgress}% close to your semester goal.

@@ -88,8 +88,8 @@ export default function AccountantProfilePage() {
         if (error) throw error;
 
         toast({
-          title: "Profile updated ✨",
-          description: "Your changes have been saved successfully.",
+          title: "Profile updated successfully",
+          description: "Your changes have been saved.",
           variant: "success",
         });
       }

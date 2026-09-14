@@ -19,7 +19,7 @@ import {
   Award,
   Clock,
   Calendar,
-  Sparkles,
+  ShieldCheck,
   DollarSign,
 } from "lucide-react";
 import {
@@ -124,7 +124,7 @@ export default function AdminDashboardPage() {
         <div className="relative p-6 md:p-8 lg:p-10 grid lg:grid-cols-4 gap-6">
           <div className="lg:col-span-3 space-y-4">
             <Badge className="bg-white/15 text-white border-0 backdrop-blur w-fit gap-1.5">
-              <Sparkles className="h-3 w-3" /> Admin Control Center
+              <ShieldCheck className="h-3 w-3" /> Admin Control Center
             </Badge>
             <h1 className="text-2xl md:text-4xl font-extrabold tracking-tight leading-tight">
               Good day, Admin! 🏛️

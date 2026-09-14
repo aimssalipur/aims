@@ -6,6 +6,7 @@ import {
   MapPin,
   Youtube,
   Instagram,
+  Facebook,
   Heart,
   GraduationCap,
   BookOpen,
@@ -23,10 +24,13 @@ export function Footer() {
 
   return (
     <footer className="relative bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 text-white overflow-hidden">
-      {/* Decorative ambient gradient blobs */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-32 -left-32 w-80 sm:w-96 h-80 sm:h-96 bg-aims-navy/20 rounded-full blur-3xl" />
-        <div className="absolute -bottom-32 -right-32 w-80 sm:w-96 h-80 sm:h-96 bg-aims-green/15 rounded-full blur-3xl" />
+      {/* Decorative top border */}
+      <div className="h-1 bg-gradient-to-r from-aims-gold via-aims-green to-aims-navy" />
+
+      {/* Subtle background glow */}
+      <div className="absolute inset-0 pointer-events-none overflow-hidden">
+        <div className="absolute -top-32 left-1/4 w-96 h-96 bg-aims-navy/20 rounded-full blur-3xl" />
+        <div className="absolute -bottom-32 right-1/4 w-96 h-96 bg-aims-green/10 rounded-full blur-3xl" />
       </div>
 
       <div className="relative container mx-auto px-4 sm:px-6 pt-10 pb-8 sm:pt-16 sm:pb-10">
@@ -35,7 +39,7 @@ export function Footer() {
           {/* Brand Column */}
           <div className="sm:col-span-2 lg:col-span-1">
             <div className="flex items-center gap-3 mb-3.5 sm:mb-5">
-              <div className="bg-white rounded-2xl p-1.5 shadow-xl ring-2 sm:ring-4 ring-white/10 shrink-0">
+              <div className="bg-white rounded-full p-1 shadow-xl ring-2 sm:ring-4 ring-white/10 shrink-0">
                 <Logo showText={false} size="sm" />
               </div>
               <div>
@@ -56,6 +60,24 @@ export function Footer() {
             {/* Social Icons with comfortable 40px+ touch targets */}
             <div className="flex items-center gap-2.5 sm:gap-3">
               <a
+                href="https://www.facebook.com/profile.php?id=61592858652995"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="h-10 w-10 rounded-xl bg-white/10 hover:bg-blue-600 active:scale-95 flex items-center justify-center transition-all duration-200"
+                aria-label="Facebook Page"
+              >
+                <Facebook className="h-5 w-5 text-white" />
+              </a>
+              <a
+                href="https://www.instagram.com/aimssalipur?stkn=MTgxZXE3cmhxN3dlcg=="
+                target="_blank"
+                rel="noopener noreferrer"
+                className="h-10 w-10 rounded-xl bg-white/10 hover:bg-gradient-to-tr hover:from-amber-500 hover:via-pink-500 hover:to-purple-600 active:scale-95 flex items-center justify-center transition-all duration-200"
+                aria-label="Instagram Profile"
+              >
+                <Instagram className="h-5 w-5 text-white" />
+              </a>
+              <a
                 href="https://www.youtube.com/@AIMS_Official"
                 target="_blank"
                 rel="noopener noreferrer"
@@ -63,15 +85,6 @@ export function Footer() {
                 aria-label="YouTube Channel"
               >
                 <Youtube className="h-5 w-5 text-white" />
-              </a>
-              <a
-                href="https://instagram.com/aims_medical"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="h-10 w-10 rounded-xl bg-white/10 hover:bg-pink-500 active:scale-95 flex items-center justify-center transition-all duration-200"
-                aria-label="Instagram Profile"
-              >
-                <Instagram className="h-5 w-5 text-white" />
               </a>
               <a
                 href="https://wa.me/919437959054"

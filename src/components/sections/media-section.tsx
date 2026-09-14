@@ -10,8 +10,9 @@ import {
   Play,
   ExternalLink,
   Instagram,
+  Facebook,
   Youtube,
-  Sparkles,
+  Users,
   Camera,
 } from "lucide-react";
 import { useGSAP } from "@/lib/use-gsap-animation";
@@ -124,7 +125,7 @@ export function MediaSection() {
                       </h3>
                     </div>
                     <Badge variant="destructive" className="hidden sm:flex items-center gap-1 bg-red-500 px-2.5 py-0.5 text-xs font-bold">
-                      <Sparkles className="h-3 w-3" />
+                      <Users className="h-3 w-3" />
                       100K+ Subs
                     </Badge>
                   </div>
@@ -183,7 +184,7 @@ export function MediaSection() {
                   return (
                     <a
                       key={i}
-                      href="https://instagram.com/aims_medical"
+                      href="https://www.instagram.com/aimssalipur?stkn=MTgxZXE3cmhxN3dlcg=="
                       target="_blank"
                       rel="noopener noreferrer"
                       className={`group relative overflow-hidden rounded-xl sm:rounded-2xl shadow-sm ${
@@ -212,17 +213,30 @@ export function MediaSection() {
               })}
               </div>
 
-              {/* Follow CTA */}
-              <a
-                href="https://instagram.com/aims_medical"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="mt-3 sm:mt-5 flex items-center justify-center gap-2 p-2.5 sm:p-3.5 rounded-xl sm:rounded-2xl bg-gradient-to-r from-pink-500 via-fuchsia-500 to-amber-500 text-white shadow-md hover:shadow-lg transition-all duration-200 hover:-translate-y-0.5 text-xs sm:text-sm font-bold"
-              >
-                <Instagram className="h-4 w-4" />
-                <span>Follow @aims_medical</span>
-                <ExternalLink className="h-3 w-3 opacity-80" />
-              </a>
+              {/* Social Follow CTAs (Instagram & Facebook) */}
+              <div className="mt-3 sm:mt-5 grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-3">
+                <a
+                  href="https://www.instagram.com/aimssalipur?stkn=MTgxZXE3cmhxN3dlcg=="
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center justify-center gap-2 p-2.5 sm:p-3.5 rounded-xl sm:rounded-2xl bg-gradient-to-r from-pink-500 via-fuchsia-500 to-amber-500 text-white shadow-md hover:shadow-lg transition-all duration-200 hover:-translate-y-0.5 text-xs sm:text-sm font-bold"
+                >
+                  <Instagram className="h-4 w-4" />
+                  <span>Follow @aimssalipur</span>
+                  <ExternalLink className="h-3 w-3 opacity-80" />
+                </a>
+
+                <a
+                  href="https://www.facebook.com/profile.php?id=61592858652995"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center justify-center gap-2 p-2.5 sm:p-3.5 rounded-xl sm:rounded-2xl bg-blue-600 hover:bg-blue-700 text-white shadow-md hover:shadow-lg transition-all duration-200 hover:-translate-y-0.5 text-xs sm:text-sm font-bold"
+                >
+                  <Facebook className="h-4 w-4" />
+                  <span>Follow on Facebook</span>
+                  <ExternalLink className="h-3 w-3 opacity-80" />
+                </a>
+              </div>
             </div>
           </div>
         </div>

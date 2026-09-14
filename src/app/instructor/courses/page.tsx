@@ -376,7 +376,7 @@ export default function InstructorCoursesPage() {
                 onClick={() => {
                   setDialogOpen(false);
                   toast({
-                    title: "Course created ✨",
+                    title: "Course created successfully",
                     description: `New course "${courseForm.title}" added successfully.`,
                     variant: "success",
                   });
@@ -583,7 +583,7 @@ export default function InstructorCoursesPage() {
                     }}
                     className="text-xs text-emerald-400 hover:text-emerald-300 font-bold flex items-center gap-1 underline underline-offset-2"
                   >
-                    ⚡ Go Live Right Now (Auto-fill)
+                    <Video className="h-3 w-3" /> Go Live Right Now (Auto-fill)
                   </button>
                 </div>
                 <div className="space-y-1.5">

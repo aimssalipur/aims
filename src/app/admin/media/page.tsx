@@ -32,7 +32,7 @@ import {
   Save,
   ExternalLink,
   CheckCircle2,
-  Sparkles,
+  LayoutTemplate,
   BookOpen,
   GraduationCap,
   Youtube,
@@ -191,7 +191,7 @@ export default function AdminMediaPage() {
     saveFrontendImages(images);
     setDirtyKeys(new Set());
     toast({
-      title: "Frontend Images Updated! 🚀",
+      title: "Frontend Images Updated",
       description: "All changes are now live on the public landing page.",
       variant: "success",
     });
@@ -272,7 +272,7 @@ export default function AdminMediaPage() {
             value="hero"
             className="gap-2 rounded-xl text-xs sm:text-sm font-bold data-[state=active]:bg-aims-navy data-[state=active]:text-white"
           >
-            <Sparkles className="h-4 w-4" />
+            <LayoutTemplate className="h-4 w-4" />
             Hero Section
           </TabsTrigger>
           <TabsTrigger

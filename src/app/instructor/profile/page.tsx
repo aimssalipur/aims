@@ -88,7 +88,7 @@ export default function InstructorProfilePage() {
           .eq("id", user.id);
       }
       toast({
-        title: "Profile Updated ✨",
+        title: "Profile Updated Successfully",
         description: "Your faculty credentials and contact details have been saved.",
         variant: "success",
       });

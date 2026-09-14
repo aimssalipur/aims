@@ -27,7 +27,7 @@ import {
   Trash2,
   Calendar,
   Send,
-  Sparkles,
+  GraduationCap,
   BookOpen,
   CalendarDays,
   AlertCircle,
@@ -41,7 +41,7 @@ import { formatDate } from "@/lib/utils";
 import { useToast } from "@/components/ui/use-toast";
 
 const categoryIcon: Record<string, any> = {
-  Admission: Sparkles,
+  Admission: GraduationCap,
   Academic: BookOpen,
   Event: CalendarDays,
   Exam: AlertCircle,

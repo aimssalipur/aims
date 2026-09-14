@@ -57,8 +57,8 @@ export default function StudentProfilePage() {
     setTimeout(() => {
       setSaving(false);
       toast({
-        title: "Profile updated ✨",
-        description: "Your changes have been saved successfully.",
+        title: "Profile updated successfully",
+        description: "Your changes have been saved.",
         variant: "success",
       });
     }, 900);

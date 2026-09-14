@@ -21,6 +21,8 @@ import {
   Share2,
   CheckCircle2,
   CalendarDays,
+  Instagram,
+  Facebook,
 } from "lucide-react";
 import { useGSAP } from "@/lib/use-gsap-animation";
 import gsap from "gsap";
@@ -89,7 +91,7 @@ export function ContactSection() {
     setTimeout(() => {
       setSubmitting(false);
       toast({
-        title: "Message Sent Successfully! 🎉",
+        title: "Message Sent Successfully",
         description: "Our admission counselor will contact you within 24 hours.",
         variant: "success",
       });
@@ -237,6 +239,27 @@ export function ContactSection() {
                   </div>
                 </CardContent>
               </Card>
+              {/* Social Channels Card */}
+              <div className="grid grid-cols-2 gap-2.5 sm:gap-3">
+                <a
+                  href="https://www.facebook.com/profile.php?id=61592858652995"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="p-3 rounded-xl bg-blue-50 border border-blue-100 hover:bg-blue-100/70 transition-colors flex items-center gap-2.5 text-blue-700 font-bold text-xs group"
+                >
+                  <Facebook className="h-4 w-4 shrink-0 text-blue-600 transition-transform group-hover:scale-110" />
+                  <span className="truncate">Facebook</span>
+                </a>
+                <a
+                  href="https://www.instagram.com/aimssalipur?stkn=MTgxZXE3cmhxN3dlcg=="
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="p-3 rounded-xl bg-pink-50 border border-pink-100 hover:bg-pink-100/70 transition-colors flex items-center gap-2.5 text-pink-700 font-bold text-xs group"
+                >
+                  <Instagram className="h-4 w-4 shrink-0 text-pink-600 transition-transform group-hover:scale-110" />
+                  <span className="truncate">Instagram</span>
+                </a>
+              </div>
             </div>
           </div>
 
@@ -259,9 +282,9 @@ export function ContactSection() {
                       <Image
                         src="/logo.png"
                         alt="AIMS Logo"
-                        width={60}
-                        height={60}
-                        className="h-14 w-14 rounded-xl bg-white p-1 shadow object-contain"
+                        width={64}
+                        height={64}
+                        className="h-16 w-16 rounded-full bg-white p-1 shadow-lg ring-2 ring-white/30 object-contain"
                         quality={100}
                       />
                     </div>

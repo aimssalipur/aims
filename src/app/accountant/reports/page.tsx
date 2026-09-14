@@ -19,7 +19,6 @@ import {
   DollarSign,
   Briefcase,
   Download,
-  Sparkles,
   RefreshCw,
 } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";

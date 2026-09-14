@@ -38,7 +38,6 @@ import {
   ArrowDownRight,
   Trash2,
   Calendar,
-  Sparkles,
   FileSpreadsheet,
 } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";

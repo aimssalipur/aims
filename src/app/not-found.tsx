@@ -125,13 +125,6 @@ export default function NotFound() {
                 <circle cx="38" cy="29" r="2" fill="#F59E0B" />
               </g>
 
-              {/* Little Sparkles */}
-              <g fill="#F59E0B">
-                <path d="M125 70 Q125 78 133 78 Q125 78 125 86 Q125 78 117 78 Q125 78 125 70 Z" />
-                <path d="M275 220 Q275 226 281 226 Q275 226 275 232 Q275 226 269 226 Q275 226 275 220 Z" opacity="0.7" />
-                <circle cx="85" cy="210" r="3" fill="#0D8267" opacity="0.5" />
-                <circle cx="320" cy="180" r="4" fill="#1B365D" opacity="0.4" />
-              </g>
             </svg>
           </div>
 

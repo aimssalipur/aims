@@ -6,7 +6,8 @@ import {
   HeartHandshake,
   ShieldCheck,
   Users,
-  Sparkles,
+  Microscope,
+  Award,
   Stethoscope,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
@@ -55,7 +56,7 @@ const values = [
     gradient: "from-purple-600 to-violet-600",
   },
   {
-    icon: Sparkles,
+    icon: Microscope,
     title: "Innovation",
     description:
       "Modern simulation labs, digital learning platforms, and exposure to advanced medical practices.",
@@ -120,7 +121,7 @@ export function ValuesSection() {
         {/* Compact Header on Mobile to minimize scrolling */}
         <div className="value-header text-center max-w-3xl mx-auto mb-6 sm:mb-10 md:mb-14">
           <div className="value-text-reveal inline-flex items-center gap-1.5 sm:gap-2 px-3 py-1 sm:px-3.5 sm:py-1.5 rounded-full bg-aims-navy/10 mb-2.5 sm:mb-4">
-            <Sparkles className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-aims-navy" />
+            <Award className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-aims-navy" />
             <span className="text-[11px] sm:text-sm font-bold uppercase tracking-wider text-aims-navy">
               Our Core Values
             </span>

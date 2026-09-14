@@ -12,7 +12,6 @@ import {
   Star,
   Award,
   GraduationCap,
-  Sparkles,
   ShieldCheck,
 } from "lucide-react";
 import { useGSAP } from "@/lib/use-gsap-animation";
@@ -120,7 +119,7 @@ export function HeroSection() {
           <div className="lg:col-span-7 relative z-10">
             {/* Top pill badge */}
             <div className="hero-badge inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/90 backdrop-blur border border-aims-navy/10 shadow-sm mb-4 sm:mb-6">
-              <Sparkles className="h-4 w-4 text-aims-green" />
+              <GraduationCap className="h-4 w-4 text-aims-green" />
               <span className="text-xs sm:text-sm font-semibold text-slate-700">
                 Odisha&apos;s #1 Nursing Recruitment Academy
               </span>
@@ -279,7 +278,7 @@ export function HeroSection() {
                       Result Oriented
                     </div>
                     <div className="text-xs sm:text-sm font-extrabold text-slate-900">
-                      INC Syllabus Covered
+                      Full Syllabus Covered
                     </div>
                   </div>
                 </div>

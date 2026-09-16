@@ -34,7 +34,7 @@ export function Logo({ className, showText = true, size = "md" }: LogoProps) {
             AIMS
           </span>
           <span className={cn("text-slate-600 font-bold uppercase tracking-wider leading-tight mt-0.5", sizes[size].sub)}>
-            Achyutanand Institute<br />of Medical Science
+            Achyutananda Institute<br />of Medical Science
           </span>
         </div>
       )}

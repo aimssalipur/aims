@@ -58,7 +58,7 @@ export function AuthSidebar() {
           {[
             { icon: GraduationCap, label: "95% Placement" },
             { icon: Users, label: "500+ Students" },
-            { icon: BookOpenCheck, label: "7 Exam Batches" },
+            { icon: BookOpenCheck, label: "12+ Exam Batches" },
             { icon: HeartHandshake, label: "Expert Mentors" },
           ].map((item) => {
             const Icon = item.icon;

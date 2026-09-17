@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { Card, CardContent } from "@/components/ui/card";
@@ -68,6 +68,7 @@ export function ContactSection() {
   }, []);
 
   const [submitting, setSubmitting] = useState(false);
+  const [courses, setCourses] = useState<{ id: string; title: string }[]>([]);
   const [formData, setFormData] = useState({
     name: "",
     phone: "",
@@ -75,6 +76,27 @@ export function ContactSection() {
     course: "",
     message: "",
   });
+
+  useEffect(() => {
+    let isMounted = true;
+    async function loadCourses() {
+      try {
+        const res = await fetch("/api/courses");
+        if (res.ok) {
+          const data = await res.json();
+          if (isMounted && data.courses && Array.isArray(data.courses) && data.courses.length > 0) {
+            setCourses(data.courses);
+          }
+        }
+      } catch (err) {
+        console.error("Error loading courses:", err);
+      }
+    }
+    loadCourses();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -347,13 +369,28 @@ export function ContactSection() {
                         <option value="" disabled>
                           Select a course
                         </option>
-                        <option>OSSSC Nursing Officer Exam Coaching</option>
-                        <option>AIIMS NORCET Coaching</option>
-                        <option>ESIC Nursing Officer Coaching</option>
-                        <option>MNS Entrance Exam Prep</option>
-                        <option>RRB Railway Nursing Superintendent Prep</option>
-                        <option>OJEE Nursing Entrance Prep</option>
-                        <option>Nursing Lecturer &amp; Tutor Prep</option>
+                        {courses.length > 0 ? (
+                          courses.map((c) => (
+                            <option key={c.id} value={c.title}>
+                              {c.title}
+                            </option>
+                          ))
+                        ) : (
+                          <>
+                            <option>OSSSC Nursing Officer Exam Coaching</option>
+                            <option>AIIMS NORCET Coaching</option>
+                            <option>ESIC Nursing Officer Coaching</option>
+                            <option>MNS Entrance Exam Prep</option>
+                            <option>RRB Railway Nursing Superintendent Prep</option>
+                            <option>OJEE Nursing Entrance Prep</option>
+                            <option>Nursing Lecturer &amp; Tutor Prep</option>
+                            <option>HAAD / DOH Abu Dhabi Nursing Exam</option>
+                            <option>DSSSB Nursing Officer Exam Coaching</option>
+                            <option>JIPMER Nursing Officer &amp; Entrance Exam</option>
+                            <option>PGIMER Chandigarh Nursing Officer &amp; Entrance</option>
+                            <option>CHO (Community Health Officer) Coaching</option>
+                          </>
+                        )}
                       </select>
                     </div>
                   </div>

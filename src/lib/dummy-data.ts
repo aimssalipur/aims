@@ -216,7 +216,7 @@ export const dummyCourses: Course[] = [
     title: "MNS Entrance Exam Prep",
     description: "Highly focused preparation program for the Military Nursing Service (MNS) Entrance Exam, leading to BSC Nursing and commissions in Armed Forces Hospitals.",
     instructor_id: "inst_4",
-    thumbnail_url: "https://images.unsplash.com/photo-1599493758264-b51e0066aa4c?w=800&h=600&fit=crop",
+    thumbnail_url: "https://images.unsplash.com/photo-1532938911079-1b06ac7ceec7?w=800&h=600&fit=crop",
     youtube_playlist: "https://www.youtube.com/@AIMS_Official",
     created_at: new Date().toISOString(),
     instructor: dummyInstructors[3],
@@ -388,6 +388,254 @@ export const dummyCourses: Course[] = [
       ]
     }
   },
+  {
+    id: "c9c9c9c9-c9c9-c9c9-c9c9-c9c9c9c9c9c9",
+    title: "HAAD / DOH Abu Dhabi Nursing Exam",
+    description: "Specialized coaching for the DOH (Department of Health Abu Dhabi / HAAD) Exam. 150 clinical scenario MCQs, Pearson VUE CBT pattern covering Adult Nursing, Fundamentals, Pharmacology, Maternal-Child, and UAE healthcare protocols.",
+    instructor_id: "inst_1",
+    thumbnail_url: "https://images.unsplash.com/photo-1579684385127-1ef15d508118?w=800&h=600&fit=crop",
+    youtube_playlist: "https://www.youtube.com/@AIMS_Official",
+    created_at: new Date().toISOString(),
+    instructor: dummyInstructors[0],
+    exam_pattern: {
+      total_marks: "150 Marks",
+      total_questions: "150 MCQs",
+      duration: "3 Hours",
+      negative_marking: "No negative marking (Passing: 60-65% via Pearson VUE)",
+      type: "Clinical Scenario Based MCQ - Pearson VUE CBT",
+      sections: [
+        {
+          name: "Medical-Surgical Nursing / Adult Nursing (Highest Weightage)",
+          marks: "52-60 Marks",
+          questions: "35-40% of exam",
+          topics: [
+            "Cardiovascular, Respiratory, GI, Renal, Endocrine, Neuro, Musculoskeletal",
+            "Fluid & Electrolyte Imbalance, Emergency Care, Pre/Post-operative Care",
+            "Critical Care & Safety, ABG Interpretation, Tracheostomy Care, NG Tube"
+          ]
+        },
+        {
+          name: "Fundamentals of Nursing",
+          marks: "30-37 Marks",
+          questions: "20-25% of exam",
+          topics: [
+            "Nursing Process (ADPIE), Patient Safety, Infection Control",
+            "Vital Signs, Documentation, Therapeutic Communication, Ethics"
+          ]
+        },
+        {
+          name: "Pharmacology",
+          marks: "22-23 Marks",
+          questions: "15% of exam",
+          topics: [
+            "Drug Calculation, Safe Administration, Side Effects & Toxicity, Antidotes",
+            "Insulin, Anticoagulants, Cardiac Drugs, Pain Management, Vaccine Storage Temp"
+          ]
+        },
+        {
+          name: "Maternal & Child Nursing",
+          marks: "22-30 Marks",
+          questions: "15-20% of exam",
+          topics: [
+            "Antenatal, Labour, Postpartum, Newborn Assessment, APGAR",
+            "Growth Milestones, Immunization, Pediatric Emergencies (Spina Bifida, Wilms Tumor)"
+          ]
+        },
+        {
+          name: "Leadership & Management + UAE Healthcare Laws",
+          marks: "15 Marks",
+          questions: "10% of exam",
+          topics: [
+            "Delegation Principles (RN vs LPN scope in UAE), Prioritization, Leadership Styles",
+            "UAE Mental Health Laws, Patient Rights, Abu Dhabi Healthcare Context"
+          ]
+        }
+      ]
+    }
+  },
+  {
+    id: "ca10ca10-ca10-ca10-ca10-ca10ca10ca10",
+    title: "DSSSB Nursing Officer Exam Coaching",
+    description: "Comprehensive preparation for Delhi Govt Hospitals (GNCTD) Staff Nurse / Nursing Officer recruitment. 200 Questions, 200 Marks with Section A (General Aptitude, Hindi, English) and Section B (100 Marks Technical Nursing).",
+    instructor_id: "inst_2",
+    thumbnail_url: "https://images.unsplash.com/photo-1576765608535-5f04d1e3f289?w=800&h=600&fit=crop",
+    youtube_playlist: "https://www.youtube.com/@AIMS_Official",
+    created_at: new Date().toISOString(),
+    instructor: dummyInstructors[1],
+    exam_pattern: {
+      total_marks: "200 Marks",
+      total_questions: "200 Questions",
+      duration: "2 Hours",
+      negative_marking: "0.25 marks deducted for each wrong answer",
+      type: "Online CBT - Objective MCQs",
+      sections: [
+        {
+          name: "Section A: General Awareness & Aptitude",
+          marks: "100 Marks",
+          questions: "100 Questions (1 Hour)",
+          topics: [
+            "General Awareness (20 Q): History, Polity, Geography, Economy, Current Affairs",
+            "General Intelligence & Reasoning (20 Q): Analogy, Coding-Decoding, Blood Relation, Series",
+            "Arithmetic & Numerical Ability (20 Q): Percentage, Profit & Loss, Ratio, Time & Work, Mensuration",
+            "Hindi Language & Comprehension (20 Q): Vyakaran, Vocabulary, Muhavare, Passage",
+            "English Language & Comprehension (20 Q): Grammar, Synonyms/Antonyms, Sentence Correction"
+          ]
+        },
+        {
+          name: "Section B: Technical Nursing Subjects",
+          marks: "100 Marks",
+          questions: "100 Questions (1 Hour)",
+          topics: [
+            "Fundamentals of Nursing, Anatomy & Physiology, Microbiology, Pharmacology",
+            "Medical-Surgical Nursing, Community Health Nursing",
+            "Midwifery & Gynaecological Nursing, Pediatric Nursing, Mental Health Nursing",
+            "Nursing Management, Nutrition, Environmental Hygiene, Psychology"
+          ]
+        }
+      ]
+    }
+  },
+  {
+    id: "cb11cb11-cb11-cb11-cb11-cb11cb11cb11",
+    title: "JIPMER Nursing Officer & Entrance Exam",
+    description: "High-yield preparation for JIPMER Puducherry Nursing Officer CBT (100 Qs / 400 Marks, +4/-1) and JIPMER B.Sc. Nursing Entrance admission examinations.",
+    instructor_id: "inst_1",
+    thumbnail_url: "https://images.unsplash.com/photo-1584515979956-d9f6e5d09982?w=800&h=600&fit=crop",
+    youtube_playlist: "https://www.youtube.com/@AIMS_Official",
+    created_at: new Date().toISOString(),
+    instructor: dummyInstructors[0],
+    exam_pattern: {
+      total_marks: "400 Marks (Job) / 100 Marks (Entrance)",
+      total_questions: "100 Questions",
+      duration: "90 Minutes",
+      negative_marking: "-1 Mark for wrong answer (Job CBT) / No negative for BSc Entrance",
+      type: "Online CBT - Objective MCQs (+4 per correct in Job)",
+      sections: [
+        {
+          name: "JIPMER Nursing Officer (Job): Nursing Subjects (70%)",
+          marks: "320 Marks",
+          questions: "80 Questions",
+          topics: [
+            "Fundamentals of Nursing, Medical-Surgical, Community Health, Mental Health",
+            "Pediatric Nursing, Midwifery & Gynaecology, Anatomy-Physiology",
+            "Pharmacology, Microbiology, Nutrition, Psychology"
+          ]
+        },
+        {
+          name: "JIPMER Nursing Officer (Job): General & Computer (30%)",
+          marks: "80 Marks",
+          questions: "20 Questions",
+          topics: [
+            "General Knowledge, Current Affairs, Reasoning, Numerical Ability, English",
+            "Computer Fundamentals: MS Office, Internet & Email Basics"
+          ]
+        },
+        {
+          name: "JIPMER B.Sc Nursing Admission Entrance",
+          marks: "100 Marks",
+          questions: "100 Questions (No Negative Marking)",
+          topics: [
+            "Biology (40 Q), Physics (20 Q), Chemistry (20 Q)",
+            "English (10 Q), Logical Reasoning (10 Q)"
+          ]
+        }
+      ]
+    }
+  },
+  {
+    id: "cc12cc12-cc12-cc12-cc12-cc12cc12cc12",
+    title: "PGIMER Chandigarh Nursing Officer & Entrance",
+    description: "Focused preparation for PGIMER Chandigarh Nursing Officer recruitment (100 Qs / 90 Min, -0.25 Negative) as well as B.Sc (Hons.) Nursing and Post-Basic Nursing entrance.",
+    instructor_id: "inst_2",
+    thumbnail_url: "https://images.unsplash.com/photo-1582750433449-648ed127bb54?w=800&h=600&fit=crop",
+    youtube_playlist: "https://www.youtube.com/@AIMS_Official",
+    created_at: new Date().toISOString(),
+    instructor: dummyInstructors[1],
+    exam_pattern: {
+      total_marks: "100 Marks",
+      total_questions: "100 Questions",
+      duration: "90 Minutes",
+      negative_marking: "-0.25 marks for each wrong answer (+1 for correct)",
+      type: "Online CBT - Objective MCQs",
+      sections: [
+        {
+          name: "PGIMER Nursing Officer (Job Recruitment)",
+          marks: "100 Marks",
+          questions: "100 Questions",
+          topics: [
+            "Fundamentals of Nursing, Medical-Surgical Nursing (incl. Anatomy-Physiology)",
+            "Child Health, Community Health + Nutrition, Obstetric & Midwifery",
+            "Mental Health, Pharmacology, Nursing Management & Education"
+          ]
+        },
+        {
+          name: "PGIMER B.Sc (Hons.) Nursing (4 Years Entrance)",
+          marks: "100 Marks",
+          questions: "100 Questions (NCERT Class 11 & 12)",
+          topics: [
+            "Biology (25 Q), Physics (25 Q), Chemistry (25 Q)",
+            "English (15 Q), GK / Current Affairs (10 Q)"
+          ]
+        },
+        {
+          name: "PGIMER Post-Basic B.Sc Nursing (For GNM Pass)",
+          marks: "100 Marks",
+          questions: "100 Questions",
+          topics: [
+            "Medical-Surgical Nursing (20 Q), Child Health (15 Q), Community Health (15 Q)",
+            "Obstetric Nursing & Midwifery (15 Q), Mental Health (15 Q)",
+            "Scientific Principles & Trends (10 Q), General Knowledge (10 Q)"
+          ]
+        }
+      ]
+    }
+  },
+  {
+    id: "cd13cd13-cd13-cd13-cd13-cd13cd13cd13",
+    title: "CHO (Community Health Officer) Coaching",
+    description: "Complete preparation for NHM Community Health Officer (Ayushman Arogya Mandir / HWC) recruitment across Odisha, Bihar, UP & Rajasthan, plus CCH/IGNOU certification.",
+    instructor_id: "inst_1",
+    thumbnail_url: "https://images.unsplash.com/photo-1516549655169-df83a0774514?w=800&h=600&fit=crop",
+    youtube_playlist: "https://www.youtube.com/@AIMS_Official",
+    created_at: new Date().toISOString(),
+    instructor: dummyInstructors[0],
+    exam_pattern: {
+      total_marks: "100 - 120 Marks",
+      total_questions: "80 - 100 Questions",
+      duration: "2 Hours",
+      negative_marking: "No negative marking",
+      type: "State NHM & Central CCH CBT Exam",
+      sections: [
+        {
+          name: "Technical / Professional Nursing Knowledge (60-70%)",
+          marks: "40-70 Marks",
+          questions: "Major Focus",
+          topics: [
+            "Community Health Nursing, Roles of CHO at Ayushman Arogya Mandir (HWC)",
+            "Maternal Health: ANC, PNC, High-Risk Pregnancy, RMNCH+A",
+            "Child Health: IMNCI, Universal Immunization, Malnutrition, Newborn Care",
+            "Family Planning & Adolescent Health Programs",
+            "Communicable Diseases: TB, Malaria, Dengue, HIV, Leprosy",
+            "Non-Communicable Diseases (NCD): Hypertension, Diabetes, Cancer Screening",
+            "National Health Programs: NHM, Ayushman Bharat, Janani Suraksha Yojana",
+            "Clinical Skills, First Aid & Emergency Management, Demography & Statistics"
+          ]
+        },
+        {
+          name: "General Knowledge & Current Affairs",
+          marks: "20 Marks",
+          questions: "20 Questions",
+          topics: ["State & National Health Schemes, Current Events, Odisha GK"]
+        },
+        {
+          name: "Reasoning & Numerical Ability",
+          marks: "40 Marks",
+          questions: "Reasoning (20 Q) + Numerical Ability (20 Q)",
+          topics: ["Analogy, Series, Coding, Percentage, Ratios, Simplification"]
+        }
+      ]
+    }
+  }
 ];
 
 export const dummyAnnouncements: Announcement[] = [

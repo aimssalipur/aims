@@ -49,7 +49,7 @@ export default function InstructorStudentsPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCourse, setSelectedCourse] = useState("all");
 
-  const myCourses = dummyCourses.filter((_, i) => i % 2 === 0);
+  const myCourses = dummyCourses;
 
   const allStudents = dummyStudents.slice(0, 18).map((s, i) => ({
     ...s,

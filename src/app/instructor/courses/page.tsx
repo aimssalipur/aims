@@ -117,15 +117,48 @@ export default function InstructorCoursesPage() {
   const [loadingResources, setLoadingResources] = useState(false);
   const [addingResource, setAddingResource] = useState(false);
 
-  // Local courses mapping
-  const myCourses = dummyCourses
-    .filter((_, i) => i % 2 === 0)
-    .map((c, i) => ({
+  // All active AIMS nursing courses mapping
+  const enrollmentMap: Record<
+    string,
+    {
+      enrolled: number;
+      avgProgress: number;
+      lectures: number;
+      badge: string;
+      badgeVariant: "default" | "secondary" | "warning" | "gold";
+    }
+  > = {
+    "c1c1c1c1-c1c1-c1c1-c1c1-c1c1c1c1c1c1": { enrolled: 68, avgProgress: 64, lectures: 54, badge: "Active", badgeVariant: "default" },
+    "c2c2c2c2-c2c2-c2c2-c2c2-c2c2c2c2c2c2": { enrolled: 62, avgProgress: 70, lectures: 60, badge: "Active", badgeVariant: "gold" },
+    "c3c3c3c3-c3c3-c3c3-c3c3-c3c3c3c3c3c3": { enrolled: 48, avgProgress: 58, lectures: 48, badge: "Active", badgeVariant: "default" },
+    "c4c4c4c4-c4c4-c4c4-c4c4-c4c4c4c4c4c4": { enrolled: 38, avgProgress: 65, lectures: 42, badge: "Active", badgeVariant: "warning" },
+    "c5c5c5c5-c5c5-c5c5-c5c5-c5c5c5c5c5c5": { enrolled: 44, avgProgress: 62, lectures: 46, badge: "Active", badgeVariant: "secondary" },
+    "c6c6c6c6-c6c6-c6c6-c6c6-c6c6c6c6c6c6": { enrolled: 54, avgProgress: 72, lectures: 44, badge: "Active", badgeVariant: "warning" },
+    "c7c7c7c7-c7c7-c7c7-c7c7-c7c7c7c7c7c7": { enrolled: 32, avgProgress: 50, lectures: 48, badge: "Active", badgeVariant: "secondary" },
+    "c9c9c9c9-c9c9-c9c9-c9c9-c9c9c9c9c9c9": { enrolled: 42, avgProgress: 55, lectures: 45, badge: "Active", badgeVariant: "gold" },
+    "ca10ca10-ca10-ca10-ca10-ca10ca10ca10": { enrolled: 50, avgProgress: 63, lectures: 56, badge: "Active", badgeVariant: "default" },
+    "cb11cb11-cb11-cb11-cb11-cb11cb11cb11": { enrolled: 45, avgProgress: 60, lectures: 50, badge: "Active", badgeVariant: "gold" },
+    "cc12cc12-cc12-cc12-cc12-cc12cc12cc12": { enrolled: 46, avgProgress: 61, lectures: 52, badge: "Active", badgeVariant: "default" },
+    "cd13cd13-cd13-cd13-cd13-cd13cd13cd13": { enrolled: 76, avgProgress: 74, lectures: 48, badge: "Active", badgeVariant: "gold" },
+  };
+
+  const myCourses = dummyCourses.map((c, i) => {
+    const meta = enrollmentMap[c.id] || {
+      enrolled: 40 + (i * 3) % 25,
+      avgProgress: 55 + (i * 4) % 25,
+      lectures: 48,
+      badge: "Active",
+      badgeVariant: "default" as const,
+    };
+    return {
       ...c,
-      enrolled: [42, 38, 35, 29][i],
-      avgProgress: [62, 48, 75, 33][i],
-      lectures: [48, 36, 42, 28][i],
-    }));
+      enrolled: meta.enrolled,
+      avgProgress: meta.avgProgress,
+      lectures: meta.lectures,
+      badge: meta.badge,
+      badgeVariant: meta.badgeVariant,
+    };
+  });
 
   // Fetch YouTube resources for a selected course
   const fetchResources = async (courseId: string) => {
@@ -417,10 +450,10 @@ export default function InstructorCoursesPage() {
               <div className="absolute inset-0 bg-gradient-to-t from-slate-900/70 via-transparent to-transparent" />
               <div className="absolute top-3 left-3 sm:top-4 sm:left-4 flex gap-2">
                 <Badge
-                  variant={["default", "secondary", "warning", "gold"][idx] as any}
+                  variant={(course as any).badgeVariant || "default"}
                   className="text-[10px] sm:text-xs font-bold px-2 sm:px-3 py-0.5 sm:py-1 shadow-sm border-0"
                 >
-                  {["Active", "Active", "Active", "Draft"][idx]}
+                  {(course as any).badge || "Active"}
                 </Badge>
               </div>
               <div className="absolute top-3 right-3 sm:top-4 sm:right-4">

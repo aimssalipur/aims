@@ -27,6 +27,7 @@ const categoryMap: Record<string, { label: string; variant: any }> = {
   Recruitment: { label: "Recruitment", variant: "default" },
   Entrance: { label: "Entrance", variant: "warning" },
   Lecturer: { label: "Lecturer", variant: "secondary" },
+  International: { label: "International (UAE)", variant: "success" },
 };
 
 const courseInfo: Record<string, { category: string; duration: string }> = {
@@ -37,6 +38,11 @@ const courseInfo: Record<string, { category: string; duration: string }> = {
   "RRB Railway Nursing Superintendent Prep": { category: "Recruitment", duration: "5 Mo" },
   "OJEE Nursing Entrance Prep": { category: "Entrance", duration: "3-4 Mo" },
   "Nursing Lecturer & Tutor Prep": { category: "Lecturer", duration: "6 Mo" },
+  "HAAD / DOH Abu Dhabi Nursing Exam": { category: "International", duration: "3-4 Mo" },
+  "DSSSB Nursing Officer Exam Coaching": { category: "Recruitment", duration: "4-5 Mo" },
+  "JIPMER Nursing Officer & Entrance Exam": { category: "Recruitment", duration: "4-5 Mo" },
+  "PGIMER Chandigarh Nursing Officer & Entrance": { category: "Recruitment", duration: "4-5 Mo" },
+  "CHO (Community Health Officer) Coaching": { category: "Recruitment", duration: "3-4 Mo" },
 };
 
 export function CoursesSection() {

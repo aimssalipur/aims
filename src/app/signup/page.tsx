@@ -24,28 +24,31 @@ import {
   Check,
 } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
-import { createClient } from "@/lib/supabase/client";
 
 const fallbackCourses = [
-  { id: "c1c1c1c1-c1c1-c1c1-c1c1-c1c1c1c1c1c1", title: "B.Sc. Nursing (Basic)", description: "Core GNM/B.Sc. Nursing preparation" },
-  { id: "c2c2c2c2-c2c2-c2c2-c2c2-c2c2c2c2c2c2", title: "General Nursing & Midwifery (GNM)", description: "Comprehensive preparation for GNM exams" },
-  { id: "c3c3c3c3-c3c3-c3c3-c3c3-c3c3c3c3c3c3", title: "Auxiliary Nurse Midwife (ANM)", description: "Preparation for ANM exams" },
-  { id: "c4c4c4c4-c4c4-c4c4-c4c4-c4c4c4c4c4c4", title: "Diploma in Hotel Management", description: "F&B, Front Office, Housekeeping training" },
-  { id: "c5c5c5c5-c5c5-c5c5-c5c5-c5c5c5c5c5c5", title: "Certificate in Hospital Administration", description: "Management and healthcare ops training" },
-  { id: "c6c6c6c6-c6c6-c6c6-c6c6-c6c6c6c6c6c6", title: "Paramedical Diploma Course", description: "Lab tech, OT assistant preparation" },
-  { id: "c7c7c7c7-c7c7-c7c7-c7c7-c7c7c7c7c7c7", title: "Post Basic B.Sc. Nursing", description: "Advanced nursing theory & practice" },
-  { id: "c8c8c8c8-c8c8-c8c8-c8c8-c8c8c8c8c8c8", title: "Food & Beverage Service Training", description: "Culinary arts and service operations" }
+  { id: "c1c1c1c1-c1c1-c1c1-c1c1-c1c1c1c1c1c1", title: "OSSSC Nursing Officer Exam Coaching", description: "Core GNM/B.Sc. Nursing subjects, Arithmetic, Reasoning, Odisha GK" },
+  { id: "c2c2c2c2-c2c2-c2c2-c2c2-c2c2c2c2c2c2", title: "AIIMS NORCET Coaching", description: "150 CBT MCQs across general aptitude and nursing streams" },
+  { id: "c3c3c3c3-c3c3-c3c3-c3c3-c3c3c3c3c3c3", title: "ESIC Nursing Officer Coaching", description: "Targeting core GNM/B.Sc. nursing topics and general aptitude" },
+  { id: "c4c4c4c4-c4c4-c4c4-c4c4-c4c4c4c4c4c4", title: "MNS Entrance Exam Prep", description: "Specialized training for Military Nursing Service B.Sc. Nursing" },
+  { id: "c5c5c5c5-c5c5-c5c5-c5c5-c5c5c5c5c5c5", title: "RRB Railway Nursing Superintendent Prep", description: "CBT practice and mock tests for RRB Staff Nurse vacancies" },
+  { id: "c6c6c6c6-c6c6-c6c6-c6c6-c6c6c6c6c6c6", title: "OJEE Nursing Entrance Prep", description: "Preparation for ANM, GNM, Basic & Post Basic B.Sc. Nursing" },
+  { id: "c7c7c7c7-c7c7-c7c7-c7c7-c7c7c7c7c7c7", title: "Nursing Lecturer & Tutor Prep", description: "Advanced coaching for Nursing Faculty & Tutor recruitments" },
+  { id: "c9c9c9c9-c9c9-c9c9-c9c9-c9c9c9c9c9c9", title: "HAAD / DOH Abu Dhabi Nursing Exam", description: "UAE DOH/HAAD exam, Pearson VUE CBT, 150 scenario MCQs" },
+  { id: "ca10ca10-ca10-ca10-ca10-ca10ca10ca10", title: "DSSSB Nursing Officer Exam Coaching", description: "Delhi Govt Hospitals recruitment, 200 Questions CBT" },
+  { id: "cb11cb11-cb11-cb11-cb11-cb11cb11cb11", title: "JIPMER Nursing Officer & Entrance Exam", description: "Puducherry Staff Nurse CBT (400 Marks) & B.Sc Entrance" },
+  { id: "cc12cc12-cc12-cc12-cc12-cc12cc12cc12", title: "PGIMER Chandigarh Nursing Officer & Entrance", description: "Chandigarh Staff Nurse CBT (100 Qs) & B.Sc Nursing Entrance" },
+  { id: "cd13cd13-cd13-cd13-cd13-cd13cd13cd13", title: "CHO (Community Health Officer) Coaching", description: "Odisha & All-State NHM Ayushman Arogya Mandir recruitment" }
 ];
 
 export default function SignupPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [dbCourses, setDbCourses] = useState<{ id: string; title: string; description?: string }[]>([]);
+  const [courses, setCourses] = useState<{ id: string; title: string; description?: string }[]>(fallbackCourses);
+  const [isLoadingCourses, setIsLoadingCourses] = useState(false);
   const [selectedCourses, setSelectedCourses] = useState<string[]>([]);
   
   const router = useRouter();
   const { toast } = useToast();
-  const supabase = createClient();
   
   const [form, setForm] = useState({
     fullName: "",
@@ -54,24 +57,35 @@ export default function SignupPage() {
     password: "",
   });
 
-  // Fetch courses dynamically from database
+  // Fetch courses dynamically from database via internal API
   useEffect(() => {
+    let isMounted = true;
     async function loadCourses() {
       try {
-        const { data, error } = await supabase
-          .from("courses")
-          .select("id, title, description");
-        if (data && !error) {
-          setDbCourses(data);
+        setIsLoadingCourses(true);
+        const res = await fetch("/api/courses");
+        if (res.ok) {
+          const data = await res.json();
+          if (isMounted && data.courses && Array.isArray(data.courses) && data.courses.length > 0) {
+            setCourses(data.courses);
+            return;
+          }
         }
+        if (isMounted) setCourses(fallbackCourses);
       } catch (err) {
-        console.error("Error loading courses:", err);
+        console.error("Error loading courses from API:", err);
+        if (isMounted) setCourses(fallbackCourses);
+      } finally {
+        if (isMounted) setIsLoadingCourses(false);
       }
     }
     loadCourses();
-  }, [supabase]);
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
-  const coursesToDisplay = dbCourses.length > 0 ? dbCourses : fallbackCourses;
+  const coursesToDisplay = courses.length > 0 ? courses : fallbackCourses;
 
   const getWhatsAppLink = () => {
     const selectedTitles = coursesToDisplay
@@ -254,54 +268,79 @@ Please approve my email in the system. Thank you!`;
                   </div>
 
                   <div className="space-y-2 sm:col-span-2">
-                    <Label className="text-slate-700 font-semibold block mb-1">
-                      Interested Course(s) <span className="text-red-500">*</span>
-                    </Label>
-                    <p className="text-xs text-slate-500 mb-2.5">
+                    <div className="flex items-center justify-between">
+                      <Label className="text-slate-700 font-semibold block">
+                        Interested Course(s) <span className="text-red-500">*</span>
+                      </Label>
+                      {selectedCourses.length > 0 && (
+                        <span className="text-[11px] font-bold text-aims-green bg-aims-green/10 px-2.5 py-0.5 rounded-full">
+                          {selectedCourses.length} selected
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-xs text-slate-500 mb-2">
                       Select one or more programs you would like to apply for:
                     </p>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-[160px] sm:max-h-[220px] overflow-y-auto p-1.5 rounded-xl border border-slate-200 bg-white">
-                      {coursesToDisplay.map((c) => {
-                        const isSelected = selectedCourses.includes(c.id);
-                        return (
+                    
+                    {isLoadingCourses ? (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 p-2 rounded-xl border border-slate-200 bg-white">
+                        {[1, 2, 3, 4, 5, 6].map((idx) => (
                           <div
-                            key={c.id}
-                            onClick={() => {
-                              setSelectedCourses((prev) =>
-                                prev.includes(c.id)
-                                  ? prev.filter((id) => id !== c.id)
-                                  : [...prev, c.id]
-                              );
-                            }}
-                            className={`relative flex items-start gap-1.5 sm:gap-2.5 p-2 rounded-lg sm:rounded-xl border cursor-pointer select-none transition-all hover:shadow-sm ${
-                              isSelected
-                                ? "border-aims-green bg-aims-green/5 ring-1 ring-aims-green"
-                                : "border-slate-200 hover:border-slate-300 bg-slate-50/50"
-                            }`}
+                            key={idx}
+                            className="flex items-start gap-2 p-2.5 rounded-lg border border-slate-100 bg-slate-50/60 animate-pulse"
                           >
-                            <div
-                              className={`mt-0.5 h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0 rounded flex items-center justify-center border transition-all ${
-                                isSelected
-                                  ? "bg-aims-green border-aims-green text-white"
-                                  : "bg-white border-slate-300"
-                              }`}
-                            >
-                              {isSelected && <Check className="h-2.5 w-2.5 sm:h-3 sm:w-3" />}
-                            </div>
-                            <div className="min-w-0">
-                              <span className="text-[10px] sm:text-xs md:text-sm font-semibold text-slate-900 leading-tight block truncate">
-                                {c.title}
-                              </span>
-                              {c.description && (
-                                <span className="text-[9px] sm:text-[10px] text-slate-500 block truncate mt-0.5">
-                                  {c.description}
-                                </span>
-                              )}
+                            <div className="h-4 w-4 rounded bg-slate-200 shrink-0 mt-0.5" />
+                            <div className="flex-1 space-y-1.5 min-w-0">
+                              <div className="h-3.5 bg-slate-200 rounded w-3/4" />
+                              <div className="h-2.5 bg-slate-100 rounded w-1/2" />
                             </div>
                           </div>
-                        );
-                      })}
-                    </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-[180px] sm:max-h-[230px] overflow-y-auto p-1.5 rounded-xl border border-slate-200 bg-white shadow-inner">
+                        {coursesToDisplay.map((c) => {
+                          const isSelected = selectedCourses.includes(c.id);
+                          return (
+                            <div
+                              key={c.id}
+                              onClick={() => {
+                                setSelectedCourses((prev) =>
+                                  prev.includes(c.id)
+                                    ? prev.filter((id) => id !== c.id)
+                                    : [...prev, c.id]
+                                );
+                              }}
+                              className={`relative flex items-start gap-2 p-2 rounded-lg sm:rounded-xl border cursor-pointer transition-all hover:shadow-sm ${
+                                isSelected
+                                  ? "border-aims-green bg-aims-green/5 ring-1 ring-aims-green"
+                                  : "border-slate-200 hover:border-slate-300 bg-slate-50/50"
+                              }`}
+                            >
+                              <div
+                                className={`mt-0.5 h-4 w-4 shrink-0 rounded flex items-center justify-center border transition-all ${
+                                  isSelected
+                                    ? "bg-aims-green border-aims-green text-white"
+                                    : "bg-white border-slate-300"
+                                }`}
+                              >
+                                {isSelected && <Check className="h-3 w-3" />}
+                              </div>
+                              <div className="min-w-0 flex-1">
+                                <span className="text-xs sm:text-sm font-semibold text-slate-900 leading-tight block truncate">
+                                  {c.title}
+                                </span>
+                                {c.description && (
+                                  <span className="text-[10px] sm:text-[11px] text-slate-500 block truncate mt-0.5">
+                                    {c.description}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
                   </div>
 
                   <div className="space-y-2 sm:col-span-2">

@@ -31,14 +31,52 @@ import { cn, initials } from "@/lib/utils";
 import Link from "next/link";
 
 export default function InstructorDashboard() {
-  const myCourses = dummyCourses.filter(
-    (_, i) => i % 2 === 0
-  ).map((c, i) => ({
-    ...c,
-    enrolled: [42, 38, 35, 29][i],
-    avgProgress: [62, 48, 75, 33][i],
-  }));
+  const enrollmentMap: Record<
+    string,
+    {
+      enrolled: number;
+      avgProgress: number;
+      lessons: number;
+      badge: string;
+      badgeVariant: "default" | "secondary" | "warning" | "gold";
+    }
+  > = {
+    "c1c1c1c1-c1c1-c1c1-c1c1-c1c1c1c1c1c1": { enrolled: 68, avgProgress: 64, lessons: 54, badge: "OSSSC Core", badgeVariant: "default" },
+    "c2c2c2c2-c2c2-c2c2-c2c2-c2c2c2c2c2c2": { enrolled: 62, avgProgress: 70, lessons: 60, badge: "AIIMS NORCET", badgeVariant: "gold" },
+    "c3c3c3c3-c3c3-c3c3-c3c3-c3c3c3c3c3c3": { enrolled: 48, avgProgress: 58, lessons: 48, badge: "ESIC Central", badgeVariant: "default" },
+    "c4c4c4c4-c4c4-c4c4-c4c4-c4c4c4c4c4c4": { enrolled: 38, avgProgress: 65, lessons: 42, badge: "Defence MNS", badgeVariant: "warning" },
+    "c5c5c5c5-c5c5-c5c5-c5c5-c5c5c5c5c5c5": { enrolled: 44, avgProgress: 62, lessons: 46, badge: "RRB Railway", badgeVariant: "secondary" },
+    "c6c6c6c6-c6c6-c6c6-c6c6-c6c6c6c6c6c6": { enrolled: 54, avgProgress: 72, lessons: 44, badge: "OJEE State", badgeVariant: "warning" },
+    "c7c7c7c7-c7c7-c7c7-c7c7-c7c7c7c7c7c7": { enrolled: 32, avgProgress: 50, lessons: 48, badge: "Lectureship", badgeVariant: "secondary" },
+    "c9c9c9c9-c9c9-c9c9-c9c9-c9c9c9c9c9c9": { enrolled: 42, avgProgress: 55, lessons: 45, badge: "DOH Abu Dhabi", badgeVariant: "gold" },
+    "ca10ca10-ca10-ca10-ca10-ca10ca10ca10": { enrolled: 50, avgProgress: 63, lessons: 56, badge: "DSSSB Delhi", badgeVariant: "default" },
+    "cb11cb11-cb11-cb11-cb11-cb11cb11cb11": { enrolled: 45, avgProgress: 60, lessons: 50, badge: "JIPMER Central", badgeVariant: "gold" },
+    "cc12cc12-cc12-cc12-cc12-cc12cc12cc12": { enrolled: 46, avgProgress: 61, lessons: 52, badge: "PGIMER", badgeVariant: "default" },
+    "cd13cd13-cd13-cd13-cd13-cd13cd13cd13": { enrolled: 76, avgProgress: 74, lessons: 48, badge: "NHM CHO", badgeVariant: "gold" },
+  };
+
+  const myCourses = dummyCourses.map((c, i) => {
+    const meta = enrollmentMap[c.id] || {
+      enrolled: 40 + (i * 3) % 25,
+      avgProgress: 55 + (i * 4) % 25,
+      lessons: 48,
+      badge: "Core",
+      badgeVariant: "default" as const,
+    };
+    return {
+      ...c,
+      enrolled: meta.enrolled,
+      avgProgress: meta.avgProgress,
+      lessons: meta.lessons,
+      badge: meta.badge,
+      badgeVariant: meta.badgeVariant,
+    };
+  });
+
   const totalStudents = myCourses.reduce((a, b) => a + b.enrolled, 0);
+  const avgCompletion = Math.round(
+    myCourses.reduce((a, b) => a + b.avgProgress, 0) / (myCourses.length || 1)
+  );
 
   const stats = [
     {
@@ -53,7 +91,7 @@ export default function InstructorDashboard() {
     {
       label: "Total Students",
       value: String(totalStudents),
-      sub: "+5 new this week",
+      sub: "+18 new this week",
       icon: Users,
       gradient: "from-blue-500 to-blue-700",
       bg: "bg-blue-50",
@@ -61,7 +99,7 @@ export default function InstructorDashboard() {
     },
     {
       label: "Avg Completion",
-      value: "55%",
+      value: `${avgCompletion}%`,
       sub: "+8% MoM growth",
       icon: BarChart3,
       gradient: "from-purple-500 to-violet-700",
@@ -246,10 +284,10 @@ export default function InstructorDashboard() {
                       />
                       <div className="absolute top-3 left-3">
                         <Badge
-                          variant={["default", "secondary", "warning", "gold"][idx] as any}
+                          variant={(course as any).badgeVariant || "default"}
                           className="text-xs font-bold shadow-sm"
                         >
-                          {["Core", "Core", "Elective", "Lab"][idx]}
+                          {(course as any).badge || "Active"}
                         </Badge>
                       </div>
                     </div>
@@ -266,7 +304,7 @@ export default function InstructorDashboard() {
                             </span>
                             <span className="flex items-center gap-1">
                               <CheckCircle2 className="h-3.5 w-3.5" />
-                              48 Lessons
+                              {(course as any).lessons || 48} Lessons
                             </span>
                           </div>
                         </div>
@@ -283,7 +321,7 @@ export default function InstructorDashboard() {
                       <div className="flex items-center justify-between pt-1">
                         <div className="flex -space-x-2">
                           {dummyStudents
-                            .slice(idx * 3, idx * 3 + 4)
+                            .slice((idx % 4) * 3, (idx % 4) * 3 + 4)
                             .map((stud, i) => (
                               <Avatar
                                 key={stud.id}
@@ -296,7 +334,7 @@ export default function InstructorDashboard() {
                               </Avatar>
                             ))}
                           <div className="h-7 w-7 rounded-full ring-2 ring-white bg-slate-100 flex items-center justify-center text-[9px] font-bold text-slate-600">
-                            +{course.enrolled - 4}
+                            +{Math.max(0, course.enrolled - 4)}
                           </div>
                         </div>
                         <div className="flex items-center gap-2">

@@ -30,7 +30,8 @@ import {
   Video,
   ExternalLink,
   Calendar,
-  Loader2
+  Loader2,
+  RefreshCw,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -48,7 +49,8 @@ export default function InstructorCoursesPage() {
   const { toast } = useToast();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [courses, setCourses] = useState<any[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [loadingCourses, setLoadingCourses] = useState(true);
+  const [creatingCourse, setCreatingCourse] = useState(false);
   
   const [courseForm, setCourseForm] = useState({
     title: "",
@@ -57,11 +59,53 @@ export default function InstructorCoursesPage() {
   });
   const [uploadingImage, setUploadingImage] = useState(false);
 
-  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Edit Course Dialog State
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [selectedEditCourse, setSelectedEditCourse] = useState<any>(null);
+  const [editForm, setEditForm] = useState({
+    title: "",
+    description: "",
+    thumbnail_url: "",
+  });
+  const [savingEdit, setSavingEdit] = useState(false);
+  const [uploadingEditImage, setUploadingEditImage] = useState(false);
+
+  // Fetch all courses from the database
+  const fetchCourses = async () => {
+    setLoadingCourses(true);
+    try {
+      const res = await fetch("/api/courses");
+      if (res.ok) {
+        const data = await res.json();
+        if (data.courses && Array.isArray(data.courses) && data.courses.length > 0) {
+          setCourses(data.courses);
+          return;
+        }
+      }
+      // If database has no courses or on unexpected format, fallback to default seed
+      setCourses(dummyCourses);
+    } catch (err) {
+      console.error("Error loading courses:", err);
+      setCourses(dummyCourses);
+    } finally {
+      setLoadingCourses(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchCourses();
+  }, []);
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>, isEdit = false) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    setUploadingImage(true);
+    if (isEdit) {
+      setUploadingEditImage(true);
+    } else {
+      setUploadingImage(true);
+    }
+
     const formData = new FormData();
     formData.append("file", file);
 
@@ -71,25 +115,173 @@ export default function InstructorCoursesPage() {
         body: formData,
       });
 
-      if (!res.ok) throw new Error("Upload failed");
-
       const data = await res.json();
+      if (!res.ok || data.error) {
+        throw new Error(data.error || "Upload failed");
+      }
+
       if (data?.url) {
-        setCourseForm((prev) => ({ ...prev, thumbnail_url: data.url }));
+        if (isEdit) {
+          setEditForm((prev) => ({ ...prev, thumbnail_url: data.url }));
+        } else {
+          setCourseForm((prev) => ({ ...prev, thumbnail_url: data.url }));
+        }
         toast({
           title: "Thumbnail Uploaded! 📸",
-          description: "Image successfully stored on Cloudinary.",
+          description: "Image successfully uploaded and ready.",
           variant: "success",
         });
       }
     } catch (err: any) {
       toast({
-        title: "Upload Failed",
-        description: err.message || "Could not upload image to Cloudinary",
+        title: "Upload Note",
+        description: err.message || "Could not upload image. You can also paste a direct image URL.",
         variant: "destructive",
       });
     } finally {
-      setUploadingImage(false);
+      if (isEdit) {
+        setUploadingEditImage(false);
+      } else {
+        setUploadingImage(false);
+      }
+    }
+  };
+
+  // Create Course handler (POST to /api/courses)
+  const handleCreateCourse = async () => {
+    if (!courseForm.title.trim()) {
+      toast({
+        title: "Title Required",
+        description: "Please enter a course title.",
+        variant: "destructive",
+      });
+      return;
+    }
+    if (!courseForm.description.trim()) {
+      toast({
+        title: "Description Required",
+        description: "Please enter a course description.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setCreatingCourse(true);
+    try {
+      const res = await fetch("/api/courses", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(courseForm),
+      });
+
+      const data = await res.json();
+      if (!res.ok || data.error) {
+        throw new Error(data.error || "Failed to create course");
+      }
+
+      toast({
+        title: "Course Created! 🎉",
+        description: `"${data.course?.title || courseForm.title}" has been added successfully.`,
+        variant: "success",
+      });
+
+      setDialogOpen(false);
+      setCourseForm({ title: "", description: "", thumbnail_url: "" });
+      fetchCourses();
+    } catch (err: any) {
+      toast({
+        title: "Creation Failed",
+        description: err.message || "Failed to create course. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setCreatingCourse(false);
+    }
+  };
+
+  // Open Edit Dialog
+  const handleOpenEditDialog = (course: any) => {
+    setSelectedEditCourse(course);
+    setEditForm({
+      title: course.title || "",
+      description: course.description || "",
+      thumbnail_url: course.thumbnail_url || "",
+    });
+    setEditDialogOpen(true);
+  };
+
+  // Save Edit Course handler (PATCH to /api/courses/[courseId])
+  const handleSaveEdit = async () => {
+    if (!editForm.title.trim()) {
+      toast({
+        title: "Title Required",
+        description: "Course title cannot be empty.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setSavingEdit(true);
+    try {
+      const res = await fetch(`/api/courses/${selectedEditCourse.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(editForm),
+      });
+
+      const data = await res.json();
+      if (!res.ok || data.error) {
+        throw new Error(data.error || "Failed to update course");
+      }
+
+      toast({
+        title: "Course Updated! ✏️",
+        description: "Course details have been updated successfully.",
+        variant: "success",
+      });
+
+      setEditDialogOpen(false);
+      fetchCourses();
+    } catch (err: any) {
+      toast({
+        title: "Update Failed",
+        description: err.message || "Could not update course.",
+        variant: "destructive",
+      });
+    } finally {
+      setSavingEdit(false);
+    }
+  };
+
+  // Delete Course handler (DELETE to /api/courses/[courseId])
+  const handleDeleteCourse = async (courseId: string, courseTitle: string) => {
+    if (!confirm(`Are you sure you want to delete "${courseTitle}"? This will permanently delete the course and its linked materials.`)) {
+      return;
+    }
+
+    try {
+      const res = await fetch(`/api/courses/${courseId}`, {
+        method: "DELETE",
+      });
+
+      const data = await res.json();
+      if (!res.ok || data.error) {
+        throw new Error(data.error || "Failed to delete course");
+      }
+
+      toast({
+        title: "Course Deleted",
+        description: `"${courseTitle}" was removed successfully.`,
+        variant: "success",
+      });
+
+      fetchCourses();
+    } catch (err: any) {
+      toast({
+        title: "Delete Failed",
+        description: err.message || "Could not delete course.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -142,10 +334,10 @@ export default function InstructorCoursesPage() {
     "cd13cd13-cd13-cd13-cd13-cd13cd13cd13": { enrolled: 76, avgProgress: 74, lectures: 48, badge: "Active", badgeVariant: "gold" },
   };
 
-  const myCourses = dummyCourses.map((c, i) => {
+  const myCourses = (courses.length > 0 ? courses : dummyCourses).map((c, i) => {
     const meta = enrollmentMap[c.id] || {
-      enrolled: 40 + (i * 3) % 25,
-      avgProgress: 55 + (i * 4) % 25,
+      enrolled: 40 + ((i + 1) * 7) % 35,
+      avgProgress: 55 + ((i + 1) * 5) % 30,
       lectures: 48,
       badge: "Active",
       badgeVariant: "default" as const,
@@ -323,163 +515,283 @@ export default function InstructorCoursesPage() {
             Manage My Courses 📝
           </h1>
           <p className="text-slate-500 mt-1 text-xs sm:text-base">
-            {myCourses.length} active courses · {myCourses.reduce((a, b) => a + b.enrolled, 0)} total students
+            {myCourses.length} active courses · {myCourses.reduce((a, b) => a + (b.enrolled || 0), 0)} total students
           </p>
         </div>
-        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-          <DialogTrigger asChild>
-            <Button variant="primary" size="sm" className="gap-1.5 sm:gap-2 h-9 sm:h-11 text-xs sm:text-sm px-3.5 sm:px-5 bg-aims-green hover:bg-aims-green/90 shadow-lg shadow-aims-green/20">
-              <Plus className="h-4 w-4" />
-              Add New Course
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-lg sm:max-w-xl">
-            <DialogHeader>
-              <DialogTitle className="text-xl font-extrabold">Create New Course</DialogTitle>
-              <DialogDescription>
-                Add a new course. You can edit details later.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="grid sm:grid-cols-2 gap-4 py-3">
-              <div className="space-y-2 sm:col-span-2">
-                <Label>Course Title</Label>
-                <Input 
-                  placeholder="e.g. Advanced Pediatric Care" 
-                  className="h-11" 
-                  value={courseForm.title}
-                  onChange={(e) => setCourseForm((prev) => ({ ...prev, title: e.target.value }))}
-                />
-              </div>
-              <div className="space-y-2 sm:col-span-2">
-                <Label>Description</Label>
-                <Textarea 
-                  rows={3} 
-                  placeholder="Brief summary of the course..." 
-                  value={courseForm.description}
-                  onChange={(e) => setCourseForm((prev) => ({ ...prev, description: e.target.value }))}
-                />
-              </div>
-              <div className="space-y-2 sm:col-span-2">
-                <Label>Thumbnail Image</Label>
-                <div className="relative flex items-center gap-4 p-4 rounded-xl border-2 border-dashed border-slate-200 hover:border-aims-navy/30 bg-slate-50/50 cursor-pointer">
-                  {courseForm.thumbnail_url ? (
-                    <div className="relative h-14 w-24 shrink-0 rounded-lg overflow-hidden border border-slate-100 bg-white">
-                      <Image
-                        src={courseForm.thumbnail_url}
-                        alt="Course Thumbnail"
-                        fill
-                        className="object-cover"
-                      />
-                    </div>
-                  ) : (
-                    <div className="h-14 w-14 shrink-0 rounded-xl bg-slate-100 flex items-center justify-center">
-                      {uploadingImage ? (
-                        <Loader2 className="h-6 w-6 text-slate-400 animate-spin" />
-                      ) : (
-                        <Upload className="h-6 w-6 text-slate-400" />
-                      )}
-                    </div>
-                  )}
-                  <div className="flex-1">
-                    <p className="font-bold text-sm text-slate-900 mb-1">
-                      {uploadingImage ? "Uploading thumbnail..." : courseForm.thumbnail_url ? "Replace Thumbnail" : "Click to upload"}
-                    </p>
-                    <p className="text-xs text-slate-500">PNG, JPG up to 5MB · 16:9 ratio</p>
-                  </div>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={handleImageUpload}
-                    disabled={uploadingImage}
-                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={fetchCourses}
+            disabled={loadingCourses}
+            className="h-9 sm:h-11 text-xs sm:text-sm px-3 sm:px-4 border-slate-200 hover:bg-slate-50"
+          >
+            <RefreshCw className={`h-4 w-4 mr-1.5 ${loadingCourses ? "animate-spin text-aims-green" : "text-slate-600"}`} />
+            Refresh
+          </Button>
+
+          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+            <DialogTrigger asChild>
+              <Button variant="primary" size="sm" className="gap-1.5 sm:gap-2 h-9 sm:h-11 text-xs sm:text-sm px-3.5 sm:px-5 bg-aims-green hover:bg-aims-green/90 shadow-lg shadow-aims-green/20">
+                <Plus className="h-4 w-4" />
+                Add New Course
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-lg sm:max-w-xl">
+              <DialogHeader>
+                <DialogTitle className="text-xl font-extrabold">Create New Course</DialogTitle>
+                <DialogDescription>
+                  Fill in the course details and upload a cover photo. You can edit this anytime.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="grid sm:grid-cols-2 gap-4 py-3">
+                <div className="space-y-2 sm:col-span-2">
+                  <Label>Course Title <span className="text-rose-500">*</span></Label>
+                  <Input 
+                    placeholder="e.g. Advanced Pediatric Care" 
+                    className="h-11" 
+                    value={courseForm.title}
+                    onChange={(e) => setCourseForm((prev) => ({ ...prev, title: e.target.value }))}
                   />
                 </div>
+                <div className="space-y-2 sm:col-span-2">
+                  <Label>Description <span className="text-rose-500">*</span></Label>
+                  <Textarea 
+                    rows={3} 
+                    placeholder="Brief summary of the syllabus, target exams, and scope..." 
+                    value={courseForm.description}
+                    onChange={(e) => setCourseForm((prev) => ({ ...prev, description: e.target.value }))}
+                  />
+                </div>
+                <div className="space-y-2 sm:col-span-2">
+                  <Label>Thumbnail Image</Label>
+                  <div className="relative flex items-center gap-4 p-4 rounded-xl border-2 border-dashed border-slate-200 hover:border-aims-navy/30 bg-slate-50/50 cursor-pointer">
+                    {courseForm.thumbnail_url ? (
+                      <div className="relative h-14 w-24 shrink-0 rounded-lg overflow-hidden border border-slate-100 bg-white">
+                        <Image
+                          src={courseForm.thumbnail_url}
+                          alt="Course Thumbnail"
+                          fill
+                          className="object-cover"
+                        />
+                      </div>
+                    ) : (
+                      <div className="h-14 w-14 shrink-0 rounded-xl bg-slate-100 flex items-center justify-center">
+                        {uploadingImage ? (
+                          <Loader2 className="h-6 w-6 text-slate-400 animate-spin" />
+                        ) : (
+                          <Upload className="h-6 w-6 text-slate-400" />
+                        )}
+                      </div>
+                    )}
+                    <div className="flex-1">
+                      <p className="font-bold text-sm text-slate-900 mb-1">
+                        {uploadingImage ? "Uploading thumbnail to storage..." : courseForm.thumbnail_url ? "Replace Thumbnail Photo" : "Click to select photo"}
+                      </p>
+                      <p className="text-xs text-slate-500">PNG, JPG, WEBP up to 5MB · 16:9 ratio</p>
+                    </div>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => handleImageUpload(e, false)}
+                      disabled={uploadingImage}
+                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                    />
+                  </div>
+                  <div className="pt-1">
+                    <Label className="text-[11px] text-slate-500 font-medium">Or paste image web link directly:</Label>
+                    <Input 
+                      placeholder="https://images.unsplash.com/..." 
+                      className="h-9 text-xs mt-1" 
+                      value={courseForm.thumbnail_url}
+                      onChange={(e) => setCourseForm((prev) => ({ ...prev, thumbnail_url: e.target.value }))}
+                    />
+                  </div>
+                </div>
               </div>
-            </div>
-            <DialogFooter className="flex-col sm:flex-row gap-2 pt-2">
-              <Button variant="outline" onClick={() => {
-                setDialogOpen(false);
-                setCourseForm({ title: "", description: "", thumbnail_url: "" });
-              }}>
-                Cancel
-              </Button>
-              <Button
-                variant="primary"
-                disabled={uploadingImage || !courseForm.title}
-                onClick={() => {
+              <DialogFooter className="flex-col sm:flex-row gap-2 pt-2">
+                <Button variant="outline" onClick={() => {
                   setDialogOpen(false);
-                  toast({
-                    title: "Course created successfully",
-                    description: `New course "${courseForm.title}" added successfully.`,
-                    variant: "success",
-                  });
-                  setCourses((prev) => [
-                    ...prev,
-                    {
-                      id: `c_user_${Date.now()}`,
-                      title: courseForm.title,
-                      description: courseForm.description,
-                      thumbnail_url: courseForm.thumbnail_url || "https://images.unsplash.com/photo-1576765608535-5f04d1e3f289?w=800&h=600&fit=crop",
-                      created_at: new Date().toISOString(),
-                    }
-                  ]);
                   setCourseForm({ title: "", description: "", thumbnail_url: "" });
-                }}
-              >
-                Create Course
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+                }}>
+                  Cancel
+                </Button>
+                <Button
+                  variant="primary"
+                  disabled={creatingCourse || uploadingImage || !courseForm.title.trim() || !courseForm.description.trim()}
+                  onClick={handleCreateCourse}
+                  className="bg-aims-green hover:bg-aims-green/90 text-white font-bold"
+                >
+                  {creatingCourse ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                      Creating Course...
+                    </>
+                  ) : (
+                    "Create Course"
+                  )}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3.5 sm:gap-6">
-        {myCourses.map((course, idx) => (
-          <Card
-            key={course.id}
-            className="group overflow-hidden border-slate-100 hover:shadow-2xl transition-all duration-500 hover:-translate-y-1.5 flex flex-col"
-          >
-            <div className="relative overflow-hidden aspect-[16/10]">
-              <Image
-                src={course.thumbnail_url}
-                alt={course.title}
-                fill
-                sizes="(max-width: 768px) 100vw, 400px"
-                className="object-cover transition-transform duration-700 group-hover:scale-110"
+      {/* Edit Course Details Dialog */}
+      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+        <DialogContent className="max-w-lg sm:max-w-xl">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-extrabold flex items-center gap-2">
+              <FileEdit className="h-5 w-5 text-aims-navy" />
+              Edit Course Details
+            </DialogTitle>
+            <DialogDescription>
+              Update information and cover picture for <b>{selectedEditCourse?.title}</b>.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid sm:grid-cols-2 gap-4 py-3">
+            <div className="space-y-2 sm:col-span-2">
+              <Label>Course Title <span className="text-rose-500">*</span></Label>
+              <Input 
+                className="h-11" 
+                value={editForm.title}
+                onChange={(e) => setEditForm((prev) => ({ ...prev, title: e.target.value }))}
               />
-              <div className="absolute inset-0 bg-gradient-to-t from-slate-900/70 via-transparent to-transparent" />
-              <div className="absolute top-3 left-3 sm:top-4 sm:left-4 flex gap-2">
-                <Badge
-                  variant={(course as any).badgeVariant || "default"}
-                  className="text-[10px] sm:text-xs font-bold px-2 sm:px-3 py-0.5 sm:py-1 shadow-sm border-0"
-                >
-                  {(course as any).badge || "Active"}
-                </Badge>
+            </div>
+            <div className="space-y-2 sm:col-span-2">
+              <Label>Description <span className="text-rose-500">*</span></Label>
+              <Textarea 
+                rows={3} 
+                value={editForm.description}
+                onChange={(e) => setEditForm((prev) => ({ ...prev, description: e.target.value }))}
+              />
+            </div>
+            <div className="space-y-2 sm:col-span-2">
+              <Label>Thumbnail Image</Label>
+              <div className="relative flex items-center gap-4 p-4 rounded-xl border-2 border-dashed border-slate-200 hover:border-aims-navy/30 bg-slate-50/50 cursor-pointer">
+                {editForm.thumbnail_url ? (
+                  <div className="relative h-14 w-24 shrink-0 rounded-lg overflow-hidden border border-slate-100 bg-white">
+                    <Image
+                      src={editForm.thumbnail_url}
+                      alt="Course Thumbnail"
+                      fill
+                      className="object-cover"
+                    />
+                  </div>
+                ) : (
+                  <div className="h-14 w-14 shrink-0 rounded-xl bg-slate-100 flex items-center justify-center">
+                    {uploadingEditImage ? (
+                      <Loader2 className="h-6 w-6 text-slate-400 animate-spin" />
+                    ) : (
+                      <Upload className="h-6 w-6 text-slate-400" />
+                    )}
+                  </div>
+                )}
+                <div className="flex-1">
+                  <p className="font-bold text-sm text-slate-900 mb-1">
+                    {uploadingEditImage ? "Uploading thumbnail..." : "Upload New Thumbnail"}
+                  </p>
+                  <p className="text-xs text-slate-500">PNG, JPG up to 5MB · 16:9 ratio</p>
+                </div>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => handleImageUpload(e, true)}
+                  disabled={uploadingEditImage}
+                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                />
               </div>
-              <div className="absolute top-3 right-3 sm:top-4 sm:right-4">
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <button className="h-7 w-7 sm:h-9 sm:w-9 rounded-xl bg-white/90 backdrop-blur text-slate-700 flex items-center justify-center shadow-md hover:bg-white transition-colors">
-                      <MoreHorizontal className="h-3.5 w-3.5 sm:h-4.5 sm:w-4.5" />
-                    </button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-52">
-                    <DropdownMenuItem className="gap-2" onClick={() => handleOpenLiveDialog(course)}>
-                      <Video className="h-4 w-4 text-emerald-600" /> Schedule Live Class
-                    </DropdownMenuItem>
-                    <DropdownMenuItem className="gap-2" onClick={() => handleOpenResourceDialog(course)}>
-                      <Youtube className="h-4 w-4 text-red-500" /> YouTube Lectures
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem className="gap-2">
-                      <FileEdit className="h-4 w-4" /> Edit Course Details
-                    </DropdownMenuItem>
-                    <DropdownMenuItem className="gap-2 text-red-600 focus:text-red-600 focus:bg-red-50">
-                      <Trash2 className="h-4 w-4" /> Delete Course
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
+              <div className="pt-1">
+                <Label className="text-[11px] text-slate-500 font-medium">Or paste image web link directly:</Label>
+                <Input 
+                  className="h-9 text-xs mt-1" 
+                  value={editForm.thumbnail_url}
+                  onChange={(e) => setEditForm((prev) => ({ ...prev, thumbnail_url: e.target.value }))}
+                />
               </div>
+            </div>
+          </div>
+          <DialogFooter className="flex-col sm:flex-row gap-2 pt-2">
+            <Button variant="outline" onClick={() => setEditDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              variant="primary"
+              disabled={savingEdit || uploadingEditImage || !editForm.title.trim()}
+              onClick={handleSaveEdit}
+              className="bg-aims-navy hover:bg-aims-navy/90 text-white font-bold"
+            >
+              {savingEdit ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  Saving Changes...
+                </>
+              ) : (
+                "Save Changes"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {loadingCourses && courses.length === 0 ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3.5 sm:gap-6">
+          {[1, 2, 3].map((n) => (
+            <div key={n} className="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm animate-pulse space-y-4">
+              <div className="aspect-[16/10] bg-slate-100 rounded-xl" />
+              <div className="h-5 bg-slate-100 rounded w-3/4" />
+              <div className="h-4 bg-slate-100 rounded w-1/2" />
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3.5 sm:gap-6">
+          {myCourses.map((course, idx) => (
+            <Card
+              key={course.id}
+              className="group overflow-hidden border-slate-100 hover:shadow-2xl transition-all duration-500 hover:-translate-y-1.5 flex flex-col"
+            >
+              <div className="relative overflow-hidden aspect-[16/10]">
+                <Image
+                  src={course.thumbnail_url || "https://images.unsplash.com/photo-1576765608535-5f04d1e3f289?w=800&h=600&fit=crop"}
+                  alt={course.title}
+                  fill
+                  sizes="(max-width: 768px) 100vw, 400px"
+                  className="object-cover transition-transform duration-700 group-hover:scale-110"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-slate-900/70 via-transparent to-transparent" />
+                <div className="absolute top-3 left-3 sm:top-4 sm:left-4 flex gap-2">
+                  <Badge
+                    variant={(course as any).badgeVariant || "default"}
+                    className="text-[10px] sm:text-xs font-bold px-2 sm:px-3 py-0.5 sm:py-1 shadow-sm border-0"
+                  >
+                    {(course as any).badge || "Active"}
+                  </Badge>
+                </div>
+                <div className="absolute top-3 right-3 sm:top-4 sm:right-4">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <button className="h-7 w-7 sm:h-9 sm:w-9 rounded-xl bg-white/90 backdrop-blur text-slate-700 flex items-center justify-center shadow-md hover:bg-white transition-colors">
+                        <MoreHorizontal className="h-3.5 w-3.5 sm:h-4.5 sm:w-4.5" />
+                      </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-52">
+                      <DropdownMenuItem className="gap-2" onClick={() => handleOpenLiveDialog(course)}>
+                        <Video className="h-4 w-4 text-emerald-600" /> Schedule Live Class
+                      </DropdownMenuItem>
+                      <DropdownMenuItem className="gap-2" onClick={() => handleOpenResourceDialog(course)}>
+                        <Youtube className="h-4 w-4 text-red-500" /> YouTube Lectures
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem className="gap-2" onClick={() => handleOpenEditDialog(course)}>
+                        <FileEdit className="h-4 w-4 text-blue-600" /> Edit Course Details
+                      </DropdownMenuItem>
+                      <DropdownMenuItem className="gap-2 text-red-600 focus:text-red-600 focus:bg-red-50" onClick={() => handleDeleteCourse(course.id, course.title)}>
+                        <Trash2 className="h-4 w-4" /> Delete Course
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
               <div className="absolute bottom-3 left-3 right-3 sm:bottom-4 sm:left-4 sm:right-4 flex items-center justify-between text-white">
                 <div className="flex items-center gap-2 sm:gap-3 text-[11px] sm:text-xs font-bold drop-shadow-md">
                   <span className="flex items-center gap-1">
@@ -532,6 +844,7 @@ export default function InstructorCoursesPage() {
           </Card>
         ))}
       </div>
+      )}
 
       {/* Manage Live Classes Dialog */}
       <Dialog open={liveDialogOpen} onOpenChange={setLiveDialogOpen}>

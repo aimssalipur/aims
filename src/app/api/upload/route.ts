@@ -1,6 +1,15 @@
 import { NextResponse } from "next/server";
 import { v2 as cloudinary } from "cloudinary";
 import { getAuthenticatedContext } from "@/lib/server-auth";
+import { createClient } from "@supabase/supabase-js";
+import dns from "node:dns";
+
+// Ensure Node uses IPv4 first to prevent connect timeout on Windows IPv6
+try {
+  dns.setDefaultResultOrder("ipv4first");
+} catch {
+  // Ignore in environments where not supported
+}
 
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
@@ -14,14 +23,15 @@ const ALLOWED_MIME_TYPES = new Set([
   "image/png",
   "image/webp",
   "image/gif",
+  "image/svg+xml",
 ]);
 
 export async function POST(request: Request) {
-  // 1. Enforce authentication — only registered, active users can upload assets
+  // 1. Enforce authentication — registered, active user
   const authContext = await getAuthenticatedContext();
   if (!authContext) {
     return NextResponse.json(
-      { error: "Unauthorized: Authentication required to upload files." },
+      { error: "Unauthorized: Please log in to upload images." },
       { status: 401 }
     );
   }
@@ -37,7 +47,7 @@ export async function POST(request: Request) {
     // 2. Validate MIME type
     if (!ALLOWED_MIME_TYPES.has(file.type)) {
       return NextResponse.json(
-        { error: "Invalid file type. Allowed formats: JPG, PNG, WEBP, GIF." },
+        { error: "Invalid file type. Allowed formats: JPG, PNG, WEBP, GIF, SVG." },
         { status: 400 }
       );
     }
@@ -53,32 +63,86 @@ export async function POST(request: Request) {
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
 
-    // 4. Secure upload via stream with explicit resource constraints
-    const uploadResult = await new Promise<any>((resolve, reject) => {
-      cloudinary.uploader
-        .upload_stream(
-          {
-            folder: "aims_uploads",
-            resource_type: "image",
-            allowed_formats: ["jpg", "png", "jpeg", "webp", "gif"],
-            max_bytes: MAX_FILE_SIZE_BYTES,
-          },
-          (error, result) => {
-            if (error) {
-              reject(error);
-            } else {
-              resolve(result);
-            }
-          }
-        )
-        .end(buffer);
-    });
+    // 4. Primary: Upload to Supabase Storage bucket 'course-thumbnails'
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-    return NextResponse.json({ url: uploadResult.secure_url });
+    if (supabaseUrl && serviceRoleKey) {
+      try {
+        const supabase = createClient(supabaseUrl, serviceRoleKey, {
+          auth: { persistSession: false },
+        });
+
+        const bucketName = "course-thumbnails";
+        const fileExt = file.name.split(".").pop()?.toLowerCase() || "jpg";
+        const cleanName = file.name
+          .replace(/[^a-zA-Z0-9]/g, "_")
+          .substring(0, 30);
+        const fileName = `${Date.now()}_${cleanName}.${fileExt}`;
+
+        const { error: uploadError } = await supabase.storage
+          .from(bucketName)
+          .upload(fileName, buffer, {
+            contentType: file.type,
+            upsert: true,
+          });
+
+        if (!uploadError) {
+          const { data: publicUrlData } = supabase.storage
+            .from(bucketName)
+            .getPublicUrl(fileName);
+
+          if (publicUrlData?.publicUrl) {
+            return NextResponse.json({ url: publicUrlData.publicUrl });
+          }
+        } else {
+          console.warn("[api/upload] Supabase upload error:", uploadError.message);
+        }
+      } catch (sbErr: any) {
+        console.warn("[api/upload] Supabase storage exception:", sbErr?.message || sbErr);
+      }
+    }
+
+    // 5. Fallback: Cloudinary upload (if configured and valid)
+    if (
+      process.env.CLOUDINARY_CLOUD_NAME &&
+      process.env.CLOUDINARY_API_KEY &&
+      process.env.CLOUDINARY_API_SECRET
+    ) {
+      try {
+        const uploadResult = await new Promise<any>((resolve, reject) => {
+          cloudinary.uploader
+            .upload_stream(
+              {
+                folder: "aims_uploads",
+                resource_type: "image",
+                allowed_formats: ["jpg", "png", "jpeg", "webp", "gif", "svg"],
+                max_bytes: MAX_FILE_SIZE_BYTES,
+              },
+              (error, result) => {
+                if (error) reject(error);
+                else resolve(result);
+              }
+            )
+            .end(buffer);
+        });
+
+        if (uploadResult?.secure_url) {
+          return NextResponse.json({ url: uploadResult.secure_url });
+        }
+      } catch (cErr: any) {
+        console.error("[api/upload] Cloudinary fallback failed:", cErr?.message || cErr);
+      }
+    }
+
+    return NextResponse.json(
+      { error: "Failed to upload image. Please try again or use a direct image URL." },
+      { status: 500 }
+    );
   } catch (error: any) {
     console.error("[api/upload] Upload processing error:", error?.message || error);
     return NextResponse.json(
-      { error: "Failed to process image upload. Please try again with a valid image file." },
+      { error: error?.message || "Failed to process image upload." },
       { status: 500 }
     );
   }

@@ -39,13 +39,35 @@ export default function StudentCoursesPage() {
   const initialQuery = searchParams.get("q") || "";
   const [searchTerm, setSearchTerm] = useState(initialQuery);
   const [activeTab, setActiveTab] = useState("all");
+  const [coursesList, setCoursesList] = useState<any[]>(dummyCourses);
 
-  const myCourses = dummyCourses.map((c, i) => ({
+  useEffect(() => {
+    let isMounted = true;
+    async function loadCourses() {
+      try {
+        const res = await fetch("/api/courses");
+        if (res.ok) {
+          const data = await res.json();
+          if (isMounted && data.courses && Array.isArray(data.courses) && data.courses.length > 0) {
+            setCoursesList(data.courses);
+          }
+        }
+      } catch (err) {
+        console.error("Error loading courses for student:", err);
+      }
+    }
+    loadCourses();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const myCourses = coursesList.map((c, i) => ({
     ...c,
-    progress: [68, 42, 85, 27, 55, 72, 15][i] || 0,
+    progress: [68, 42, 85, 27, 55, 72, 15][i] || ((i * 17) % 70) + 20,
     category: ["Recruitment", "Recruitment", "Recruitment", "Entrance", "Recruitment", "Entrance", "Lecturer"][i] || "Recruitment",
-    lectures: [42, 36, 28, 50, 22, 38, 30][i] || 30,
-    completed: [28, 15, 24, 13, 12, 27, 4][i] || 0,
+    lectures: [42, 36, 28, 50, 22, 38, 30][i] || 32,
+    completed: [28, 15, 24, 13, 12, 27, 4][i] || 10,
   }));
 
   const filteredCourses = myCourses.filter((c) =>

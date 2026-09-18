@@ -72,6 +72,7 @@ const navConfig: Record<UserRole, NavItem[]> = {
   ],
   admin: [
     { href: "/admin", label: "Analytics", icon: BarChart3 },
+    { href: "/instructor/courses", label: "Manage Courses", icon: FileEdit },
     { href: "/admin/media", label: "Frontend Images", icon: ImageIcon },
     { href: "/admin/users", label: "User Management", icon: ShieldCheck },
     { href: "/admin/announcements", label: "Announcements", icon: MessageSquarePlus },

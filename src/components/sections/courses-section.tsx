@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef } from "react";
+import { useRef, useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import {
@@ -47,8 +47,31 @@ const courseInfo: Record<string, { category: string; duration: string }> = {
 
 export function CoursesSection() {
   const sectionRef = useRef<HTMLDivElement>(null);
-  const featuredCourses = dummyCourses;
+  const [coursesList, setCoursesList] = useState<any[]>(dummyCourses);
   const frontendImages = useFrontendImages();
+
+  useEffect(() => {
+    let isMounted = true;
+    async function loadCourses() {
+      try {
+        const res = await fetch("/api/courses");
+        if (res.ok) {
+          const data = await res.json();
+          if (isMounted && data.courses && Array.isArray(data.courses) && data.courses.length > 0) {
+            setCoursesList(data.courses);
+          }
+        }
+      } catch (err) {
+        console.error("Error fetching courses for landing page:", err);
+      }
+    }
+    loadCourses();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const featuredCourses = coursesList;
 
   useGSAP(() => {
     gsap.from(".courses-text-reveal", {

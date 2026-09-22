@@ -39,6 +39,7 @@ import {
   Trash2,
   Calendar,
   FileSpreadsheet,
+  UserCheck,
 } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 
@@ -53,6 +54,7 @@ export default function AccountantTransactionsPage() {
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [addOpen, setAddOpen] = useState(false);
 
+  const [staffList, setStaffList] = useState<any[]>([]);
   const [form, setForm] = useState({
     type: "expense",
     category: "Utility",
@@ -60,6 +62,7 @@ export default function AccountantTransactionsPage() {
     description: "",
     reference_no: "",
     date: new Date().toISOString().split("T")[0],
+    recipient_id: "",
   });
 
   const debouncedSearch = useDebounce(searchTerm, 350);
@@ -88,8 +91,21 @@ export default function AccountantTransactionsPage() {
     }
   };
 
+  const fetchStaffList = async () => {
+    try {
+      const response = await fetch("/api/accountant/staff");
+      const data = await response.json();
+      if (Array.isArray(data)) {
+        setStaffList(data);
+      }
+    } catch (err) {
+      console.error("Failed to fetch staff list:", err);
+    }
+  };
+
   useEffect(() => {
     fetchTransactions();
+    fetchStaffList();
   }, [typeFilter, categoryFilter, debouncedSearch]);
 
   const handleCreate = async () => {
@@ -97,6 +113,15 @@ export default function AccountantTransactionsPage() {
       toast({
         title: "Missing fields",
         description: "Please enter an amount, category, and description.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (form.category === "Salary" && !form.recipient_id) {
+      toast({
+        title: "Staff selection required",
+        description: "Please select which staff or admin member is receiving this salary.",
         variant: "destructive",
       });
       return;
@@ -131,6 +156,7 @@ export default function AccountantTransactionsPage() {
           description: "",
           reference_no: "",
           date: new Date().toISOString().split("T")[0],
+          recipient_id: "",
         });
       }
     } catch (err: any) {
@@ -235,7 +261,14 @@ export default function AccountantTransactionsPage() {
                   <Label className="font-semibold">Category</Label>
                   <Select
                     value={form.category}
-                    onValueChange={(val) => setForm({ ...form, category: val })}
+                    onValueChange={(val) => {
+                      setForm((prev) => ({
+                        ...prev,
+                        category: val,
+                        type: val === "Salary" ? "expense" : prev.type,
+                        recipient_id: val === "Salary" ? prev.recipient_id : "",
+                      }));
+                    }}
                   >
                     <SelectTrigger className="h-11 rounded-xl">
                       <SelectValue placeholder="Select category" />
@@ -247,6 +280,61 @@ export default function AccountantTransactionsPage() {
                     </SelectContent>
                   </Select>
                 </div>
+
+                {/* Recipient Selection for Salary */}
+                {form.category === "Salary" && (
+                  <div className="space-y-2 p-3.5 rounded-2xl bg-indigo-50/70 border border-indigo-100 animate-in fade-in duration-200">
+                    <div className="flex items-center justify-between">
+                      <Label className="font-bold text-indigo-950 flex items-center gap-1.5 text-xs sm:text-sm">
+                        <UserCheck className="h-4 w-4 text-indigo-600" />
+                        Paid To (Staff / Admin) *
+                      </Label>
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-indigo-600 bg-indigo-100/80 px-2 py-0.5 rounded-full">
+                        Required
+                      </span>
+                    </div>
+                    <Select
+                      value={form.recipient_id}
+                      onValueChange={(val) => {
+                        const selected = staffList.find((s) => s.id === val);
+                        setForm((prev) => {
+                          const autoDesc = selected
+                            ? `Salary paid to ${selected.full_name} (${selected.roles?.join(", ") || selected.primaryRole})`
+                            : prev.description;
+                          return {
+                            ...prev,
+                            recipient_id: val,
+                            description:
+                              !prev.description || prev.description.startsWith("Salary paid to")
+                                ? autoDesc
+                                : prev.description,
+                          };
+                        });
+                      }}
+                    >
+                      <SelectTrigger className="h-11 rounded-xl bg-white border-indigo-200 focus:ring-indigo-500 font-semibold text-slate-800 text-xs sm:text-sm">
+                        <SelectValue placeholder="Select staff or admin member..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {staffList.length === 0 ? (
+                          <div className="p-3 text-center text-xs text-slate-400">Loading staff members...</div>
+                        ) : (
+                          staffList.map((staff) => (
+                            <SelectItem key={staff.id} value={staff.id}>
+                              <div className="flex items-center gap-2 py-0.5">
+                                <span className="font-bold text-slate-900">{staff.full_name}</span>
+                                <Badge variant="outline" className="text-[10px] uppercase font-extrabold px-1.5 py-0 border-indigo-200 bg-indigo-50 text-indigo-700">
+                                  {staff.roles?.join(", ") || staff.primaryRole}
+                                </Badge>
+                                <span className="text-slate-400 text-xs hidden sm:inline">({staff.email})</span>
+                              </div>
+                            </SelectItem>
+                          ))
+                        )}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
 
                 {/* Amount input */}
                 <div className="space-y-2">
@@ -382,7 +470,22 @@ export default function AccountantTransactionsPage() {
                       <td className="py-2.5 sm:py-4 px-3 sm:px-6 font-medium text-slate-500 whitespace-nowrap">
                         {new Date(tx.date).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
                       </td>
-                      <td className="py-2.5 sm:py-4 px-3 sm:px-6 text-slate-900 font-bold max-w-xs truncate">{tx.description}</td>
+                      <td className="py-2.5 sm:py-4 px-3 sm:px-6 max-w-xs">
+                        <div className="flex flex-col gap-1">
+                          <span className="text-slate-900 font-bold truncate">{tx.description}</span>
+                          {tx.recipient_profile && (
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-800 text-[11px] font-bold border border-indigo-100">
+                                <UserCheck className="h-3 w-3 text-indigo-600 shrink-0" />
+                                <span>Paid to: {tx.recipient_profile.full_name}</span>
+                                <span className="text-[9px] uppercase px-1 py-0.2 rounded bg-indigo-200/70 text-indigo-900">
+                                  {tx.recipient_profile.role}
+                                </span>
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      </td>
                       <td className="py-2.5 sm:py-4 px-3 sm:px-6">
                         <Badge variant="outline" className="capitalize border-slate-200 py-0.5 sm:py-1 px-2 sm:px-2.5 text-[10px] sm:text-xs">
                           {tx.category}

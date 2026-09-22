@@ -169,16 +169,16 @@ export function PwaInstallPrompt() {
 
         {/* Header: App Brand Info */}
         <div className="flex items-start gap-3.5 mb-3.5 pr-6">
-          <div className="relative h-14 w-14 sm:h-16 sm:w-16 shrink-0 rounded-full bg-white p-1 shadow-lg ring-2 ring-slate-200/90 flex items-center justify-center border border-slate-100">
+          <div className="relative h-14 w-14 sm:h-16 sm:w-16 shrink-0 rounded-2xl bg-white p-1 shadow-lg ring-2 ring-slate-200/90 flex items-center justify-center border border-slate-100">
             <Image
-              src="/logo.png"
+              src="/icon-192.png"
               alt="AIMS Salipur Logo"
               width={64}
               height={64}
-              className="rounded-full object-contain drop-shadow-sm"
+              className="rounded-xl object-contain drop-shadow-sm"
               priority
             />
-            <span className="absolute bottom-0 right-0 flex h-4 w-4 sm:h-4.5 sm:w-4.5 items-center justify-center rounded-full bg-emerald-500 text-white ring-2 ring-white shadow-sm">
+            <span className="absolute -bottom-1 -right-1 flex h-4 w-4 sm:h-4.5 sm:w-4.5 items-center justify-center rounded-full bg-emerald-500 text-white ring-2 ring-white shadow-sm z-10">
               <ShieldCheck className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
             </span>
           </div>

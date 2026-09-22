@@ -17,7 +17,7 @@ export async function GET(request: Request) {
   const supabase = createClient();
   let query = supabase
     .from("business_transactions")
-    .select("*, recorded_by_profile:profiles!recorded_by(full_name, email)")
+    .select("*, recorded_by_profile:profiles!recorded_by(full_name, email), recipient_profile:profiles!recipient_id(id, full_name, email, role)")
     .order("date", { ascending: false });
 
   if (type && type !== "all" && ALLOWED_TRANSACTION_TYPES.has(type)) {
@@ -47,7 +47,7 @@ export async function POST(request: Request) {
 
   try {
     const body = await request.json();
-    const { type, category, amount, description, date, reference_no } = body;
+    const { type, category, amount, description, date, reference_no, recipient_id } = body;
 
     if (!type || !category || amount === undefined || !description) {
       return NextResponse.json(
@@ -79,8 +79,9 @@ export async function POST(request: Request) {
         date: date || new Date().toISOString(),
         reference_no: reference_no ? String(reference_no).trim().slice(0, 100) : null,
         recorded_by: context.user.id,
+        recipient_id: recipient_id ? String(recipient_id).trim() : null,
       })
-      .select()
+      .select("*, recorded_by_profile:profiles!recorded_by(full_name, email), recipient_profile:profiles!recipient_id(id, full_name, email, role)")
       .single();
 
     if (error) {
@@ -100,7 +101,7 @@ export async function PUT(request: Request) {
 
   try {
     const body = await request.json();
-    const { id, type, category, amount, description, date, reference_no } = body;
+    const { id, type, category, amount, description, date, reference_no, recipient_id } = body;
 
     if (!id || typeof id !== "string") {
       return NextResponse.json({ error: "Missing or invalid transaction id" }, { status: 400 });
@@ -131,9 +132,10 @@ export async function PUT(request: Request) {
         description: description ? String(description).trim().slice(0, 500) : undefined,
         date,
         reference_no: reference_no ? String(reference_no).trim().slice(0, 100) : undefined,
+        recipient_id: recipient_id !== undefined ? (recipient_id ? String(recipient_id).trim() : null) : undefined,
       })
       .eq("id", id)
-      .select()
+      .select("*, recorded_by_profile:profiles!recorded_by(full_name, email), recipient_profile:profiles!recipient_id(id, full_name, email, role)")
       .single();
 
     if (error) {

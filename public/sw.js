@@ -1,10 +1,13 @@
-const CACHE_NAME = 'aims-cache-v1';
+const CACHE_NAME = 'aims-cache-v2';
 const STATIC_ASSETS = [
   '/',
   '/manifest.json',
   '/logo.png',
   '/icon-192.png',
   '/icon-512.png',
+  '/icon-maskable-192.png',
+  '/icon-maskable-512.png',
+  '/apple-touch-icon.png',
 ];
 
 // Install: Cache critical assets

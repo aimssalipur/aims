@@ -35,8 +35,13 @@ export default async function InstructorLayout({
     }
   }
 
+  const isAdmin = roles.includes("admin") || profile?.role === "admin" || user?.email === "aimssalipur@gmail.com";
+  if (isAdmin) {
+    roles = ["student", "instructor", "accountant", "admin"];
+  }
+
   // Reject unauthorized users (only instructor and admin allowed)
-  if (!roles.includes("instructor") && !roles.includes("admin") && profile?.role !== "instructor" && profile?.role !== "admin") {
+  if (!isAdmin && !roles.includes("instructor") && profile?.role !== "instructor") {
     redirect(`/${profile?.role || "student"}`);
   }
 

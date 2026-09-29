@@ -1,6 +1,8 @@
-import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
 import { requireRole } from "@/lib/server-auth";
+
+export const dynamic = "force-dynamic";
 
 const ALLOWED_PAYMENT_METHODS = new Set(["UPI", "Cash", "Bank Transfer", "Card", "Other"]);
 const ALLOWED_PAYMENT_STATUSES = new Set(["pending", "verified", "rejected"]);
@@ -14,7 +16,7 @@ export async function GET(request: Request) {
   const status = searchParams.get("status");
   const studentId = searchParams.get("student_id");
 
-  const supabase = createClient();
+  const supabase = createAdminClient();
   let query = supabase
     .from("fees_payments")
     .select("*, student:profiles!student_id(full_name, email, whatsapp, course_of_interest), verifier:profiles!verified_by(full_name)")
@@ -68,8 +70,27 @@ export async function POST(request: Request) {
     }
 
     const targetStatus = status && ALLOWED_PAYMENT_STATUSES.has(status) ? status : "pending";
-    const supabase = createClient();
+    const supabase = createAdminClient();
     const isManualVerification = targetStatus === "verified";
+
+    // Prevent accidental double clicks / duplicate fee submissions within 8 seconds
+    const eightSecondsAgo = new Date(Date.now() - 8_000).toISOString();
+    const { data: recentDuplicate } = await supabase
+      .from("fees_payments")
+      .select("id")
+      .eq("student_id", student_id)
+      .eq("amount_paid", parsedAmount)
+      .eq("payment_method", sanitizedMethod)
+      .gte("created_at", eightSecondsAgo)
+      .limit(1)
+      .maybeSingle();
+
+    if (recentDuplicate) {
+      return NextResponse.json(
+        { error: "A matching payment entry was just submitted a few seconds ago. Please wait a moment to avoid duplicate records." },
+        { status: 409 }
+      );
+    }
 
     const { data, error } = await supabase
       .from("fees_payments")
@@ -87,7 +108,8 @@ export async function POST(request: Request) {
       .single();
 
     if (error) {
-      return NextResponse.json({ error: "Failed to record fee payment." }, { status: 500 });
+      console.error("[api/accountant/fees] POST error:", error);
+      return NextResponse.json({ error: error.message || "Failed to record fee payment." }, { status: 500 });
     }
 
     // Automatically record this as an income transaction in business_transactions if it is verified
@@ -113,7 +135,8 @@ export async function POST(request: Request) {
 
     return NextResponse.json(data);
   } catch (err: any) {
-    return NextResponse.json({ error: "An error occurred while processing payment." }, { status: 500 });
+    console.error("[api/accountant/fees] POST exception:", err);
+    return NextResponse.json({ error: err?.message || "An error occurred while processing payment." }, { status: 500 });
   }
 }
 
@@ -134,7 +157,7 @@ export async function PUT(request: Request) {
       return NextResponse.json({ error: "Invalid status values. Allowed: verified, rejected" }, { status: 400 });
     }
 
-    const supabase = createClient();
+    const supabase = createAdminClient();
 
     // Get current payment record to extract amount/student details
     const { data: currentPayment, error: fetchError } = await supabase

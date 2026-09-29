@@ -42,20 +42,35 @@ import {
   AlertCircle,
   FileCheck2,
   Send,
+  Loader2,
+  RotateCw,
+  Printer,
 } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
+import { getFriendlyErrorMessage } from "@/lib/friendly-error";
+import { subscribeToDataRefresh } from "@/lib/refresh-event";
+import { cn } from "@/lib/utils";
+import { ReceiptModal, ReceiptData } from "@/components/finance/receipt-modal";
 
 export default function AccountantFeesPage() {
   const { toast } = useToast();
   const [fees, setFees] = useState<any[]>([]);
   const [students, setStudents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [verifyingId, setVerifyingId] = useState<string | null>(null);
+  const [rejecting, setRejecting] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [logOpen, setLogOpen] = useState(false);
   const [rejectOpen, setRejectOpen] = useState(false);
   const [rejectId, setRejectId] = useState<string | null>(null);
   const [rejectionReason, setRejectionReason] = useState("");
+
+  // Receipt Modal State
+  const [receiptData, setReceiptData] = useState<ReceiptData | null>(null);
+  const [receiptOpen, setReceiptOpen] = useState(false);
 
   const [form, setForm] = useState({
     student_id: "",
@@ -105,6 +120,27 @@ export default function AccountantFeesPage() {
   }, [statusFilter]);
 
   useEffect(() => {
+    return subscribeToDataRefresh(() => {
+      fetchFees();
+      fetchStudents();
+    });
+  }, [statusFilter]);
+
+  const handleManualRefresh = async () => {
+    if (isRefreshing) return;
+    setIsRefreshing(true);
+    try {
+      await Promise.all([fetchFees(), fetchStudents()]);
+      toast({
+        title: "Fees Ledger Updated ✅",
+        description: "Latest student fee submissions loaded.",
+        variant: "success",
+      });
+    } catch {}
+    setTimeout(() => setIsRefreshing(false), 600);
+  };
+
+  useEffect(() => {
     fetchStudents();
     if (typeof window !== "undefined") {
       const params = new URLSearchParams(window.location.search);
@@ -114,18 +150,55 @@ export default function AccountantFeesPage() {
     }
   }, []);
 
+  const handleOpenFeeReceipt = (fee: any) => {
+    const cleanId = fee.id ? fee.id.replace(/-/g, "").slice(0, 8).toUpperCase() : String(Math.floor(100000 + Math.random() * 900000));
+    const receiptNo = `AIMS-FEE-${cleanId}`;
+
+    const studentName = fee.student?.full_name || "AIMS Enrolled Student";
+    const studentEmail = fee.student?.email;
+    const course = fee.student?.course_of_interest || "AIMS Nursing & Medical Coaching";
+
+    const data: ReceiptData = {
+      receiptNo,
+      date: fee.payment_date || fee.created_at || new Date(),
+      type: "fee",
+      title: "Official Student Fee Receipt",
+      partyName: studentName,
+      partyRoleOrCourse: course,
+      partyContact: studentEmail,
+      category: "Academic Course Tuition & Fees",
+      amount: Number(fee.amount_paid) || 0,
+      paymentMethod: fee.payment_method || "UPI Online",
+      referenceNo: fee.transaction_id || undefined,
+      description: fee.remarks ? `Course Fee: ${fee.remarks}` : `Tuition fee payment received for ${course}`,
+      recordedBy: fee.verifier?.full_name || "AIMS Admissions & Accounts",
+      verifiedBy: fee.verifier?.full_name || "AIMS Accounts Dept",
+      status: fee.status === "verified" ? "Verified & Settled" : (fee.status === "rejected" ? "Payment Rejected" : "Pending Verification"),
+    };
+
+    setReceiptData(data);
+    setReceiptOpen(true);
+  };
+
   const handleVerify = async (id: string) => {
+    if (verifyingId) return;
+
+    setVerifyingId(id);
     try {
       const response = await fetch("/api/accountant/fees", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id, status: "verified" }),
       });
-      const data = await response.json();
-      if (data.error) {
+      let data: any = {};
+      try {
+        data = await response.json();
+      } catch {}
+
+      if (!response.ok || data.error) {
         toast({
           title: "Verification failed",
-          description: data.error,
+          description: getFriendlyErrorMessage(data.error || "Unable to verify payment at this time."),
           variant: "destructive",
         });
       } else {
@@ -139,9 +212,11 @@ export default function AccountantFeesPage() {
     } catch (err: any) {
       toast({
         title: "Error verifying",
-        description: err.message,
+        description: getFriendlyErrorMessage(err),
         variant: "destructive",
       });
+    } finally {
+      setVerifyingId(null);
     }
   };
 
@@ -152,6 +227,8 @@ export default function AccountantFeesPage() {
   };
 
   const handleReject = async () => {
+    if (rejecting) return;
+
     if (!rejectionReason) {
       toast({
         title: "Remarks required",
@@ -161,17 +238,22 @@ export default function AccountantFeesPage() {
       return;
     }
 
+    setRejecting(true);
     try {
       const response = await fetch("/api/accountant/fees", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id: rejectId, status: "rejected", remarks: rejectionReason }),
       });
-      const data = await response.json();
-      if (data.error) {
+      let data: any = {};
+      try {
+        data = await response.json();
+      } catch {}
+
+      if (!response.ok || data.error) {
         toast({
           title: "Rejection failed",
-          description: data.error,
+          description: getFriendlyErrorMessage(data.error || "Unable to reject submission at this time."),
           variant: "destructive",
         });
       } else {
@@ -186,13 +268,17 @@ export default function AccountantFeesPage() {
     } catch (err: any) {
       toast({
         title: "Error rejecting",
-        description: err.message,
+        description: getFriendlyErrorMessage(err),
         variant: "destructive",
       });
+    } finally {
+      setRejecting(false);
     }
   };
 
   const handleManualLog = async () => {
+    if (submitting) return;
+
     if (!form.student_id || !form.amount_paid || !form.payment_method) {
       toast({
         title: "Missing fields",
@@ -202,6 +288,7 @@ export default function AccountantFeesPage() {
       return;
     }
 
+    setSubmitting(true);
     try {
       const response = await fetch("/api/accountant/fees", {
         method: "POST",
@@ -209,11 +296,15 @@ export default function AccountantFeesPage() {
         body: JSON.stringify(form),
       });
 
-      const data = await response.json();
-      if (data.error) {
+      let data: any = {};
+      try {
+        data = await response.json();
+      } catch {}
+
+      if (!response.ok || data.error) {
         toast({
           title: "Failed to record payment",
-          description: data.error,
+          description: getFriendlyErrorMessage(data.error || "Unable to record payment at this time."),
           variant: "destructive",
         });
       } else {
@@ -236,9 +327,11 @@ export default function AccountantFeesPage() {
     } catch (err: any) {
       toast({
         title: "Error logging payment",
-        description: err.message,
+        description: getFriendlyErrorMessage(err),
         variant: "destructive",
       });
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -272,6 +365,18 @@ export default function AccountantFeesPage() {
           </p>
         </div>
         <div className="flex items-center gap-2 sm:gap-3">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={handleManualRefresh}
+            disabled={isRefreshing}
+            className="gap-1.5 sm:gap-2 h-9 sm:h-11 text-xs sm:text-sm px-3 sm:px-4 rounded-xl font-bold border-slate-200 text-slate-700 hover:bg-slate-50 transition-all shadow-xs"
+            title="Refresh Fees Ledger (without page reload)"
+          >
+            <RotateCw className={cn("h-3.5 w-3.5 sm:h-4 sm:w-4 text-indigo-600 shrink-0", isRefreshing && "animate-spin")} />
+            <span>{isRefreshing ? "Refreshing..." : "Refresh"}</span>
+          </Button>
           <Dialog open={logOpen} onOpenChange={setLogOpen}>
             <DialogTrigger asChild>
               <Button size="sm" className="gap-1.5 sm:gap-2 h-9 sm:h-11 text-xs sm:text-sm px-3.5 sm:px-5 shadow-lg shadow-indigo-600/20 bg-gradient-to-r from-indigo-600 to-purple-700 hover:from-indigo-700 hover:to-purple-800 text-white border-0 font-bold rounded-xl">
@@ -279,25 +384,28 @@ export default function AccountantFeesPage() {
                 Record Cash/Office Fee
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-md">
-              <DialogHeader>
-                <DialogTitle className="text-xl font-extrabold text-slate-900">Record Offline Payment</DialogTitle>
-                <DialogDescription className="font-semibold text-slate-400">
+            <DialogContent className="w-[95vw] sm:max-w-lg max-h-[90vh] overflow-y-auto p-4 sm:p-6 rounded-2xl sm:rounded-3xl border-slate-200">
+              <DialogHeader className="space-y-1 text-left">
+                <DialogTitle className="text-lg sm:text-xl font-extrabold text-slate-900 flex items-center gap-2">
+                  <PlusCircle className="h-5 w-5 text-indigo-600 shrink-0" />
+                  Record Offline Payment
+                </DialogTitle>
+                <DialogDescription className="font-semibold text-slate-500 text-xs sm:text-sm">
                   Log direct payments paid directly at the office counter.
                 </DialogDescription>
               </DialogHeader>
-              <div className="space-y-4 py-3">
+              <div className="space-y-3.5 sm:space-y-4 py-2 sm:py-3">
                 {/* Student Select */}
-                <div className="space-y-2">
-                  <Label className="font-semibold">Select Student</Label>
+                <div className="space-y-1.5 sm:space-y-2">
+                  <Label className="font-semibold text-xs sm:text-sm">Select Student <span className="text-rose-500">*</span></Label>
                   <Select
                     value={form.student_id}
                     onValueChange={(val) => setForm({ ...form, student_id: val })}
                   >
-                    <SelectTrigger className="h-11 rounded-xl">
+                    <SelectTrigger className="h-10 sm:h-11 rounded-xl text-xs sm:text-sm font-semibold">
                       <SelectValue placeholder="Search student profile..." />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className="max-h-60">
                       {students.map((student) => (
                         <SelectItem key={student.id} value={student.id}>
                           {student.full_name} ({student.course_of_interest || "No Course Specified"})
@@ -307,69 +415,88 @@ export default function AccountantFeesPage() {
                   </Select>
                 </div>
 
-                {/* Amount Paid */}
-                <div className="space-y-2">
-                  <Label className="font-semibold">Amount Paid (₹)</Label>
-                  <div className="relative">
-                    <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 font-bold">₹</span>
-                    <Input
-                      type="number"
-                      placeholder="e.g. 15000"
-                      className="pl-8 h-11 rounded-xl font-bold text-slate-900"
-                      value={form.amount_paid}
-                      onChange={(e) => setForm({ ...form, amount_paid: e.target.value })}
-                    />
+                {/* Amount Paid & Payment Method - Responsive Grid */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {/* Amount Paid */}
+                  <div className="space-y-1.5 sm:space-y-2">
+                    <Label className="font-semibold text-xs sm:text-sm">Amount Paid (₹) <span className="text-rose-500">*</span></Label>
+                    <div className="relative">
+                      <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-sm">₹</span>
+                      <Input
+                        type="number"
+                        placeholder="e.g. 15000"
+                        className="pl-8 h-10 sm:h-11 rounded-xl font-bold text-slate-900 text-xs sm:text-sm"
+                        value={form.amount_paid}
+                        onChange={(e) => setForm({ ...form, amount_paid: e.target.value })}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Payment Method */}
+                  <div className="space-y-1.5 sm:space-y-2">
+                    <Label className="font-semibold text-xs sm:text-sm">Payment Method <span className="text-rose-500">*</span></Label>
+                    <Select
+                      value={form.payment_method}
+                      onValueChange={(val) => setForm({ ...form, payment_method: val })}
+                    >
+                      <SelectTrigger className="h-10 sm:h-11 rounded-xl text-xs sm:text-sm font-semibold">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Cash">Cash Deposit</SelectItem>
+                        <SelectItem value="UPI">UPI Transfer</SelectItem>
+                        <SelectItem value="Bank Transfer">Bank Wire Transfer</SelectItem>
+                        <SelectItem value="Card">Debit/Credit Card</SelectItem>
+                        <SelectItem value="Other">Other</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
 
-                {/* Payment Method */}
-                <div className="space-y-2">
-                  <Label className="font-semibold">Payment Method</Label>
-                  <Select
-                    value={form.payment_method}
-                    onValueChange={(val) => setForm({ ...form, payment_method: val })}
-                  >
-                    <SelectTrigger className="h-11 rounded-xl">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Cash">Cash Deposit</SelectItem>
-                      <SelectItem value="UPI">UPI Transfer</SelectItem>
-                      <SelectItem value="Bank Transfer">Bank Wire Transfer</SelectItem>
-                      <SelectItem value="Card">Debit/Credit Card</SelectItem>
-                      <SelectItem value="Other">Other</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
                 {/* Trans Reference */}
-                <div className="space-y-2">
-                  <Label className="font-semibold">Transaction ID / Reference (Optional)</Label>
+                <div className="space-y-1.5 sm:space-y-2">
+                  <Label className="font-semibold text-xs sm:text-sm">Transaction ID / Reference (Optional)</Label>
                   <Input
                     placeholder="e.g. UPI-98273618 / CASH-082"
-                    className="h-11 rounded-xl font-mono"
+                    className="h-10 sm:h-11 rounded-xl font-mono text-xs sm:text-sm"
                     value={form.transaction_id}
                     onChange={(e) => setForm({ ...form, transaction_id: e.target.value })}
                   />
                 </div>
 
                 {/* Remarks */}
-                <div className="space-y-2">
-                  <Label className="font-semibold">Remarks</Label>
+                <div className="space-y-1.5 sm:space-y-2">
+                  <Label className="font-semibold text-xs sm:text-sm">Remarks</Label>
                   <Input
                     placeholder="e.g. Installment 1 / Full Semester Fee"
-                    className="h-11 rounded-xl"
+                    className="h-10 sm:h-11 rounded-xl text-xs sm:text-sm font-medium"
                     value={form.remarks}
                     onChange={(e) => setForm({ ...form, remarks: e.target.value })}
                   />
                 </div>
               </div>
-              <DialogFooter className="flex gap-2">
-                <Button variant="outline" onClick={() => setLogOpen(false)} className="rounded-xl h-11 font-semibold">
+              <DialogFooter className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 sm:gap-3 pt-2">
+                <Button
+                  variant="outline"
+                  disabled={submitting}
+                  onClick={() => setLogOpen(false)}
+                  className="w-full sm:w-auto rounded-xl h-10 sm:h-11 font-semibold text-xs sm:text-sm"
+                >
                   Cancel
                 </Button>
-                <Button onClick={handleManualLog} className="bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl h-11 font-bold">
-                  Log payment
+                <Button
+                  onClick={handleManualLog}
+                  disabled={submitting}
+                  className="w-full sm:w-auto bg-gradient-to-r from-indigo-600 to-purple-700 hover:from-indigo-700 hover:to-purple-800 text-white rounded-xl h-10 sm:h-11 font-bold min-w-[140px] text-xs sm:text-sm shadow-md shadow-indigo-600/20"
+                >
+                  {submitting ? (
+                    <span className="flex items-center justify-center gap-2">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Recording...
+                    </span>
+                  ) : (
+                    "Log Payment"
+                  )}
                 </Button>
               </DialogFooter>
             </DialogContent>
@@ -481,14 +608,23 @@ export default function AccountantFeesPage() {
                           <div className="flex items-center justify-center gap-1 sm:gap-1.5">
                             <Button
                               size="sm"
-                              className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg h-7 sm:h-9 font-bold px-2 sm:px-3 text-[11px] sm:text-xs"
+                              disabled={verifyingId === fee.id}
+                              className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg h-7 sm:h-9 font-bold px-2 sm:px-3 text-[11px] sm:text-xs min-w-[70px]"
                               onClick={() => handleVerify(fee.id)}
                             >
-                              Verify
+                              {verifyingId === fee.id ? (
+                                <span className="flex items-center gap-1">
+                                  <Loader2 className="h-3 w-3 animate-spin" />
+                                  Verifying...
+                                </span>
+                              ) : (
+                                "Verify"
+                              )}
                             </Button>
                             <Button
                               size="sm"
                               variant="outline"
+                              disabled={verifyingId === fee.id}
                               className="border-rose-200 text-rose-600 hover:bg-rose-50 hover:text-rose-700 rounded-lg h-7 sm:h-9 font-bold px-2 sm:px-3 text-[11px] sm:text-xs"
                               onClick={() => openRejectDialog(fee.id)}
                             >
@@ -496,11 +632,22 @@ export default function AccountantFeesPage() {
                             </Button>
                           </div>
                         ) : (
-                          <div className="text-slate-400 text-[10px] sm:text-xs font-normal">
-                            Processed by
-                            <span className="block font-bold text-slate-500">
-                              {fee.verifier?.full_name || "Accountant"}
-                            </span>
+                          <div className="flex flex-col items-center justify-center gap-1.5">
+                            {fee.status === "verified" ? (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleOpenFeeReceipt(fee)}
+                                className="h-7 sm:h-8 px-2 sm:px-2.5 text-indigo-700 border-indigo-200 hover:bg-indigo-50 font-bold text-xs gap-1.5 rounded-lg shadow-sm"
+                                title="Print / Share Official Receipt"
+                              >
+                                <Printer className="h-3.5 w-3.5 text-indigo-600" />
+                                <span>Receipt</span>
+                              </Button>
+                            ) : null}
+                            <div className="text-slate-400 text-[10px] sm:text-[11px] font-normal text-center">
+                              By <span className="font-bold text-slate-600">{fee.verifier?.full_name || "Accounts"}</span>
+                            </div>
                           </div>
                         )}
                       </td>
@@ -513,34 +660,56 @@ export default function AccountantFeesPage() {
         </div>
       </Card>
 
-      {/* Reject Remarks Dialog */}
       <Dialog open={rejectOpen} onOpenChange={setRejectOpen}>
-        <DialogContent className="max-w-sm">
-          <DialogHeader>
+        <DialogContent className="w-[95vw] sm:max-w-md max-h-[90vh] overflow-y-auto p-4 sm:p-6 rounded-2xl border-slate-200">
+          <DialogHeader className="space-y-1 text-left">
             <DialogTitle className="text-lg font-extrabold text-slate-900">Provide Rejection Remarks</DialogTitle>
-            <DialogDescription className="font-semibold text-slate-400">
+            <DialogDescription className="font-semibold text-slate-500 text-xs sm:text-sm">
               State the reason for rejecting this fee submission. The student will see this note.
             </DialogDescription>
           </DialogHeader>
           <div className="py-2 space-y-2">
-            <Label className="font-semibold">Rejection Notes</Label>
+            <Label className="font-semibold text-xs sm:text-sm">Rejection Notes <span className="text-rose-500">*</span></Label>
             <Input
               placeholder="e.g. Transaction Reference number does not match bank records."
-              className="h-11 rounded-xl"
+              className="h-10 sm:h-11 rounded-xl text-xs sm:text-sm"
               value={rejectionReason}
               onChange={(e) => setRejectionReason(e.target.value)}
             />
           </div>
-          <DialogFooter className="flex gap-2">
-            <Button variant="outline" onClick={() => setRejectOpen(false)} className="rounded-xl h-11 font-semibold">
+          <DialogFooter className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 sm:gap-3 pt-2">
+            <Button
+              variant="outline"
+              disabled={rejecting}
+              onClick={() => setRejectOpen(false)}
+              className="w-full sm:w-auto rounded-xl h-10 sm:h-11 font-semibold text-xs sm:text-sm"
+            >
               Cancel
             </Button>
-            <Button onClick={handleReject} className="bg-rose-600 hover:bg-rose-700 text-white rounded-xl h-11 font-bold">
-              Reject Submission
+            <Button
+              onClick={handleReject}
+              disabled={rejecting}
+              className="w-full sm:w-auto bg-rose-600 hover:bg-rose-700 text-white rounded-xl h-10 sm:h-11 font-bold min-w-[150px] text-xs sm:text-sm shadow-md shadow-rose-600/20"
+            >
+              {rejecting ? (
+                <span className="flex items-center justify-center gap-2">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Rejecting...
+                </span>
+              ) : (
+                "Reject Submission"
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Official Student Fee Receipt Modal */}
+      <ReceiptModal
+        open={receiptOpen}
+        onOpenChange={setReceiptOpen}
+        data={receiptData}
+      />
     </div>
   );
 }

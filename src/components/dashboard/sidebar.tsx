@@ -46,8 +46,11 @@ import {
   Video,
   DollarSign,
   Image as ImageIcon,
+  RotateCw,
+  Landmark,
 } from "lucide-react";
 import { useState } from "react";
+import { triggerDataRefresh } from "@/lib/refresh-event";
 
 interface NavItem {
   href: string;
@@ -81,6 +84,7 @@ const navConfig: Record<UserRole, NavItem[]> = {
   accountant: [
     { href: "/accountant", label: "Overview", icon: LayoutDashboard },
     { href: "/accountant/transactions", label: "Transactions", icon: DollarSign },
+    { href: "/accountant/capital", label: "Capital & Loans", icon: Landmark, badge: "New" },
     { href: "/accountant/fees", label: "Student Fees", icon: GraduationCap },
     { href: "/accountant/reports", label: "Financial Reports", icon: BarChart3 },
     { href: "/accountant/profile", label: "Profile", icon: UserIcon },
@@ -136,8 +140,24 @@ export function DashboardSidebar({ role, user }: DashboardSidebarProps) {
   const router = useRouter();
   const { toast } = useToast();
   const [sheetOpen, setSheetOpen] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const theme = roleTheme[role];
   const navItems = navConfig[role];
+
+  const handleRefreshData = () => {
+    if (isRefreshing) return;
+    setIsRefreshing(true);
+    triggerDataRefresh();
+    router.refresh();
+    toast({
+      title: "Data Refreshed ✅",
+      description: "Fetched latest records and status.",
+      variant: "success",
+    });
+    setTimeout(() => {
+      setIsRefreshing(false);
+    }, 800);
+  };
 
   const supabase = createClient();
 
@@ -360,98 +380,107 @@ export function DashboardSidebar({ role, user }: DashboardSidebarProps) {
           </div>
 
           {/* Active Panel Switcher Grid */}
-          {user.roles && user.roles.length > 1 && (
-            <div className="mb-2">
-              <div className="flex items-center justify-between mb-1 px-0.5">
-                <span className={cn("text-[9px] font-black uppercase tracking-widest", mobile ? "text-slate-400" : "text-white/60")}>
-                  Active Panel
-                </span>
-                <span className="flex h-1.5 w-1.5 rounded-full bg-emerald-500" />
+          {(() => {
+            const isAdmin = role === "admin" || (user.roles && user.roles.includes("admin"));
+            const effectiveRoles: UserRole[] = isAdmin
+              ? ["student", "instructor", "accountant", "admin"]
+              : user.roles || [role];
+
+            if (effectiveRoles.length <= 1) return null;
+
+            return (
+              <div className="mb-2">
+                <div className="flex items-center justify-between mb-1 px-0.5">
+                  <span className={cn("text-[9px] font-black uppercase tracking-widest", mobile ? "text-slate-400" : "text-white/60")}>
+                    Active Panel {isAdmin && <span className="text-amber-300 font-bold">(Universal Admin)</span>}
+                  </span>
+                  <span className="flex h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                </div>
+                <div
+                  className={cn(
+                    "grid gap-1 p-1 rounded-xl",
+                    effectiveRoles.length > 3 ? "grid-cols-4" : effectiveRoles.length === 3 ? "grid-cols-3" : "grid-cols-2",
+                    mobile
+                      ? "bg-slate-200/70 border border-slate-300/40"
+                      : "bg-black/30 border border-white/10"
+                  )}
+                >
+                  {effectiveRoles.includes("student") && (
+                    <Link
+                      href="/student"
+                      onClick={() => mobile && setSheetOpen(false)}
+                      className={cn(
+                        "text-[10px] font-extrabold text-center py-1.5 px-0.5 rounded-lg transition-all truncate",
+                        role === "student"
+                          ? mobile
+                            ? "bg-white text-aims-navy shadow-xs font-black ring-1 ring-slate-200"
+                            : "bg-white text-aims-navy shadow font-black"
+                          : mobile
+                            ? "text-slate-600 hover:text-slate-900 hover:bg-white/50"
+                            : "text-white/65 hover:text-white hover:bg-white/10"
+                      )}
+                    >
+                      Student
+                    </Link>
+                  )}
+                  {effectiveRoles.includes("instructor") && (
+                    <Link
+                      href="/instructor"
+                      onClick={() => mobile && setSheetOpen(false)}
+                      className={cn(
+                        "text-[10px] font-extrabold text-center py-1.5 px-0.5 rounded-lg transition-all truncate",
+                        role === "instructor"
+                          ? mobile
+                            ? "bg-white text-emerald-800 shadow-xs font-black ring-1 ring-slate-200"
+                            : "bg-white text-emerald-800 shadow font-black"
+                          : mobile
+                            ? "text-slate-600 hover:text-slate-900 hover:bg-white/50"
+                            : "text-white/65 hover:text-white hover:bg-white/10"
+                      )}
+                    >
+                      Staff
+                    </Link>
+                  )}
+                  {effectiveRoles.includes("accountant") && (
+                    <Link
+                      href="/accountant"
+                      onClick={() => mobile && setSheetOpen(false)}
+                      className={cn(
+                        "text-[10px] font-extrabold text-center py-1.5 px-0.5 rounded-lg transition-all truncate",
+                        role === "accountant"
+                          ? mobile
+                            ? "bg-white text-indigo-900 shadow-xs font-black ring-1 ring-slate-200"
+                            : "bg-white text-indigo-900 shadow font-black"
+                          : mobile
+                            ? "text-slate-600 hover:text-slate-900 hover:bg-white/50"
+                            : "text-white/65 hover:text-white hover:bg-white/10"
+                      )}
+                    >
+                      Finance
+                    </Link>
+                  )}
+                  {effectiveRoles.includes("admin") && (
+                    <Link
+                      href="/admin"
+                      onClick={() => mobile && setSheetOpen(false)}
+                      className={cn(
+                        "text-[10px] font-extrabold text-center py-1.5 px-0.5 rounded-lg transition-all truncate",
+                        role === "admin"
+                          ? mobile
+                            ? "bg-white text-amber-800 shadow-xs font-black ring-1 ring-slate-200"
+                            : "bg-white text-amber-800 shadow font-black"
+                          : mobile
+                            ? "text-slate-600 hover:text-slate-900 hover:bg-white/50"
+                            : "text-white/65 hover:text-white hover:bg-white/10"
+                      )}
+                    >
+                      Admin
+                    </Link>
+                  )}
+                </div>
               </div>
-              <div
-                className={cn(
-                  "grid gap-1 p-1 rounded-xl",
-                  user.roles.length > 3 ? "grid-cols-4" : user.roles.length === 3 ? "grid-cols-3" : "grid-cols-2",
-                  mobile
-                    ? "bg-slate-200/70 border border-slate-300/40"
-                    : "bg-black/30 border border-white/10"
-                )}
-              >
-                {user.roles.includes("student") && (
-                  <Link
-                    href="/student"
-                    onClick={() => mobile && setSheetOpen(false)}
-                    className={cn(
-                      "text-[10px] font-extrabold text-center py-1.5 px-0.5 rounded-lg transition-all truncate",
-                      role === "student"
-                        ? mobile
-                          ? "bg-white text-aims-navy shadow-xs font-black ring-1 ring-slate-200"
-                          : "bg-white text-aims-navy shadow font-black"
-                        : mobile
-                          ? "text-slate-600 hover:text-slate-900 hover:bg-white/50"
-                          : "text-white/65 hover:text-white hover:bg-white/10"
-                    )}
-                  >
-                    Student
-                  </Link>
-                )}
-                {user.roles.includes("instructor") && (
-                  <Link
-                    href="/instructor"
-                    onClick={() => mobile && setSheetOpen(false)}
-                    className={cn(
-                      "text-[10px] font-extrabold text-center py-1.5 px-0.5 rounded-lg transition-all truncate",
-                      role === "instructor"
-                        ? mobile
-                          ? "bg-white text-emerald-800 shadow-xs font-black ring-1 ring-slate-200"
-                          : "bg-white text-emerald-800 shadow font-black"
-                        : mobile
-                          ? "text-slate-600 hover:text-slate-900 hover:bg-white/50"
-                          : "text-white/65 hover:text-white hover:bg-white/10"
-                    )}
-                  >
-                    Staff
-                  </Link>
-                )}
-                {user.roles.includes("accountant") && (
-                  <Link
-                    href="/accountant"
-                    onClick={() => mobile && setSheetOpen(false)}
-                    className={cn(
-                      "text-[10px] font-extrabold text-center py-1.5 px-0.5 rounded-lg transition-all truncate",
-                      role === "accountant"
-                        ? mobile
-                          ? "bg-white text-indigo-900 shadow-xs font-black ring-1 ring-slate-200"
-                          : "bg-white text-indigo-900 shadow font-black"
-                        : mobile
-                          ? "text-slate-600 hover:text-slate-900 hover:bg-white/50"
-                          : "text-white/65 hover:text-white hover:bg-white/10"
-                    )}
-                  >
-                    Finance
-                  </Link>
-                )}
-                {user.roles.includes("admin") && (
-                  <Link
-                    href="/admin"
-                    onClick={() => mobile && setSheetOpen(false)}
-                    className={cn(
-                      "text-[10px] font-extrabold text-center py-1.5 px-0.5 rounded-lg transition-all truncate",
-                      role === "admin"
-                        ? mobile
-                          ? "bg-white text-amber-800 shadow-xs font-black ring-1 ring-slate-200"
-                          : "bg-white text-amber-800 shadow font-black"
-                        : mobile
-                          ? "text-slate-600 hover:text-slate-900 hover:bg-white/50"
-                          : "text-white/65 hover:text-white hover:bg-white/10"
-                    )}
-                  >
-                    Admin
-                  </Link>
-                )}
-              </div>
-            </div>
-          )}
+            );
+          })()}
 
           {/* Sign out button */}
           <button
@@ -505,6 +534,17 @@ export function DashboardSidebar({ role, user }: DashboardSidebarProps) {
           <Logo size="sm" />
 
           <div className="flex items-center gap-1">
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              disabled={isRefreshing}
+              onClick={handleRefreshData}
+              className="h-9 w-9 rounded-xl text-slate-700 hover:bg-slate-100"
+              title="Refresh Data"
+            >
+              <RotateCw className={cn("h-4 w-4", isRefreshing && "animate-spin text-aims-navy")} />
+            </Button>
             <Button asChild variant="ghost" size="icon" className="relative h-9 w-9 rounded-xl text-slate-600 hover:bg-slate-100">
               <Link href={role === "student" ? "/student/announcements" : role === "instructor" ? "/instructor/announcements" : role === "admin" ? "/admin/announcements" : "/accountant/reports"} title="Announcements">
                 <Bell className="h-4.5 w-4.5" />

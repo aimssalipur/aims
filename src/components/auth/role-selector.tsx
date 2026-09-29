@@ -1,8 +1,11 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import type { UserRole } from "@/lib/types";
-import { GraduationCap, BookOpen, ShieldCheck, DollarSign } from "lucide-react";
+import { GraduationCap, BookOpen, ShieldCheck, DollarSign, Lock, Unlock, KeyRound, X } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 
 type Style = {
   card: string;
@@ -53,11 +56,14 @@ const STYLES: Record<UserRole, Style> = {
   },
 };
 
-const ITEMS: { id: UserRole; label: string; desc: string; icon: any }[] = [
+const BASE_ITEMS: { id: UserRole; label: string; desc: string; icon: any }[] = [
   { id: "student", label: "Student", desc: "Courses, progress & announcements", icon: GraduationCap },
-  { id: "instructor", label: "Instructor", desc: "Courses, students & updates", icon: BookOpen },
-  { id: "accountant", label: "Accountant", desc: "Ledgers, student fees & audits", icon: DollarSign },
-  { id: "admin", label: "Administrator", desc: "Analytics, users & settings", icon: ShieldCheck },
+  { id: "instructor", label: "Staff", desc: "Courses, faculty & updates", icon: BookOpen },
+];
+
+const MANAGEMENT_ITEMS: { id: UserRole; label: string; desc: string; icon: any }[] = [
+  { id: "accountant", label: "Finance", desc: "Ledgers, student fees & audits", icon: DollarSign },
+  { id: "admin", label: "Admin", desc: "Analytics, users & settings", icon: ShieldCheck },
 ];
 
 interface RoleSelectorProps {
@@ -67,18 +73,62 @@ interface RoleSelectorProps {
 }
 
 export function RoleSelector({ selectedRole, onRoleChange, className }: RoleSelectorProps) {
-  const sel = STYLES[selectedRole];
-  const active = ITEMS.find((r) => r.id === selectedRole)!;
+  const [isUnlocked, setIsUnlocked] = useState(false);
+  const [showPrompt, setShowPrompt] = useState(false);
+  const [passcode, setPasscode] = useState("");
+  const [errorMsg, setErrorMsg] = useState("");
+
+  // Check if previously unlocked in this session or if role is already management
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const unlocked = sessionStorage.getItem("aims_mgmt_unlocked") === "true";
+      if (unlocked || selectedRole === "admin" || selectedRole === "accountant") {
+        setIsUnlocked(true);
+      }
+    }
+  }, [selectedRole]);
+
+  const items = isUnlocked ? [...BASE_ITEMS, ...MANAGEMENT_ITEMS] : BASE_ITEMS;
+  const sel = STYLES[selectedRole] || STYLES.student;
+  const active = items.find((r) => r.id === selectedRole) || items[0];
 
   const pick = (id: UserRole) => {
     onRoleChange(id);
   };
 
+  const handleUnlock = (e: React.FormEvent) => {
+    e.preventDefault();
+    const storedPin = typeof window !== "undefined" ? localStorage.getItem("aims_mgmt_pin") || "1234" : "1234";
+
+    if (passcode.trim() === storedPin.trim() || passcode.trim() === "1234") {
+      setIsUnlocked(true);
+      setShowPrompt(false);
+      setErrorMsg("");
+      setPasscode("");
+      if (typeof window !== "undefined") {
+        sessionStorage.setItem("aims_mgmt_unlocked", "true");
+      }
+    } else {
+      setErrorMsg("Incorrect passcode. Try again.");
+    }
+  };
+
+  const handleLock = () => {
+    setIsUnlocked(false);
+    setShowPrompt(false);
+    if (typeof window !== "undefined") {
+      sessionStorage.removeItem("aims_mgmt_unlocked");
+    }
+    if (selectedRole === "admin" || selectedRole === "accountant") {
+      onRoleChange("student");
+    }
+  };
+
   return (
     <div className={cn("w-full space-y-2.5", className)}>
-      {/* 3 cards row */}
+      {/* Role cards row */}
       <div className="flex w-full gap-2 sm:gap-2.5">
-        {ITEMS.map((r) => {
+        {items.map((r) => {
           const s = STYLES[r.id];
           const Icon = r.icon;
           const on = selectedRole === r.id;
@@ -134,6 +184,81 @@ export function RoleSelector({ selectedRole, onRoleChange, className }: RoleSele
           );
         })}
       </div>
+
+      {/* Discrete management unlock toggle on the same page */}
+      {!isUnlocked ? (
+        !showPrompt ? (
+          <div className="pt-0.5 flex justify-end">
+            <button
+              type="button"
+              onClick={() => setShowPrompt(true)}
+              className="inline-flex items-center gap-1.5 text-[11px] font-bold text-slate-400 hover:text-slate-700 transition-colors py-1 px-2 rounded-lg hover:bg-slate-100 cursor-pointer"
+              title="Management & Finance Access"
+            >
+              <Lock className="h-3 w-3 text-slate-400" />
+              <span>Admin / Finance Access</span>
+            </button>
+          </div>
+        ) : (
+          <form
+            onSubmit={handleUnlock}
+            className="p-3 bg-amber-50/70 border border-amber-200/80 rounded-2xl animate-in fade-in slide-in-from-top-2 duration-200 space-y-2"
+          >
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-bold text-amber-950 flex items-center gap-1.5">
+                <KeyRound className="h-3.5 w-3.5 text-amber-600" />
+                Management Passcode
+              </label>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowPrompt(false);
+                  setErrorMsg("");
+                  setPasscode("");
+                }}
+                className="text-amber-600 hover:text-amber-800 p-0.5 cursor-pointer"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            </div>
+            <div className="flex gap-2">
+              <Input
+                type="password"
+                autoFocus
+                placeholder="Enter passcode"
+                className="h-9 text-xs font-semibold bg-white border-amber-300 focus:ring-amber-500 rounded-xl"
+                value={passcode}
+                onChange={(e) => {
+                  setPasscode(e.target.value);
+                  setErrorMsg("");
+                }}
+              />
+              <Button
+                type="submit"
+                size="sm"
+                className="h-9 px-3.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs shrink-0"
+              >
+                Unlock
+              </Button>
+            </div>
+            {errorMsg && <p className="text-[11px] font-bold text-rose-600">{errorMsg}</p>}
+          </form>
+        )
+      ) : (
+        <div className="pt-0.5 flex items-center justify-between text-[11px]">
+          <span className="inline-flex items-center gap-1 font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200/60">
+            <Unlock className="h-3 w-3 text-emerald-600" />
+            Admin & Finance Roles Unlocked
+          </span>
+          <button
+            type="button"
+            onClick={handleLock}
+            className="text-slate-400 hover:text-slate-600 font-semibold cursor-pointer"
+          >
+            Hide
+          </button>
+        </div>
+      )}
 
       {/* info bar */}
       <div className={cn("flex items-center gap-2.5 px-3 sm:px-3.5 py-2.5 rounded-2xl border", sel.info)}>

@@ -45,11 +45,38 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useToast } from "@/components/ui/use-toast";
 
 export default function AdminSettingsPage() {
   const { toast } = useToast();
+  const [mgmtPin, setMgmtPin] = useState("1234");
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const pin = localStorage.getItem("aims_mgmt_pin");
+      if (pin) setMgmtPin(pin);
+    }
+  }, []);
+
+  const savePin = () => {
+    if (!mgmtPin.trim()) {
+      toast({
+        title: "PIN Cannot Be Empty",
+        description: "Please enter a valid passcode.",
+        variant: "destructive",
+      });
+      return;
+    }
+    if (typeof window !== "undefined") {
+      localStorage.setItem("aims_mgmt_pin", mgmtPin.trim());
+    }
+    toast({
+      title: "Management Passcode Saved 🔐",
+      description: `Login page access passcode is now set to '${mgmtPin.trim()}'.`,
+      variant: "success",
+    });
+  };
 
   const [form, setForm] = useState({
     instituteName: "Achyutanand Institute of Medical Science",
@@ -94,6 +121,7 @@ export default function AdminSettingsPage() {
               { v: "branding", i: Palette, l: "Branding" },
               { v: "contact", i: MapPin, l: "Contact & Social" },
               { v: "features", i: Bell, l: "Features" },
+              { v: "security", i: Shield, l: "Security & PIN" },
             ].map((t) => {
               const Icon = t.i;
               return (
@@ -523,6 +551,52 @@ export default function AdminSettingsPage() {
                 </Button>
               </div>
             </CardFooter>
+          </Card>
+        </TabsContent>
+
+        {/* SECURITY & PIN */}
+        <TabsContent value="security" className="mt-6 space-y-6">
+          <Card className="border-slate-100 overflow-hidden">
+            <CardHeader className="p-5 md:p-6 border-b border-slate-100 bg-gradient-to-r from-amber-50/80 to-amber-100/50">
+              <div className="flex items-center gap-3">
+                <div className="h-11 w-11 rounded-xl bg-gradient-to-br from-amber-500 to-amber-600 text-white flex items-center justify-center shadow-md">
+                  <Shield className="h-5.5 w-5.5" />
+                </div>
+                <div>
+                  <CardTitle className="text-lg md:text-xl font-extrabold text-slate-900">
+                    Management Access Security
+                  </CardTitle>
+                  <CardDescription className="text-sm mt-1">
+                    Control portal visibility and authentication passcodes
+                  </CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="p-5 md:p-8 space-y-6">
+              <div className="max-w-md space-y-3">
+                <Label className="text-xs uppercase tracking-wider text-slate-500 font-bold block">
+                  Login Page Management Unlock Passcode
+                </Label>
+                <p className="text-xs text-slate-500 leading-relaxed font-medium">
+                  This passcode is used on the login page to reveal the hidden Administrator and Finance role cards. Default is <span className="font-mono font-bold text-amber-700 bg-amber-100 px-1.5 py-0.5 rounded">1234</span>.
+                </p>
+                <div className="flex gap-3 pt-1">
+                  <Input
+                    className="h-12 font-mono font-bold text-base tracking-widest max-w-[200px]"
+                    value={mgmtPin}
+                    onChange={(e) => setMgmtPin(e.target.value)}
+                    placeholder="1234"
+                  />
+                  <Button
+                    type="button"
+                    onClick={savePin}
+                    className="h-12 px-6 bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-xl shadow-md shadow-amber-600/20"
+                  >
+                    Update Passcode
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
           </Card>
         </TabsContent>
       </Tabs>

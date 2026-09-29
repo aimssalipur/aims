@@ -44,6 +44,7 @@ import { dummyCourses } from "@/lib/dummy-data";
 import { useState, useEffect } from "react";
 import { useToast } from "@/components/ui/use-toast";
 import Link from "next/link";
+import { subscribeToDataRefresh } from "@/lib/refresh-event";
 
 export default function InstructorCoursesPage() {
   const { toast } = useToast();
@@ -94,6 +95,10 @@ export default function InstructorCoursesPage() {
 
   useEffect(() => {
     fetchCourses();
+    return subscribeToDataRefresh(() => {
+      fetchCourses();
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>, isEdit = false) => {

@@ -34,8 +34,13 @@ export default async function AccountantLayout({
     }
   }
 
+  const isAdmin = roles.includes("admin") || profile?.role === "admin" || user?.email === "aimssalipur@gmail.com";
+  if (isAdmin) {
+    roles = ["student", "instructor", "accountant", "admin"];
+  }
+
   // Reject unauthorized users (only accountant and admin allowed)
-  if (!roles.includes("accountant") && !roles.includes("admin") && profile?.role !== "accountant" && profile?.role !== "admin") {
+  if (!isAdmin && !roles.includes("accountant") && profile?.role !== "accountant") {
     redirect(`/${profile?.role || "student"}`);
   }
 

@@ -25,6 +25,8 @@ import {
   Mail,
   CheckCircle2,
   DollarSign,
+  Loader2,
+  RotateCw,
 } from "lucide-react";
 import {
   Tabs,
@@ -67,12 +69,19 @@ import { useState, useEffect } from "react";
 import { useToast } from "@/components/ui/use-toast";
 import { initials } from "@/lib/utils";
 import type { UserRole } from "@/lib/types";
+import { getFriendlyErrorMessage } from "@/lib/friendly-error";
+import { subscribeToDataRefresh } from "@/lib/refresh-event";
 
 export default function AdminUsersPage() {
   const { toast } = useToast();
   const [addOpen, setAddOpen] = useState(false);
   const [users, setUsers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [approvingId, setApprovingId] = useState<string | null>(null);
+  const [creatingUser, setCreatingUser] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [roleUpdatingId, setRoleUpdatingId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [roleFilter, setRoleFilter] = useState("all");
   const [activeTab, setActiveTab] = useState("all");
@@ -103,7 +112,29 @@ export default function AdminUsersPage() {
     fetchUsers();
   }, []);
 
+  useEffect(() => {
+    return subscribeToDataRefresh(() => {
+      fetchUsers();
+    });
+  }, []);
+
+  const handleManualRefresh = async () => {
+    if (isRefreshing) return;
+    setIsRefreshing(true);
+    try {
+      await fetchUsers();
+      toast({
+        title: "Users List Updated ✅",
+        description: "Latest user records and approvals loaded.",
+        variant: "success",
+      });
+    } catch {}
+    setTimeout(() => setIsRefreshing(false), 600);
+  };
+
   const handleCreateUser = async () => {
+    if (creatingUser) return;
+
     if (!form.fullName || !form.email || !form.password) {
       toast({
         title: "Missing details",
@@ -113,17 +144,22 @@ export default function AdminUsersPage() {
       return;
     }
     
+    setCreatingUser(true);
     try {
       const response = await fetch("/api/admin/users", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(form),
       });
-      const data = await response.json();
-      if (data.error) {
+      let data: any = {};
+      try {
+        data = await response.json();
+      } catch {}
+
+      if (!response.ok || data.error) {
         toast({
           title: "Failed to create user",
-          description: data.error,
+          description: getFriendlyErrorMessage(data.error || "Unable to create user account."),
           variant: "destructive",
         });
       } else {
@@ -144,24 +180,33 @@ export default function AdminUsersPage() {
       }
     } catch (err: any) {
       toast({
-        title: "Error",
-        description: err.message || "An unexpected error occurred",
+        title: "Error creating user",
+        description: getFriendlyErrorMessage(err),
         variant: "destructive",
       });
+    } finally {
+      setCreatingUser(false);
     }
   };
 
   const handleDeleteUser = async (id: string) => {
+    if (deletingId) return;
     if (!confirm("Are you sure you want to remove this user?")) return;
+
+    setDeletingId(id);
     try {
       const response = await fetch(`/api/admin/users?id=${id}`, {
         method: "DELETE",
       });
-      const data = await response.json();
-      if (data.error) {
+      let data: any = {};
+      try {
+        data = await response.json();
+      } catch {}
+
+      if (!response.ok || data.error) {
         toast({
           title: "Failed to delete user",
-          description: data.error,
+          description: getFriendlyErrorMessage(data.error || "Unable to remove user account."),
           variant: "destructive",
         });
       } else {
@@ -174,14 +219,18 @@ export default function AdminUsersPage() {
       }
     } catch (err: any) {
       toast({
-        title: "Error",
-        description: err.message || "An unexpected error occurred",
+        title: "Error deleting user",
+        description: getFriendlyErrorMessage(err),
         variant: "destructive",
       });
+    } finally {
+      setDeletingId(null);
     }
   };
 
   const handleToggleRole = async (userId: string, targetRole: string, currentRoles: string[]) => {
+    if (roleUpdatingId) return;
+
     let newRoles = [...(currentRoles || [])];
     if (newRoles.includes(targetRole)) {
       if (newRoles.length === 1) {
@@ -197,17 +246,22 @@ export default function AdminUsersPage() {
       newRoles.push(targetRole);
     }
 
+    setRoleUpdatingId(userId);
     try {
       const response = await fetch("/api/admin/users", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id: userId, roles: newRoles }),
       });
-      const data = await response.json();
-      if (data.error) {
+      let data: any = {};
+      try {
+        data = await response.json();
+      } catch {}
+
+      if (!response.ok || data.error) {
         toast({
           title: "Failed to update roles",
-          description: data.error,
+          description: getFriendlyErrorMessage(data.error || "Unable to update roles."),
           variant: "destructive",
         });
       } else {
@@ -220,25 +274,34 @@ export default function AdminUsersPage() {
       }
     } catch (err: any) {
       toast({
-        title: "Error",
-        description: err.message || "An unexpected error occurred",
+        title: "Error updating role",
+        description: getFriendlyErrorMessage(err),
         variant: "destructive",
       });
+    } finally {
+      setRoleUpdatingId(null);
     }
   };
 
   const handleApproveUser = async (userId: string) => {
+    if (approvingId) return;
+
+    setApprovingId(userId);
     try {
       const response = await fetch("/api/admin/users", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id: userId, approved: true }),
       });
-      const data = await response.json();
-      if (data.error) {
+      let data: any = {};
+      try {
+        data = await response.json();
+      } catch {}
+
+      if (!response.ok || data.error) {
         toast({
           title: "Failed to approve user",
-          description: data.error,
+          description: getFriendlyErrorMessage(data.error || "Unable to approve student account."),
           variant: "destructive",
         });
       } else {
@@ -254,10 +317,12 @@ export default function AdminUsersPage() {
       }
     } catch (err: any) {
       toast({
-        title: "Error",
-        description: err.message || "An unexpected error occurred",
+        title: "Approval Error",
+        description: getFriendlyErrorMessage(err),
         variant: "destructive",
       });
+    } finally {
+      setApprovingId(null);
     }
   };
 
@@ -344,6 +409,18 @@ export default function AdminUsersPage() {
           </p>
         </div>
         <div className="flex items-center gap-2 sm:gap-3">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={handleManualRefresh}
+            disabled={isRefreshing}
+            className="gap-1.5 sm:gap-2 h-9 sm:h-11 text-xs sm:text-sm px-3 sm:px-4 rounded-xl font-bold border-slate-200 text-slate-700 hover:bg-slate-50 transition-all shadow-xs"
+            title="Refresh Users List (without page reload)"
+          >
+            <RotateCw className={`h-3.5 w-3.5 sm:h-4 sm:w-4 text-amber-600 shrink-0 ${isRefreshing ? "animate-spin" : ""}`} />
+            <span>{isRefreshing ? "Refreshing..." : "Refresh"}</span>
+          </Button>
           <Dialog open={addOpen} onOpenChange={setAddOpen}>
             <DialogTrigger asChild>
               <Button variant="primary" size="sm" className="gap-1.5 sm:gap-2 h-9 sm:h-11 text-xs sm:text-sm px-3.5 sm:px-5 shadow-lg shadow-amber-600/20 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 border-0">
@@ -351,48 +428,48 @@ export default function AdminUsersPage() {
                 Add User
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-lg">
-              <DialogHeader>
-                <DialogTitle className="text-xl font-extrabold">Add New User</DialogTitle>
-                <DialogDescription>
+            <DialogContent className="w-[95vw] sm:max-w-lg max-h-[90vh] overflow-y-auto p-4 sm:p-6 rounded-2xl sm:rounded-3xl border-slate-200">
+              <DialogHeader className="space-y-1 text-left">
+                <DialogTitle className="text-lg sm:text-xl font-extrabold text-slate-900">Add New User</DialogTitle>
+                <DialogDescription className="font-semibold text-slate-500 text-xs sm:text-sm">
                   Create a new account and assign a role.
                 </DialogDescription>
               </DialogHeader>
-              <div className="grid sm:grid-cols-2 gap-4 py-3">
-                <div className="space-y-2 sm:col-span-2">
-                  <Label>Full Name</Label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 py-2 sm:py-3">
+                <div className="space-y-1.5 sm:space-y-2 sm:col-span-2">
+                  <Label className="font-semibold text-xs sm:text-sm">Full Name <span className="text-rose-500">*</span></Label>
                   <Input
                     placeholder="e.g. Priyanka Mishra"
-                    className="h-11"
+                    className="h-10 sm:h-11 rounded-xl text-xs sm:text-sm font-semibold"
                     value={form.fullName}
                     onChange={(e) => setForm({ ...form, fullName: e.target.value })}
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label>Email</Label>
+                <div className="space-y-1.5 sm:space-y-2">
+                  <Label className="font-semibold text-xs sm:text-sm">Email <span className="text-rose-500">*</span></Label>
                   <Input
                     placeholder="name@aims.edu"
-                    className="h-11"
+                    className="h-10 sm:h-11 rounded-xl text-xs sm:text-sm"
                     value={form.email}
                     onChange={(e) => setForm({ ...form, email: e.target.value })}
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label>WhatsApp Number</Label>
+                <div className="space-y-1.5 sm:space-y-2">
+                  <Label className="font-semibold text-xs sm:text-sm">WhatsApp Number</Label>
                   <Input
                     placeholder="+91 98765 43210"
-                    className="h-11"
+                    className="h-10 sm:h-11 rounded-xl text-xs sm:text-sm"
                     value={form.phone}
                     onChange={(e) => setForm({ ...form, phone: e.target.value })}
                   />
                 </div>
-                <div className="space-y-2 sm:col-span-2">
-                  <Label>Role</Label>
+                <div className="space-y-1.5 sm:space-y-2 sm:col-span-2">
+                  <Label className="font-semibold text-xs sm:text-sm">Role <span className="text-rose-500">*</span></Label>
                   <Select
                     value={form.role}
                     onValueChange={(val) => setForm({ ...form, role: val })}
                   >
-                    <SelectTrigger className="h-11">
+                    <SelectTrigger className="h-10 sm:h-11 rounded-xl text-xs sm:text-sm font-semibold">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -403,22 +480,39 @@ export default function AdminUsersPage() {
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="space-y-2 sm:col-span-2">
-                  <Label>Temporary Password</Label>
+                <div className="space-y-1.5 sm:space-y-2 sm:col-span-2">
+                  <Label className="font-semibold text-xs sm:text-sm">Temporary Password <span className="text-rose-500">*</span></Label>
                   <Input
                     type="password"
                     value={form.password}
                     onChange={(e) => setForm({ ...form, password: e.target.value })}
-                    className="h-11"
+                    className="h-10 sm:h-11 rounded-xl text-xs sm:text-sm font-semibold"
                   />
                 </div>
               </div>
-              <DialogFooter className="flex-col sm:flex-row gap-2">
-                <Button variant="outline" onClick={() => setAddOpen(false)}>
+              <DialogFooter className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 sm:gap-3 pt-2">
+                <Button
+                  variant="outline"
+                  disabled={creatingUser}
+                  onClick={() => setAddOpen(false)}
+                  className="w-full sm:w-auto rounded-xl h-10 sm:h-11 font-semibold text-xs sm:text-sm"
+                >
                   Cancel
                 </Button>
-                <Button variant="primary" onClick={handleCreateUser}>
-                  Create User
+                <Button
+                  variant="primary"
+                  disabled={creatingUser}
+                  onClick={handleCreateUser}
+                  className="w-full sm:w-auto min-w-[130px] rounded-xl h-10 sm:h-11 font-bold text-xs sm:text-sm shadow-md shadow-amber-600/20"
+                >
+                  {creatingUser ? (
+                    <span className="flex items-center justify-center gap-2">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Creating...
+                    </span>
+                  ) : (
+                    "Create User"
+                  )}
                 </Button>
               </DialogFooter>
             </DialogContent>
@@ -584,11 +678,21 @@ export default function AdminUsersPage() {
                             <Button
                               variant="outline"
                               size="sm"
-                              className="h-8 border-emerald-200 text-emerald-700 hover:text-emerald-800 hover:bg-emerald-50 gap-1 rounded-lg px-3 font-semibold"
+                              disabled={approvingId === u.id}
+                              className="h-8 border-emerald-200 text-emerald-700 hover:text-emerald-800 hover:bg-emerald-50 gap-1 rounded-lg px-3 font-semibold min-w-[85px]"
                               onClick={() => handleApproveUser(u.id)}
                             >
-                              <CheckCircle2 className="h-3.5 w-3.5" />
-                              Approve
+                              {approvingId === u.id ? (
+                                <span className="flex items-center gap-1">
+                                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                  Approving...
+                                </span>
+                              ) : (
+                                <>
+                                  <CheckCircle2 className="h-3.5 w-3.5" />
+                                  Approve
+                                </>
+                              )}
                             </Button>
                           )}
                           <DropdownMenu>
@@ -600,8 +704,17 @@ export default function AdminUsersPage() {
                             <DropdownMenuContent align="end" className="w-64">
                               {u.approved === false && (
                                 <>
-                                  <DropdownMenuItem className="gap-2 font-bold text-emerald-600 focus:text-emerald-700 focus:bg-emerald-50" onClick={() => handleApproveUser(u.id)}>
-                                    <CheckCircle2 className="h-4 w-4 text-emerald-600" /> Approve Application
+                                  <DropdownMenuItem
+                                    disabled={approvingId === u.id}
+                                    className="gap-2 font-bold text-emerald-600 focus:text-emerald-700 focus:bg-emerald-50"
+                                    onClick={() => handleApproveUser(u.id)}
+                                  >
+                                    {approvingId === u.id ? (
+                                      <Loader2 className="h-4 w-4 animate-spin text-emerald-600" />
+                                    ) : (
+                                      <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                                    )}
+                                    Approve Application
                                   </DropdownMenuItem>
                                   <DropdownMenuSeparator />
                                 </>
@@ -680,10 +793,18 @@ export default function AdminUsersPage() {
                         <Button
                           variant="outline"
                           size="sm"
-                          className="h-7 sm:h-8 text-[11px] sm:text-xs border-emerald-200 text-emerald-700 hover:bg-emerald-50 gap-1 rounded-lg px-2 sm:px-2.5 font-semibold"
+                          disabled={approvingId === u.id}
+                          className="h-7 sm:h-8 text-[11px] sm:text-xs border-emerald-200 text-emerald-700 hover:bg-emerald-50 gap-1 rounded-lg px-2 sm:px-2.5 font-semibold min-w-[75px]"
                           onClick={() => handleApproveUser(u.id)}
                         >
-                          Approve
+                          {approvingId === u.id ? (
+                            <span className="flex items-center gap-1">
+                              <Loader2 className="h-3 w-3 animate-spin" />
+                              Approving...
+                            </span>
+                          ) : (
+                            "Approve"
+                          )}
                         </Button>
                       )}
                       <DropdownMenu>
@@ -695,8 +816,16 @@ export default function AdminUsersPage() {
                         <DropdownMenuContent align="end" className="w-60">
                           {u.approved === false && (
                             <>
-                              <DropdownMenuItem className="gap-2 font-bold text-emerald-600 focus:text-emerald-700 focus:bg-emerald-50" onClick={() => handleApproveUser(u.id)}>
-                                <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                              <DropdownMenuItem
+                                disabled={approvingId === u.id}
+                                className="gap-2 font-bold text-emerald-600 focus:text-emerald-700 focus:bg-emerald-50"
+                                onClick={() => handleApproveUser(u.id)}
+                              >
+                                {approvingId === u.id ? (
+                                  <Loader2 className="h-4 w-4 animate-spin text-emerald-600" />
+                                ) : (
+                                  <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                                )}
                                 Approve Application
                               </DropdownMenuItem>
                               <DropdownMenuSeparator />

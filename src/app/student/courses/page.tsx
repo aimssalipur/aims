@@ -30,36 +30,52 @@ import {
   ArrowRight,
   BarChart3,
   Star,
+  RotateCw,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { cn, initials, formatProgress } from "@/lib/utils";
+import { subscribeToDataRefresh } from "@/lib/refresh-event";
+import { useToast } from "@/components/ui/use-toast";
 
 export default function StudentCoursesPage() {
+  const { toast } = useToast();
   const searchParams = useSearchParams();
   const initialQuery = searchParams.get("q") || "";
   const [searchTerm, setSearchTerm] = useState(initialQuery);
   const [activeTab, setActiveTab] = useState("all");
   const [coursesList, setCoursesList] = useState<any[]>(dummyCourses);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const loadCourses = async (silent = false) => {
+    if (!silent) setIsRefreshing(true);
+    try {
+      const res = await fetch("/api/courses");
+      if (res.ok) {
+        const data = await res.json();
+        if (data.courses && Array.isArray(data.courses) && data.courses.length > 0) {
+          setCoursesList(data.courses);
+        }
+      }
+      if (!silent) {
+        toast({
+          title: "Courses Updated 📚",
+          description: "Latest courses and modules loaded.",
+          variant: "success",
+        });
+      }
+    } catch (err) {
+      console.error("Error loading courses for student:", err);
+    } finally {
+      if (!silent) setIsRefreshing(false);
+    }
+  };
 
   useEffect(() => {
-    let isMounted = true;
-    async function loadCourses() {
-      try {
-        const res = await fetch("/api/courses");
-        if (res.ok) {
-          const data = await res.json();
-          if (isMounted && data.courses && Array.isArray(data.courses) && data.courses.length > 0) {
-            setCoursesList(data.courses);
-          }
-        }
-      } catch (err) {
-        console.error("Error loading courses for student:", err);
-      }
-    }
-    loadCourses();
-    return () => {
-      isMounted = false;
-    };
+    loadCourses(true);
+    return subscribeToDataRefresh(() => {
+      loadCourses(false);
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const myCourses = coursesList.map((c, i) => ({
@@ -88,6 +104,18 @@ export default function StudentCoursesPage() {
           </p>
         </div>
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => loadCourses(false)}
+            disabled={isRefreshing}
+            className="h-10 sm:h-11 px-3.5 gap-2 border-slate-200 text-slate-700 hover:text-aims-navy hover:bg-slate-50 font-bold rounded-xl"
+            title="Refresh Courses List"
+          >
+            <RotateCw className={cn("h-4 w-4 text-aims-navy", isRefreshing && "animate-spin")} />
+            <span className="text-xs font-bold">{isRefreshing ? "Refreshing..." : "Refresh"}</span>
+          </Button>
           <div className="relative">
             <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
             <Input

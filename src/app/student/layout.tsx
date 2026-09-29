@@ -35,8 +35,13 @@ export default async function StudentLayout({
     }
   }
 
-  // Check student approval
-  if (profile && !profile.approved && profile.role === "student") {
+  const isAdmin = roles.includes("admin") || profile?.role === "admin" || user?.email === "aimssalipur@gmail.com";
+  if (isAdmin) {
+    roles = ["student", "instructor", "accountant", "admin"];
+  }
+
+  // Check student approval (admins and staff are never blocked)
+  if (!isAdmin && profile && !profile.approved && profile.role === "student") {
     redirect("/login?error=pending_approval");
   }
 

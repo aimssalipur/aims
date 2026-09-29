@@ -1,6 +1,8 @@
-import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
 import { requireRole } from "@/lib/server-auth";
+
+export const dynamic = "force-dynamic";
 
 const ALLOWED_TRANSACTION_TYPES = new Set(["income", "expense"]);
 
@@ -14,7 +16,7 @@ export async function GET(request: Request) {
   const category = searchParams.get("category");
   const search = searchParams.get("search");
 
-  const supabase = createClient();
+  const supabase = createAdminClient();
   let query = supabase
     .from("business_transactions")
     .select("*, recorded_by_profile:profiles!recorded_by(full_name, email), recipient_profile:profiles!recipient_id(id, full_name, email, role)")
@@ -34,7 +36,8 @@ export async function GET(request: Request) {
 
   const { data, error } = await query;
   if (error) {
-    return NextResponse.json({ error: "Failed to retrieve transactions." }, { status: 500 });
+    console.error("[api/accountant/transactions] GET error:", error);
+    return NextResponse.json({ error: error.message || "Failed to retrieve transactions." }, { status: 500 });
   }
 
   return NextResponse.json(data);
@@ -68,14 +71,39 @@ export async function POST(request: Request) {
       );
     }
 
-    const supabase = createClient();
+    const sanitizedCategory = String(category).trim().slice(0, 100);
+    const sanitizedDescription = String(description).trim().slice(0, 500);
+
+    const supabase = createAdminClient();
+
+    // Prevent accidental double clicks / duplicate submissions within 8 seconds
+    const eightSecondsAgo = new Date(Date.now() - 8_000).toISOString();
+    const { data: recentDuplicate } = await supabase
+      .from("business_transactions")
+      .select("id")
+      .eq("recorded_by", context.user.id)
+      .eq("type", type)
+      .eq("amount", parsedAmount)
+      .eq("category", sanitizedCategory)
+      .eq("description", sanitizedDescription)
+      .gte("created_at", eightSecondsAgo)
+      .limit(1)
+      .maybeSingle();
+
+    if (recentDuplicate) {
+      return NextResponse.json(
+        { error: "A matching transaction was just recorded a few seconds ago. Please wait a moment to avoid duplicate entries." },
+        { status: 409 }
+      );
+    }
+
     const { data, error } = await supabase
       .from("business_transactions")
       .insert({
         type,
-        category: String(category).trim().slice(0, 100),
+        category: sanitizedCategory,
         amount: parsedAmount,
-        description: String(description).trim().slice(0, 500),
+        description: sanitizedDescription,
         date: date || new Date().toISOString(),
         reference_no: reference_no ? String(reference_no).trim().slice(0, 100) : null,
         recorded_by: context.user.id,
@@ -85,12 +113,14 @@ export async function POST(request: Request) {
       .single();
 
     if (error) {
-      return NextResponse.json({ error: "Failed to create transaction record." }, { status: 500 });
+      console.error("[api/accountant/transactions] POST insert error:", error);
+      return NextResponse.json({ error: error.message || "Failed to create transaction record." }, { status: 500 });
     }
 
     return NextResponse.json(data);
   } catch (err: any) {
-    return NextResponse.json({ error: "Failed to process transaction." }, { status: 500 });
+    console.error("[api/accountant/transactions] POST exception:", err);
+    return NextResponse.json({ error: err?.message || "Failed to process transaction." }, { status: 500 });
   }
 }
 
@@ -122,7 +152,7 @@ export async function PUT(request: Request) {
       return NextResponse.json({ error: "Transaction type must be 'income' or 'expense'." }, { status: 400 });
     }
 
-    const supabase = createClient();
+    const supabase = createAdminClient();
     const { data, error } = await supabase
       .from("business_transactions")
       .update({
@@ -139,12 +169,14 @@ export async function PUT(request: Request) {
       .single();
 
     if (error) {
-      return NextResponse.json({ error: "Failed to update transaction." }, { status: 500 });
+      console.error("[api/accountant/transactions] PUT error:", error);
+      return NextResponse.json({ error: error.message || "Failed to update transaction." }, { status: 500 });
     }
 
     return NextResponse.json(data);
   } catch (err: any) {
-    return NextResponse.json({ error: "Failed to process transaction edit." }, { status: 500 });
+    console.error("[api/accountant/transactions] PUT exception:", err);
+    return NextResponse.json({ error: err?.message || "Failed to process transaction edit." }, { status: 500 });
   }
 }
 
@@ -161,18 +193,20 @@ export async function DELETE(request: Request) {
       return NextResponse.json({ error: "Missing transaction id" }, { status: 400 });
     }
 
-    const supabase = createClient();
+    const supabase = createAdminClient();
     const { error } = await supabase
       .from("business_transactions")
       .delete()
       .eq("id", id);
 
     if (error) {
-      return NextResponse.json({ error: "Failed to delete transaction." }, { status: 500 });
+      console.error("[api/accountant/transactions] DELETE error:", error);
+      return NextResponse.json({ error: error.message || "Failed to delete transaction." }, { status: 500 });
     }
 
     return NextResponse.json({ success: true });
   } catch (err: any) {
-    return NextResponse.json({ error: "Failed to process transaction deletion." }, { status: 500 });
+    console.error("[api/accountant/transactions] DELETE exception:", err);
+    return NextResponse.json({ error: err?.message || "Failed to process transaction deletion." }, { status: 500 });
   }
 }

@@ -1,13 +1,15 @@
-import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
 import { requireRole } from "@/lib/server-auth";
+
+export const dynamic = "force-dynamic";
 
 export async function GET() {
   const { context, errorResponse } = await requireRole(["admin", "accountant"]);
   if (errorResponse) return errorResponse;
 
   try {
-    const supabase = createClient();
+    const supabase = createAdminClient();
     // Query users with student profiles
     const { data, error } = await supabase
       .from("profiles")

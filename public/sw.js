@@ -1,4 +1,16 @@
-const CACHE_NAME = 'aims-cache-v2';
+// Self-unregister and clean up caches on localhost / development
+if (self.location.hostname === 'localhost' || self.location.hostname === '127.0.0.1') {
+  self.addEventListener('install', () => self.skipWaiting());
+  self.addEventListener('activate', (event) => {
+    event.waitUntil(
+      caches.keys().then((keys) => Promise.all(keys.map((k) => caches.delete(k))))
+        .then(() => self.registration.unregister())
+        .then(() => self.clients.claim())
+    );
+  });
+}
+
+const CACHE_NAME = 'aims-cache-v4';
 const STATIC_ASSETS = [
   '/',
   '/manifest.json',
@@ -44,10 +56,12 @@ self.addEventListener('fetch', (event) => {
   // Only handle GET requests
   if (request.method !== 'GET') return;
 
-  // Skip browser extension schemes, supabase api calls, analytics, and video streams
+  // Skip browser extension schemes, Next.js chunks, supabase api calls, analytics, and dev localhost
   const url = new URL(request.url);
   if (!url.protocol.startsWith('http')) return;
+  if (url.pathname.startsWith('/_next/')) return;
   if (url.pathname.startsWith('/api/')) return;
+  if (url.hostname === 'localhost' || url.hostname === '127.0.0.1') return;
   if (url.hostname.includes('supabase.co')) return;
   if (url.hostname.includes('cloudinary.com')) return;
 
@@ -69,16 +83,24 @@ self.addEventListener('fetch', (event) => {
         }
         return response;
       })
-      .catch(() => {
+      .catch(async () => {
         // Fallback to cache if offline
-        return caches.match(request).then((cachedResponse) => {
-          if (cachedResponse) {
-            return cachedResponse;
+        const cachedResponse = await caches.match(request);
+        if (cachedResponse) {
+          return cachedResponse;
+        }
+        // If HTML request fails, return cached home page
+        if (request.headers.get('accept')?.includes('text/html')) {
+          const homeResponse = await caches.match('/');
+          if (homeResponse) {
+            return homeResponse;
           }
-          // If HTML request fails, return cached home page
-          if (request.headers.get('accept')?.includes('text/html')) {
-            return caches.match('/');
-          }
+        }
+        // Always return a valid Response to satisfy event.respondWith
+        return new Response('Network request failed or offline', {
+          status: 503,
+          statusText: 'Service Unavailable',
+          headers: new Headers({ 'Content-Type': 'text/plain' }),
         });
       })
   );

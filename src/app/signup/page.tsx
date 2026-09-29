@@ -24,6 +24,7 @@ import {
   Check,
 } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
+import { getFriendlyErrorMessage } from "@/lib/friendly-error";
 
 const fallbackCourses = [
   { id: "c1c1c1c1-c1c1-c1c1-c1c1-c1c1c1c1c1c1", title: "OSSSC Nursing Officer Exam Coaching", description: "Core GNM/B.Sc. Nursing subjects, Arithmetic, Reasoning, Odisha GK" },
@@ -41,7 +42,6 @@ const fallbackCourses = [
 ];
 
 export default function SignupPage() {
-  const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [courses, setCourses] = useState<{ id: string; title: string; description?: string }[]>(fallbackCourses);
   const [isLoadingCourses, setIsLoadingCourses] = useState(false);
@@ -54,7 +54,6 @@ export default function SignupPage() {
     fullName: "",
     email: "",
     phone: "",
-    password: "",
   });
 
   // Fetch courses dynamically from database via internal API
@@ -110,7 +109,7 @@ Please approve my email in the system. Thank you!`;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.fullName || !form.email || !form.phone || !form.password) {
+    if (!form.fullName || !form.email || !form.phone) {
       toast({
         title: "Missing information",
         description: "Please fill all required fields to continue.",
@@ -142,17 +141,20 @@ Please approve my email in the system. Thank you!`;
           fullName: form.fullName,
           email: form.email,
           phone: form.phone,
-          password: form.password,
           course: selectedTitles,
           course_ids: selectedCourses.join(","),
         }),
       });
 
-      const signupData = await signupRes.json();
-      if (signupData.error) {
+      let signupData: any = {};
+      try {
+        signupData = await signupRes.json();
+      } catch {}
+
+      if (!signupRes.ok || signupData.error) {
         toast({
-          title: "Sign up failed",
-          description: signupData.error,
+          title: "Sign up could not proceed",
+          description: getFriendlyErrorMessage(signupData.error || "Unable to submit application at this time."),
           variant: "destructive",
         });
         setIsLoading(false);
@@ -173,8 +175,8 @@ Please approve my email in the system. Thank you!`;
       setTimeout(() => setIsLoading(false), 5000);
     } catch (err: any) {
       toast({
-        title: "Error",
-        description: err.message || "An unexpected error occurred",
+        title: "Application Submission Note",
+        description: getFriendlyErrorMessage(err),
         variant: "destructive",
       });
       setIsLoading(false);
@@ -342,54 +344,6 @@ Please approve my email in the system. Thank you!`;
                       </div>
                     )}
                   </div>
-
-                  <div className="space-y-2 sm:col-span-2">
-                    <Label htmlFor="password" className="text-slate-700">
-                      Create Password <span className="text-red-500">*</span>
-                    </Label>
-                    <div className="relative">
-                      <Lock className="absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 h-4 w-4 sm:h-4.5 sm:w-4.5 text-slate-400" />
-                      <Input
-                        id="password"
-                        type={showPassword ? "text" : "password"}
-                        placeholder="At least 8 characters"
-                        className="pl-10 sm:pl-11 pr-11 sm:pr-12 h-11 sm:h-12 w-full text-sm sm:text-base"
-                        value={form.password}
-                        onChange={update("password")}
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowPassword((v) => !v)}
-                        className="absolute right-2 sm:right-3 top-1/2 -translate-y-1/2 p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"
-                      >
-                        {showPassword ? (
-                          <EyeOff className="h-4 w-4 sm:h-4.5 sm:w-4.5" />
-                        ) : (
-                          <Eye className="h-4 w-4 sm:h-4.5 sm:w-4.5" />
-                        )}
-                      </button>
-                    </div>
-                    {/* Password strength hint */}
-                    <div className="flex flex-wrap items-center gap-3 pt-1">
-                      <div className="flex gap-1">
-                        {[...Array(4)].map((_, i) => (
-                          <div
-                            key={i}
-                            className={`h-1.5 w-8 sm:w-10 rounded-full ${
-                              form.password.length > i * 2 ? "bg-aims-green" : "bg-slate-200"
-                            }`}
-                          />
-                        ))}
-                      </div>
-                      <span className="text-xs font-semibold text-slate-500">
-                        {form.password.length < 4
-                          ? "Weak"
-                          : form.password.length < 8
-                          ? "Good"
-                          : "Strong"}
-                      </span>
-                    </div>
-                  </div>
                 </div>
 
                 {/* Checklist */}
@@ -449,7 +403,7 @@ Please approve my email in the system. Thank you!`;
                     </>
                   ) : (
                     <>
-                      Submit Application & Create Account
+                      Submit Application
                       <ArrowRight className="h-4.5 w-4.5" />
                     </>
                   )}

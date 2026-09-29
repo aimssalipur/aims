@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import { useGSAP } from "@/lib/use-gsap-animation";
 import gsap from "gsap";
+import { getFriendlyErrorMessage } from "@/lib/friendly-error";
 
 export default function LoginPage() {
   const formCardRef = useRef<HTMLDivElement>(null);
@@ -65,7 +66,7 @@ export default function LoginPage() {
       if (error) {
         toast({
           title: "Sign in failed",
-          description: error.message,
+          description: getFriendlyErrorMessage(error),
           variant: "destructive",
         });
         setIsLoading(false);
@@ -101,8 +102,8 @@ export default function LoginPage() {
       router.push(`/${finalRole}`);
     } catch (err: any) {
       toast({
-        title: "Error",
-        description: err.message || "An unexpected error occurred",
+        title: "Sign In Error",
+        description: getFriendlyErrorMessage(err),
         variant: "destructive",
       });
       setIsLoading(false);
@@ -132,7 +133,7 @@ export default function LoginPage() {
     } catch (err: any) {
       toast({
         title: "Reset Request Note",
-        description: err.message || "If this email is registered, password instructions have been dispatched.",
+        description: getFriendlyErrorMessage(err, "If this email is registered, password instructions have been dispatched."),
       });
     }
   };
@@ -151,15 +152,15 @@ export default function LoginPage() {
       if (error) {
         toast({
           title: "Google authentication failed",
-          description: error.message,
+          description: getFriendlyErrorMessage(error),
           variant: "destructive",
         });
         setIsLoading(false);
       }
     } catch (err: any) {
       toast({
-        title: "Error",
-        description: err.message || "An unexpected error occurred",
+        title: "Google Sign In Error",
+        description: getFriendlyErrorMessage(err),
         variant: "destructive",
       });
       setIsLoading(false);

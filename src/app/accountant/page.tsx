@@ -24,6 +24,7 @@ import {
   Clock,
   FileSpreadsheet,
   GraduationCap,
+  Printer,
 } from "lucide-react";
 import {
   ResponsiveContainer,
@@ -40,6 +41,9 @@ import {
 } from "recharts";
 import Link from "next/link";
 import { useToast } from "@/components/ui/use-toast";
+import { subscribeToDataRefresh } from "@/lib/refresh-event";
+import { cn } from "@/lib/utils";
+import { ReceiptModal, ReceiptData } from "@/components/finance/receipt-modal";
 
 const COLORS = ["#4F46E5", "#06B6D4", "#F59E0B", "#EF4444", "#10B981", "#8B5CF6"];
 
@@ -47,7 +51,10 @@ export default function AccountantOverviewPage() {
   const { toast } = useToast();
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [recentTx, setRecentTx] = useState<any[]>([]);
+  const [receiptData, setReceiptData] = useState<ReceiptData | null>(null);
+  const [receiptOpen, setReceiptOpen] = useState(false);
 
   const fetchSummary = async () => {
     setLoading(true);
@@ -75,10 +82,77 @@ export default function AccountantOverviewPage() {
     }
   };
 
+  const handleManualRefresh = async () => {
+    setIsRefreshing(true);
+    await fetchSummary();
+    setTimeout(() => setIsRefreshing(false), 500);
+    toast({
+      title: "Ledger Refreshed",
+      description: "Financial metrics and recent transactions are up to date.",
+    });
+  };
+
   useEffect(() => {
     fetchSummary();
+    const unsubscribe = subscribeToDataRefresh(() => {
+      fetchSummary();
+    });
+    return () => unsubscribe();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const handleOpenReceipt = (tx: any) => {
+    const isIncome = tx.type === "income";
+    const isSalary = tx.category === "Salary";
+
+    let title = "Official Inflow Receipt";
+    if (!isIncome) {
+      title = isSalary ? "Salary Payment Voucher" : "Official Expense Voucher";
+    }
+
+    let partyName = "Beneficiary / Payee";
+    let partyRoleOrCourse: string | undefined = undefined;
+    let partyContact: string | undefined = undefined;
+
+    if (tx.recipient_profile) {
+      partyName = tx.recipient_profile.full_name;
+      partyRoleOrCourse = `${tx.recipient_profile.role?.toUpperCase() || "Staff"} · AIMS Academy`;
+      partyContact = tx.recipient_profile.email;
+    } else if (isIncome) {
+      partyName = "Student / Payer";
+      partyRoleOrCourse = tx.category;
+    }
+
+    const cleanId = tx.id ? tx.id.replace(/-/g, "").slice(0, 8).toUpperCase() : String(Math.floor(100000 + Math.random() * 900000));
+    const receiptNo = `AIMS-${isIncome ? "REC" : "VCH"}-${cleanId}`;
+
+    const data: ReceiptData = {
+      receiptNo,
+      date: tx.date || new Date(),
+      type: isIncome ? "income" : "expense",
+      title,
+      partyName,
+      partyRoleOrCourse,
+      partyContact,
+      category: tx.category || "General",
+      amount: Number(tx.amount) || 0,
+      paymentMethod: tx.reference_no
+        ? (tx.reference_no.toLowerCase().includes("upi")
+            ? "UPI Online"
+            : tx.reference_no.toLowerCase().includes("chq")
+            ? "Cheque"
+            : "Bank Transfer / Online")
+        : "Cash / Direct Ledger",
+      referenceNo: tx.reference_no || undefined,
+      description: tx.description || `${tx.category} transaction recorded in AIMS ledger`,
+      recordedBy: tx.recorded_by_profile?.full_name || "AIMS Accounts Dept",
+      verifiedBy: "AIMS Accounts Salipur",
+      status: "Verified & Recorded",
+    };
+
+    setReceiptData(data);
+    setReceiptOpen(true);
+  };
 
   const formatCurrency = (val: number) => {
     return new Intl.NumberFormat("en-IN", {
@@ -181,6 +255,21 @@ export default function AccountantOverviewPage() {
                   Verify Student Fees
                 </Link>
               </Button>
+              <Button asChild size="sm" className="bg-white/10 text-white hover:bg-white/15 border-white/20 font-bold rounded-xl h-9 sm:h-10 text-xs sm:text-sm">
+                <Link href="/accountant/capital">
+                  <Landmark className="h-3.5 w-3.5 sm:h-4.5 sm:w-4.5 mr-1.5" /> Capital & Loans
+                </Link>
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleManualRefresh}
+                disabled={isRefreshing || loading}
+                className="bg-white/10 text-white hover:bg-white/20 border-white/25 font-bold rounded-xl h-9 sm:h-10 text-xs sm:text-sm"
+              >
+                <RefreshCw className={cn("h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5", (isRefreshing || loading) && "animate-spin")} />
+                {isRefreshing ? "Refreshing..." : "Refresh"}
+              </Button>
             </div>
           </div>
           <div className="bg-white/10 backdrop-blur rounded-2xl sm:rounded-3xl p-3.5 sm:p-5 border border-white/15 space-y-2 sm:space-y-3 flex flex-col justify-between">
@@ -188,8 +277,15 @@ export default function AccountantOverviewPage() {
               <Badge className="bg-emerald-500/20 border-0 text-emerald-100 w-fit text-[10px] font-bold uppercase tracking-widest">
                 Realtime Sync
               </Badge>
-              <Button variant="ghost" size="icon" onClick={fetchSummary} className="h-7 w-7 sm:h-8 sm:w-8 text-white hover:bg-white/10">
-                <RefreshCw className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={handleManualRefresh}
+                disabled={isRefreshing || loading}
+                className="h-7 w-7 sm:h-8 sm:w-8 text-white hover:bg-white/10"
+                title="Refresh ledger data"
+              >
+                <RefreshCw className={cn("h-3.5 w-3.5 sm:h-4 sm:w-4", (isRefreshing || loading) && "animate-spin")} />
               </Button>
             </div>
             <div>
@@ -402,6 +498,7 @@ export default function AccountantOverviewPage() {
                   <th className="py-2.5 sm:py-3 px-3 sm:px-4">Category</th>
                   <th className="py-2.5 sm:py-3 px-3 sm:px-4">Method / Ref</th>
                   <th className="py-2.5 sm:py-3 px-3 sm:px-4 text-right">Amount</th>
+                  <th className="py-2.5 sm:py-3 px-3 sm:px-4 text-center">Receipt</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50 font-semibold text-slate-600">
@@ -425,6 +522,17 @@ export default function AccountantOverviewPage() {
                       <td className={`py-2.5 sm:py-3.5 px-3 sm:px-4 text-right font-extrabold text-xs sm:text-base whitespace-nowrap ${tx.type === "income" ? "text-emerald-600" : "text-rose-600"}`}>
                         {tx.type === "income" ? "+" : "-"}{formatCurrency(tx.amount)}
                       </td>
+                      <td className="py-2.5 sm:py-3.5 px-3 sm:px-4 text-center">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleOpenReceipt(tx)}
+                          className="h-7 w-7 text-indigo-600 hover:bg-indigo-50 hover:text-indigo-700 rounded-lg"
+                          title="Print / Share Official Receipt"
+                        >
+                          <Printer className="h-3.5 w-3.5" />
+                        </Button>
+                      </td>
                     </tr>
                   ))
                 )}
@@ -433,6 +541,13 @@ export default function AccountantOverviewPage() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Official Receipt / Voucher Modal */}
+      <ReceiptModal
+        open={receiptOpen}
+        onOpenChange={setReceiptOpen}
+        data={receiptData}
+      />
     </div>
   );
 }

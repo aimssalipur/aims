@@ -58,6 +58,14 @@ export async function getAuthenticatedContext(): Promise<AuthenticatedContext | 
       rolesSet.add("student");
     }
 
+    // Supreme Admin Privilege: universal access across all roles (Admin, Instructor, Accountant, Student)
+    if (rolesSet.has("admin") || profile?.role === "admin" || user?.email === "aimssalipur@gmail.com") {
+      rolesSet.add("admin");
+      rolesSet.add("instructor");
+      rolesSet.add("accountant");
+      rolesSet.add("student");
+    }
+
     const roles = Array.from(rolesSet);
     const primaryRole = (profile?.role as UserRole) || roles[0];
 

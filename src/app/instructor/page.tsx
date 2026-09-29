@@ -1,5 +1,9 @@
 "use client";
 
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { useToast } from "@/components/ui/use-toast";
+import { triggerDataRefresh, subscribeToDataRefresh } from "@/lib/refresh-event";
 import {
   Card,
   CardContent,
@@ -25,12 +29,37 @@ import {
   BarChart3,
   BookOpenCheck,
   Award,
+  RotateCw,
 } from "lucide-react";
 import { dummyCourses, dummyStudents } from "@/lib/dummy-data";
 import { cn, initials } from "@/lib/utils";
 import Link from "next/link";
 
 export default function InstructorDashboard() {
+  const router = useRouter();
+  const { toast } = useToast();
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  useEffect(() => {
+    return subscribeToDataRefresh(() => {
+      setIsRefreshing(true);
+      router.refresh();
+      setTimeout(() => setIsRefreshing(false), 600);
+    });
+  }, [router]);
+
+  const handleManualRefresh = () => {
+    if (isRefreshing) return;
+    setIsRefreshing(true);
+    triggerDataRefresh();
+    router.refresh();
+    toast({
+      title: "Faculty Portal Refreshed ✅",
+      description: "Latest student activities and courses loaded.",
+      variant: "success",
+    });
+    setTimeout(() => setIsRefreshing(false), 600);
+  };
   const enrollmentMap: Record<
     string,
     {
@@ -135,9 +164,23 @@ export default function InstructorDashboard() {
         </div>
         <div className="relative grid lg:grid-cols-3 gap-4 sm:gap-6 p-4 sm:p-6 md:p-8 lg:p-10">
           <div className="lg:col-span-2 space-y-3 sm:space-y-4">
-            <Badge className="bg-white/15 text-white border-0 backdrop-blur w-fit text-[10px] sm:text-xs py-0.5 px-2 sm:px-2.5">
-              <Award className="h-3 w-3 mr-1" /> Faculty Spotlight
-            </Badge>
+            <div className="flex items-center justify-between gap-2 flex-wrap">
+              <Badge className="bg-white/15 text-white border-0 backdrop-blur w-fit text-[10px] sm:text-xs py-0.5 px-2 sm:px-2.5">
+                <Award className="h-3 w-3 mr-1" /> Faculty Spotlight
+              </Badge>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={handleManualRefresh}
+                disabled={isRefreshing}
+                className="h-8 px-3 rounded-lg bg-white/15 hover:bg-white/25 text-white text-xs font-bold border-white/20 gap-1.5 backdrop-blur transition-all shadow-xs"
+                title="Refresh Faculty Portal (without page reload)"
+              >
+                <RotateCw className={cn("h-3.5 w-3.5 text-white shrink-0", isRefreshing && "animate-spin")} />
+                <span>{isRefreshing ? "Refreshing..." : "Refresh"}</span>
+              </Button>
+            </div>
             <h2 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-extrabold leading-tight">
               Welcome back, Dr. Priyanka! 👩‍⚕️
               <br />

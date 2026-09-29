@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -9,26 +9,15 @@ import {
   Settings,
   CalendarDays,
   GraduationCap,
+  RotateCw,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import type { UserRole } from "@/lib/types";
-
-const greeting = () => {
-  const h = new Date().getHours();
-  if (h < 12) return "Good morning";
-  if (h < 17) return "Good afternoon";
-  return "Good evening";
-};
-
-const today = new Date().toLocaleDateString("en-IN", {
-  weekday: "long",
-  day: "numeric",
-  month: "long",
-  year: "numeric",
-});
+import { useToast } from "@/components/ui/use-toast";
+import { triggerDataRefresh } from "@/lib/refresh-event";
 
 interface DashboardTopbarProps {
   role: UserRole;
@@ -37,8 +26,43 @@ interface DashboardTopbarProps {
 
 export function DashboardTopbar({ role, userName }: DashboardTopbarProps) {
   const router = useRouter();
+  const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState("");
+  const [greetingText, setGreetingText] = useState("Welcome");
+  const [todayText, setTodayText] = useState("");
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const first = userName.split(" ")[0];
+
+  const handleRefreshData = () => {
+    if (isRefreshing) return;
+    setIsRefreshing(true);
+    triggerDataRefresh();
+    router.refresh();
+    toast({
+      title: "Data Refreshed ✅",
+      description: "Fetched latest records and status.",
+      variant: "success",
+    });
+    setTimeout(() => {
+      setIsRefreshing(false);
+    }, 800);
+  };
+
+  useEffect(() => {
+    const h = new Date().getHours();
+    if (h < 12) setGreetingText("Good morning");
+    else if (h < 17) setGreetingText("Good afternoon");
+    else setGreetingText("Good evening");
+
+    setTodayText(
+      new Date().toLocaleDateString("en-IN", {
+        weekday: "long",
+        day: "numeric",
+        month: "long",
+        year: "numeric",
+      })
+    );
+  }, []);
 
   const roleBadge: Record<UserRole, { variant: any; label: string }> = {
     student: { variant: "default", label: "Student Portal" },
@@ -85,8 +109,8 @@ export function DashboardTopbar({ role, userName }: DashboardTopbarProps) {
           </div>
           <div>
             <div className="flex flex-wrap items-center gap-2 mb-1">
-              <h1 className="text-xl md:text-2xl font-extrabold text-slate-900 tracking-tight">
-                {greeting()}, {first} 👋
+              <h1 className="text-xl md:text-2xl font-extrabold text-slate-900 tracking-tight" suppressHydrationWarning>
+                {greetingText}, {first} 👋
               </h1>
               <Badge
                 variant={roleBadge[role].variant as any}
@@ -97,7 +121,7 @@ export function DashboardTopbar({ role, userName }: DashboardTopbarProps) {
             </div>
             <div className="flex flex-wrap items-center gap-2 text-sm text-slate-500">
               <CalendarDays className="h-3.5 w-3.5" />
-              <span className="font-medium">{today}</span>
+              <span className="font-medium" suppressHydrationWarning>{todayText || "Today"}</span>
               <span className="text-slate-300">·</span>
               <span className="hidden sm:inline font-medium">
                 Ready for another productive day at AIMS
@@ -117,7 +141,21 @@ export function DashboardTopbar({ role, userName }: DashboardTopbarProps) {
               className="pl-10 pr-4 h-11 bg-slate-50 border-slate-100 focus:bg-white rounded-xl text-sm"
             />
           </form>
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1.5 sm:gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={handleRefreshData}
+              disabled={isRefreshing}
+              className="h-11 px-3 sm:px-3.5 gap-2 rounded-xl border-slate-200 text-slate-700 hover:text-aims-navy hover:bg-slate-50 font-bold shadow-xs transition-all"
+              title="Refresh Data (without reloading site)"
+            >
+              <RotateCw className={cn("h-4 w-4 text-aims-navy shrink-0", isRefreshing && "animate-spin")} />
+              <span className="hidden sm:inline text-xs font-bold">
+                {isRefreshing ? "Refreshing..." : "Refresh"}
+              </span>
+            </Button>
             <Button
               asChild
               variant="ghost"

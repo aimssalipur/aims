@@ -1,6 +1,9 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { useToast } from "@/components/ui/use-toast";
+import { triggerDataRefresh, subscribeToDataRefresh } from "@/lib/refresh-event";
 import {
   Card,
   CardContent,
@@ -26,6 +29,7 @@ import {
   Activity,
   Layers,
   Sparkles,
+  RotateCw,
 } from "lucide-react";
 import {
   monthlyEnrollments,
@@ -153,10 +157,34 @@ const PieCustomTooltip = ({ active, payload }: any) => {
 };
 
 export default function AdminDashboardPage() {
+  const router = useRouter();
+  const { toast } = useToast();
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [enrollmentView, setEnrollmentView] = useState<"area" | "bar">("area");
   const [enrollmentTimeframe, setEnrollmentTimeframe] = useState<"12m" | "6m">("12m");
   const [activeUsersMode, setActiveUsersMode] = useState<"breakdown" | "total">("breakdown");
   const [activePieIndex, setActivePieIndex] = useState<number | null>(null);
+
+  useEffect(() => {
+    return subscribeToDataRefresh(() => {
+      setIsRefreshing(true);
+      router.refresh();
+      setTimeout(() => setIsRefreshing(false), 600);
+    });
+  }, [router]);
+
+  const handleManualRefresh = () => {
+    if (isRefreshing) return;
+    setIsRefreshing(true);
+    triggerDataRefresh();
+    router.refresh();
+    toast({
+      title: "Dashboard Refreshed ✅",
+      description: "Latest analytics and metrics reloaded.",
+      variant: "success",
+    });
+    setTimeout(() => setIsRefreshing(false), 600);
+  };
 
   const displayedEnrollments = useMemo(() => {
     return enrollmentTimeframe === "6m"
@@ -277,9 +305,23 @@ export default function AdminDashboardPage() {
         </div>
         <div className="relative p-4 sm:p-6 md:p-8 lg:p-10 grid lg:grid-cols-4 gap-4 sm:gap-6">
           <div className="lg:col-span-3 space-y-3 sm:space-y-4">
-            <Badge className="bg-white/15 text-white border-0 backdrop-blur w-fit gap-1 sm:gap-1.5 text-[10px] sm:text-xs">
-              <ShieldCheck className="h-3 w-3" /> Admin Control Center
-            </Badge>
+            <div className="flex items-center justify-between gap-2 flex-wrap">
+              <Badge className="bg-white/15 text-white border-0 backdrop-blur w-fit gap-1 sm:gap-1.5 text-[10px] sm:text-xs">
+                <ShieldCheck className="h-3 w-3" /> Admin Control Center
+              </Badge>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={handleManualRefresh}
+                disabled={isRefreshing}
+                className="h-8 px-3 rounded-lg bg-white/15 hover:bg-white/25 text-white text-xs font-bold border-white/20 gap-1.5 backdrop-blur transition-all shadow-xs"
+                title="Refresh Analytics (without page reload)"
+              >
+                <RotateCw className={cn("h-3.5 w-3.5 text-white shrink-0", isRefreshing && "animate-spin")} />
+                <span>{isRefreshing ? "Refreshing..." : "Refresh Stats"}</span>
+              </Button>
+            </div>
             <h1 className="text-xl sm:text-2xl md:text-4xl font-extrabold tracking-tight leading-tight">
               Good day, Admin! 🏛️
               <br />

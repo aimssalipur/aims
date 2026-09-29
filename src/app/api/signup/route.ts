@@ -9,35 +9,23 @@ export async function POST(request: Request) {
     const body = await request.json();
     const { email, password, fullName, phone, course, course_ids } = body;
 
-    if (!email || !password || !fullName || !phone) {
+    if (!email || !fullName || !phone) {
       return NextResponse.json(
-        { error: "Missing required fields: email, password, fullName, phone" },
+        { error: "Missing required fields: email, fullName, phone" },
         { status: 400 }
       );
     }
 
     const trimmedEmail = String(email).trim().toLowerCase();
     const trimmedName = String(fullName).trim();
-    const rawPassword = String(password);
+    const rawPassword = password
+      ? String(password)
+      : `Aims_${Math.random().toString(36).slice(2, 10)}!${Date.now()}`;
     const cleanedPhone = String(phone).replace(PHONE_CLEAN_REGEX, "");
 
     // 1. Email format validation
     if (!EMAIL_REGEX.test(trimmedEmail) || trimmedEmail.length > 254) {
       return NextResponse.json({ error: "Please enter a valid email address." }, { status: 400 });
-    }
-
-    // 2. Password length & strength policy
-    if (rawPassword.length < 8) {
-      return NextResponse.json(
-        { error: "Password must be at least 8 characters long." },
-        { status: 400 }
-      );
-    }
-    if (rawPassword.length > 128) {
-      return NextResponse.json(
-        { error: "Password is too long (maximum 128 characters)." },
-        { status: 400 }
-      );
     }
 
     // 3. Phone number validation

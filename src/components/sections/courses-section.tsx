@@ -148,7 +148,7 @@ export function CoursesSection() {
                 <div className="relative overflow-hidden aspect-[16/11]">
                   <Image
                     src={courseThumb}
-                    alt={course.title}
+                    alt={`${course.title} - AIMS Salipur Nursing Coaching`}
                     fill
                     sizes="(max-width: 1024px) 50vw, 33vw"
                     className="object-cover transition-transform duration-500 group-hover:scale-105"
@@ -195,7 +195,7 @@ export function CoursesSection() {
                     <Avatar className="h-6 w-6 sm:h-7 sm:w-7 ring-1 ring-white shadow-xs shrink-0">
                       <AvatarImage
                         src={course.instructor?.avatar_url || ""}
-                        alt={course.instructor?.full_name || ""}
+                        alt={`${course.instructor?.full_name || "Faculty Mentor"} - AIMS Salipur`}
                       />
                       <AvatarFallback className="text-[9px] sm:text-[10px] font-bold bg-emerald-700 text-white">
                         {getInitials(course.instructor?.full_name || "Faculty")}
@@ -219,7 +219,10 @@ export function CoursesSection() {
                     className="w-full h-8 sm:h-9 text-[11px] sm:text-xs font-bold gap-1 rounded-lg sm:rounded-xl hover:bg-aims-navy hover:text-white transition-all shadow-xs px-2"
                     asChild
                   >
-                    <Link href="/signup">
+                    <Link
+                      href="/signup"
+                      aria-label={`Apply for ${course.title} at AIMS Salipur`}
+                    >
                       <span>Apply Now</span>
                       <ArrowRight className="h-3 w-3" />
                     </Link>

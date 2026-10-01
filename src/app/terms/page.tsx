@@ -1,11 +1,20 @@
 import { Navbar } from "@/components/navbar";
 import { Footer } from "@/components/footer";
 import { FileText, Calendar, BookOpen, AlertOctagon, Terminal } from "lucide-react";
+import { siteConfig } from "@/lib/site-config";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
   title: "Terms of Service",
   description: "Read the Terms and Conditions of service governing classroom conduct, piracy policies, intellectual properties, and role permissions.",
+  alternates: {
+    canonical: `${siteConfig.url}/terms`,
+  },
+  openGraph: {
+    title: "Terms of Service | AIMS Salipur",
+    description: "Read the Terms and Conditions of service governing classroom conduct, piracy policies, intellectual properties, and role permissions.",
+    url: `${siteConfig.url}/terms`,
+  },
 };
 
 export default function TermsOfServicePage() {

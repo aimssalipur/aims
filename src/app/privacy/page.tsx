@@ -1,11 +1,20 @@
 import { Navbar } from "@/components/navbar";
 import { Footer } from "@/components/footer";
 import { ShieldCheck, Calendar, Lock, Eye, AlertCircle } from "lucide-react";
+import { siteConfig } from "@/lib/site-config";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
   title: "Privacy Policy",
   description: "Learn about how AIMS Salipur collects, processes, and protects your personal information and student data.",
+  alternates: {
+    canonical: `${siteConfig.url}/privacy`,
+  },
+  openGraph: {
+    title: "Privacy Policy | AIMS Salipur",
+    description: "Learn about how AIMS Salipur collects, processes, and protects your personal information and student data.",
+    url: `${siteConfig.url}/privacy`,
+  },
 };
 
 export default function PrivacyPolicyPage() {

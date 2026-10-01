@@ -1,10 +1,17 @@
 import { DashboardSidebar } from "@/components/dashboard/sidebar";
 import { DashboardTopbar } from "@/components/dashboard/topbar";
 import type { UserRole } from "@/lib/types";
-
+import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
-
 import { redirect } from "next/navigation";
+
+export const metadata: Metadata = {
+  title: "Instructor Portal",
+  robots: {
+    index: false,
+    follow: false,
+  },
+};
 
 export default async function InstructorLayout({
   children,

@@ -239,7 +239,7 @@ export function HeroSection() {
                   <Image
                     key={i}
                     src={src}
-                    alt="Student"
+                    alt={`AIMS Salipur nursing exam student ${i + 1}`}
                     width={36}
                     height={36}
                     className="h-8 w-8 sm:h-9 sm:w-9 rounded-full ring-2 ring-white shadow-md object-cover"
@@ -311,7 +311,7 @@ export function HeroSection() {
                 <div className="relative aspect-[4/3] sm:aspect-[4/5] bg-gradient-to-br from-aims-navy/5 via-aims-green/5 to-aims-gold/5">
                   <Image
                     src={heroImage}
-                    alt="AIMS Nursing Candidates in Exam Prep Lab"
+                    alt="AIMS Salipur - Nursing Officer coaching academy in Salipur, Cuttack"
                     fill
                     sizes="(max-width: 1024px) 100vw, 40vw"
                     className="object-cover"

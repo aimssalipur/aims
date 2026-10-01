@@ -103,7 +103,7 @@ export function TestimonialsSection() {
                               <div className="relative shrink-0">
                                 <Image
                                   src={avatarUrl}
-                                  alt={testimonial.name}
+                                  alt={`${testimonial.name} - ${testimonial.role} at AIMS Salipur`}
                                   width={52}
                                   height={52}
                                   className="relative h-10 w-10 sm:h-12 sm:w-12 rounded-full object-cover ring-2 ring-white shadow"

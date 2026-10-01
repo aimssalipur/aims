@@ -86,7 +86,7 @@ export function MediaSection() {
                       frontendImages.youtube_thumb ||
                       "https://images.unsplash.com/photo-1588776814546-1ffcf47267a5?w=1200&h=675&fit=crop"
                     }
-                    alt="AIMS YouTube Channel"
+                    alt="AIMS Salipur Official YouTube Video Lectures & Mock Test Series"
                     fill
                     sizes="(max-width: 1024px) 100vw, 50vw"
                     className="object-cover opacity-70 group-hover:opacity-60 group-hover:scale-105 transition-all duration-500"
@@ -101,7 +101,7 @@ export function MediaSection() {
                       target="_blank"
                       rel="noopener noreferrer"
                       className="group/btn relative"
-                      aria-label="Play video"
+                      aria-label="Watch AIMS Salipur Nursing Lectures on YouTube"
                     >
                       <div className="relative h-12 w-12 sm:h-16 sm:w-16 md:h-20 md:w-20 rounded-full bg-white shadow-xl flex items-center justify-center group-hover/btn:bg-red-500 transition-all duration-300 group-hover/btn:scale-110">
                         <Play
@@ -193,7 +193,7 @@ export function MediaSection() {
                     >
                       <Image
                         src={igSrc}
-                        alt={`AIMS Campus Life ${i + 1}`}
+                        alt={`AIMS Salipur Campus & Clinical Training - Photo ${i + 1}`}
                         fill
                         sizes="(max-width: 1024px) 50vw, 25vw"
                         className="object-cover transition-transform duration-500 group-hover:scale-105"

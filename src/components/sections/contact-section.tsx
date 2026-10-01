@@ -25,6 +25,7 @@ import {
   Facebook,
 } from "lucide-react";
 import { useGSAP } from "@/lib/use-gsap-animation";
+import { siteConfig } from "@/lib/site-config";
 import gsap from "gsap";
 
 export function ContactSection() {
@@ -131,7 +132,7 @@ export function ContactSection() {
     const shareData = {
       title: "AIMS Salipur - Nursing Coaching Academy",
       text: "Join AIMS Salipur for premier OSSSC, AIIMS NORCET, ESIC, and MNS nursing recruitment coaching.",
-      url: typeof window !== "undefined" ? window.location.href : "https://aimssalipur.com",
+      url: typeof window !== "undefined" ? window.location.href : siteConfig.url,
     };
 
     if (navigator.share) {
@@ -303,7 +304,7 @@ export function ContactSection() {
                     <div className="hidden sm:block shrink-0">
                       <Image
                         src="/logo.png"
-                        alt="AIMS Logo"
+                        alt="AIMS Salipur - Achyutanand Institute of Medical Science Logo"
                         width={64}
                         height={64}
                         className="h-16 w-16 rounded-full bg-white p-1 shadow-lg ring-2 ring-white/30 object-contain"

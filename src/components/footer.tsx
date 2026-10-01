@@ -64,7 +64,7 @@ export function Footer() {
                 target="_blank"
                 rel="noopener noreferrer"
                 className="h-10 w-10 rounded-xl bg-white/10 hover:bg-blue-600 active:scale-95 flex items-center justify-center transition-all duration-200"
-                aria-label="Facebook Page"
+                aria-label="AIMS Salipur Facebook Page"
               >
                 <Facebook className="h-5 w-5 text-white" />
               </a>
@@ -73,7 +73,7 @@ export function Footer() {
                 target="_blank"
                 rel="noopener noreferrer"
                 className="h-10 w-10 rounded-xl bg-white/10 hover:bg-gradient-to-tr hover:from-amber-500 hover:via-pink-500 hover:to-purple-600 active:scale-95 flex items-center justify-center transition-all duration-200"
-                aria-label="Instagram Profile"
+                aria-label="AIMS Salipur Instagram Profile"
               >
                 <Instagram className="h-5 w-5 text-white" />
               </a>
@@ -82,7 +82,7 @@ export function Footer() {
                 target="_blank"
                 rel="noopener noreferrer"
                 className="h-10 w-10 rounded-xl bg-white/10 hover:bg-red-500 active:scale-95 flex items-center justify-center transition-all duration-200"
-                aria-label="YouTube Channel"
+                aria-label="AIMS Salipur Official YouTube Channel"
               >
                 <Youtube className="h-5 w-5 text-white" />
               </a>
@@ -91,7 +91,7 @@ export function Footer() {
                 target="_blank"
                 rel="noopener noreferrer"
                 className="h-10 w-10 rounded-xl bg-white/10 hover:bg-emerald-500 active:scale-95 flex items-center justify-center transition-all duration-200"
-                aria-label="WhatsApp Contact"
+                aria-label="Contact AIMS Salipur Admissions on WhatsApp"
               >
                 <Phone className="h-5 w-5 text-white" />
               </a>

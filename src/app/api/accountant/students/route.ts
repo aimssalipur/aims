@@ -10,17 +10,18 @@ export async function GET() {
 
   try {
     const supabase = createAdminClient();
-    // Query users with student profiles
+    // Query users with student profiles (role = student or all non-staff)
     const { data, error } = await supabase
       .from("profiles")
-      .select("id, full_name, email, whatsapp, course_of_interest")
+      .select("id, full_name, email, whatsapp, course_of_interest, role, avatar_url")
+      .in("role", ["student", "user"])
       .order("full_name", { ascending: true });
 
     if (error) {
       return NextResponse.json({ error: "Failed to fetch students list." }, { status: 500 });
     }
 
-    return NextResponse.json(data);
+    return NextResponse.json(data || []);
   } catch (err: any) {
     return NextResponse.json({ error: "Failed to process request." }, { status: 500 });
   }

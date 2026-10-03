@@ -283,13 +283,6 @@ export default function AdminMediaPage() {
             Course Covers ({getSectionItems("courses").length})
           </TabsTrigger>
           <TabsTrigger
-            value="testimonials"
-            className="gap-2 rounded-xl text-xs sm:text-sm font-bold data-[state=active]:bg-aims-navy data-[state=active]:text-white"
-          >
-            <GraduationCap className="h-4 w-4" />
-            Student Testimonials ({getSectionItems("testimonials").length})
-          </TabsTrigger>
-          <TabsTrigger
             value="media"
             className="gap-2 rounded-xl text-xs sm:text-sm font-bold data-[state=active]:bg-aims-navy data-[state=active]:text-white"
           >
@@ -299,7 +292,7 @@ export default function AdminMediaPage() {
         </TabsList>
 
         {/* Tab Contents */}
-        {(["hero", "courses", "testimonials", "media"] as const).map((section) => (
+        {(["hero", "courses", "media"] as const).map((section) => (
           <TabsContent key={section} value={section} className="mt-6 space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {getSectionItems(section).map((item) => (

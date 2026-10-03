@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Card,
   CardContent,
@@ -10,7 +10,6 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { dummyAnnouncements, dummyInstructors } from "@/lib/dummy-data";
 import {
   Bell,
   Megaphone,
@@ -28,6 +27,7 @@ import {
   Download,
   Eye,
   Check,
+  Loader2,
 } from "lucide-react";
 import {
   Dialog,
@@ -63,23 +63,33 @@ export default function StudentAnnouncementsPage() {
   const [bookmarkedIds, setBookmarkedIds] = useState<string[]>([]);
   const [activeDialogAnn, setActiveDialogAnn] = useState<any>(null);
   const [visibleCount, setVisibleCount] = useState(6);
+  const [announcements, setAnnouncements] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const rawAnnouncements = dummyAnnouncements.map((a, i) => ({
+  useEffect(() => {
+    async function load() {
+      try {
+        const res = await fetch("/api/announcements");
+        if (res.ok) {
+          const data = await res.json();
+          if (Array.isArray(data)) setAnnouncements(data);
+        }
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    load();
+  }, []);
+
+  const rawAnnouncements = announcements.map((a, i) => ({
     ...a,
-    author:
-      i % 2 === 0
-        ? { full_name: "AIMS Admin", avatar_url: undefined, role: "admin" }
-        : dummyInstructors[i % dummyInstructors.length],
-    type: ["Admission", "Event", "Academic", "Exam", "Celebration", "Info"][i % 6],
+    author: a.author || { full_name: "AIMS Administration", role: "admin" },
+    type: "Academic",
   }));
 
-  const filteredAnnouncements = rawAnnouncements.filter((a) => {
-    if (activeFilter === "Academic") return a.type === "Academic" || a.type === "Exam";
-    if (activeFilter === "Events") return a.type === "Event" || a.type === "Celebration";
-    if (activeFilter === "Admissions") return a.type === "Admission";
-    return true;
-  });
-
+  const filteredAnnouncements = rawAnnouncements;
   const displayedAnnouncements = filteredAnnouncements.slice(0, visibleCount);
 
   const toggleBookmark = (id: string) => {

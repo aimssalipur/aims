@@ -53,9 +53,9 @@ export default async function InstructorLayout({
   }
 
   const currentUser = {
-    full_name: profile?.full_name || user?.user_metadata?.full_name || user?.user_metadata?.name || "Dr. Priyanka Sharma",
-    email: user?.email || "priyanka.sharma@aims.edu",
-    avatar_url: profile?.avatar_url || user?.user_metadata?.avatar_url || "https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=400&h=400&fit=crop&crop=faces",
+    full_name: profile?.full_name || user?.user_metadata?.full_name || user?.user_metadata?.name || user?.email?.split("@")[0] || "Instructor",
+    email: user?.email || "",
+    avatar_url: profile?.avatar_url || user?.user_metadata?.avatar_url || "",
     roles: roles,
   };
 

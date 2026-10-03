@@ -16,49 +16,144 @@ import {
   MessageSquarePlus,
   CalendarDays,
   Pin,
-  Edit3,
   Trash2,
   Megaphone,
-  CheckCircle2,
   Eye,
   Send,
-  Save,
   X,
+  Loader2,
+  RotateCw,
 } from "lucide-react";
-import { dummyAnnouncements } from "@/lib/dummy-data";
 import { formatDate, initials } from "@/lib/utils";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useToast } from "@/components/ui/use-toast";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { dummyInstructors } from "@/lib/dummy-data";
+import { subscribeToDataRefresh, triggerDataRefresh } from "@/lib/refresh-event";
 
 export default function InstructorAnnouncementsPage() {
   const { toast } = useToast();
   const [draft, setDraft] = useState({
     title: "",
     content: "",
+    is_pinned: false,
   });
   const [preview, setPreview] = useState(false);
+  const [announcements, setAnnouncements] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [publishing, setPublishing] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
-  const publish = () => {
-    if (!draft.title || !draft.content) {
+  const fetchAnnouncements = async () => {
+    try {
+      const res = await fetch("/api/announcements", { cache: "no-store" });
+      const data = await res.json();
+      if (Array.isArray(data)) {
+        setAnnouncements(data);
+      } else {
+        setAnnouncements([]);
+      }
+    } catch (err) {
+      console.error("Error loading announcements:", err);
+      setAnnouncements([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchAnnouncements();
+  }, []);
+
+  useEffect(() => {
+    return subscribeToDataRefresh(() => {
+      fetchAnnouncements();
+    });
+  }, []);
+
+  const publish = async () => {
+    if (!draft.title.trim() || !draft.content.trim()) {
       toast({
         title: "Missing content",
-        description: "Please add a title and content before publishing.",
+        description: "Please enter both a title and content before publishing.",
         variant: "destructive",
       });
       return;
     }
-    toast({
-      title: "Announcement posted! 📢",
-      description: `Your announcement "${draft.title.slice(0, 30)}..." has been published.`,
-      variant: "success",
-    });
-    setDraft({ title: "", content: "" });
-    setPreview(false);
+
+    setPublishing(true);
+    try {
+      const res = await fetch("/api/announcements", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: draft.title.trim(),
+          content: draft.content.trim(),
+          is_pinned: draft.is_pinned,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok || data.error) {
+        toast({
+          title: "Publish Failed",
+          description: data.error || "Unable to save announcement.",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Announcement posted! 📢",
+          description: `"${draft.title.slice(0, 30)}..." has been published.`,
+          variant: "success",
+        });
+        setDraft({ title: "", content: "", is_pinned: false });
+        setPreview(false);
+        fetchAnnouncements();
+        triggerDataRefresh();
+      }
+    } catch (err: any) {
+      toast({
+        title: "Error publishing",
+        description: err.message,
+        variant: "destructive",
+      });
+    } finally {
+      setPublishing(false);
+    }
   };
 
-  const me = dummyInstructors[0];
+  const handleDelete = async (id: string) => {
+    if (!confirm("Are you sure you want to delete this announcement?")) return;
+    setDeletingId(id);
+    try {
+      const res = await fetch(`/api/announcements?id=${id}`, {
+        method: "DELETE",
+      });
+      const data = await res.json();
+      if (!res.ok || data.error) {
+        toast({
+          title: "Failed to delete",
+          description: data.error || "Could not delete announcement.",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Announcement deleted",
+          description: "The announcement was removed successfully.",
+          variant: "success",
+        });
+        fetchAnnouncements();
+        triggerDataRefresh();
+      }
+    } catch (err: any) {
+      toast({
+        title: "Error",
+        description: err.message,
+        variant: "destructive",
+      });
+    } finally {
+      setDeletingId(null);
+    }
+  };
 
   return (
     <div className="space-y-6 lg:space-y-8 max-w-[1200px] mx-auto">
@@ -83,39 +178,22 @@ export default function InstructorAnnouncementsPage() {
                   <MessageSquarePlus className="h-5.5 w-5.5" />
                 </div>
                 <div>
-                  <CardTitle className="text-lg font-extrabold">Compose New</CardTitle>
+                  <CardTitle className="text-lg font-extrabold">Compose Notice</CardTitle>
                   <CardDescription className="text-sm mt-1">
-                    Visible to all enrolled students
+                    Visible to all enrolled students & faculty
                   </CardDescription>
                 </div>
               </div>
             </CardHeader>
             <CardContent className="p-5 md:p-6 space-y-5">
-              <div className="flex items-center gap-3 p-3 rounded-xl bg-slate-50 border border-slate-100">
-                <Avatar className="h-10 w-10 ring-2 ring-white shadow-sm">
-                  <AvatarImage src={me.avatar_url || ""} />
-                  <AvatarFallback className="text-xs font-bold bg-gradient-to-br from-aims-navy to-aims-green text-white">
-                    {initials(me.full_name)}
-                  </AvatarFallback>
-                </Avatar>
-                <div className="leading-tight">
-                  <div className="font-extrabold text-sm text-slate-900">
-                    {me.full_name}
-                  </div>
-                  <div className="text-[11px] text-slate-500 font-semibold uppercase tracking-wider">
-                    Posting as Instructor
-                  </div>
-                </div>
-              </div>
-
               <div className="space-y-2">
                 <Label htmlFor="title" className="text-xs uppercase tracking-wider text-slate-500 font-bold">
-                  Title
+                  Notice Title <span className="text-rose-500">*</span>
                 </Label>
                 <Input
                   id="title"
-                  placeholder="e.g. Class rescheduled to tomorrow..."
-                  className="h-12 text-base font-semibold"
+                  placeholder="e.g. Special Mock Test on Pediatric Nursing..."
+                  className="h-12 text-sm font-semibold rounded-xl"
                   value={draft.title}
                   onChange={(e) => setDraft({ ...draft, title: e.target.value })}
                 />
@@ -124,7 +202,7 @@ export default function InstructorAnnouncementsPage() {
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <Label htmlFor="content" className="text-xs uppercase tracking-wider text-slate-500 font-bold">
-                    Content
+                    Content <span className="text-rose-500">*</span>
                   </Label>
                   <button
                     type="button"
@@ -138,18 +216,18 @@ export default function InstructorAnnouncementsPage() {
                   </button>
                 </div>
                 {preview ? (
-                  <div className="min-h-[200px] p-5 rounded-xl bg-gradient-to-br from-slate-50 to-white border border-slate-200">
+                  <div className="min-h-[180px] p-4 rounded-xl bg-gradient-to-br from-slate-50 to-white border border-slate-200">
                     {draft.title && (
-                      <h4 className="font-extrabold text-lg text-slate-900 mb-2">
+                      <h4 className="font-extrabold text-base text-slate-900 mb-2">
                         {draft.title}
                       </h4>
                     )}
                     {draft.content ? (
-                      <p className="text-slate-700 leading-relaxed text-sm whitespace-pre-wrap">
+                      <p className="text-slate-700 leading-relaxed text-xs whitespace-pre-wrap">
                         {draft.content}
                       </p>
                     ) : (
-                      <p className="text-slate-400 italic text-sm">
+                      <p className="text-slate-400 italic text-xs">
                         Start typing to see a preview...
                       </p>
                     )}
@@ -157,41 +235,55 @@ export default function InstructorAnnouncementsPage() {
                 ) : (
                   <Textarea
                     id="content"
-                    rows={9}
-                    placeholder="Write your announcement here. Students will be notified via email and dashboard..."
-                    className="resize-none text-sm leading-relaxed"
+                    rows={7}
+                    placeholder="Write your announcement details here. Students will see this in their dashboard notices..."
+                    className="resize-none text-xs sm:text-sm leading-relaxed rounded-xl"
                     value={draft.content}
                     onChange={(e) => setDraft({ ...draft, content: e.target.value })}
                   />
                 )}
-                <div className="flex items-center justify-between text-xs text-slate-400 font-semibold pt-1">
-                  <span>{draft.content.length} characters</span>
-                  <span>Supports plain text</span>
-                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <label className="flex items-center gap-2 text-xs font-semibold text-slate-600 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={draft.is_pinned}
+                    onChange={(e) => setDraft({ ...draft, is_pinned: e.target.checked })}
+                    className="rounded text-aims-green focus:ring-aims-green h-4 w-4"
+                  />
+                  Pin this announcement to top
+                </label>
               </div>
 
               <div className="flex items-center gap-2 pt-2 border-t border-slate-100">
                 <button
                   type="button"
-                  onClick={() => setDraft({ title: "", content: "" })}
+                  onClick={() => setDraft({ title: "", content: "", is_pinned: false })}
                   className="flex items-center gap-1.5 px-3 h-9 rounded-xl text-xs font-bold text-slate-500 hover:text-red-600 hover:bg-red-50 transition-colors"
                 >
                   <X className="h-3.5 w-3.5" />
                   Clear
                 </button>
                 <div className="flex-1" />
-                <Button variant="outline" size="sm" className="gap-1.5 h-9 border-slate-200">
-                  <Save className="h-3.5 w-3.5" />
-                  Save Draft
-                </Button>
                 <Button
                   variant="primary"
                   size="sm"
+                  disabled={publishing}
                   onClick={publish}
-                  className="gap-1.5 h-9 bg-aims-green hover:bg-aims-green/90 shadow-lg shadow-aims-green/20"
+                  className="gap-1.5 h-10 px-5 rounded-xl bg-aims-green hover:bg-aims-green/90 shadow-lg shadow-aims-green/20 font-bold"
                 >
-                  <Send className="h-3.5 w-3.5" />
-                  Publish
+                  {publishing ? (
+                    <>
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      Publishing...
+                    </>
+                  ) : (
+                    <>
+                      <Send className="h-3.5 w-3.5" />
+                      Publish Notice
+                    </>
+                  )}
                 </Button>
               </div>
             </CardContent>
@@ -202,98 +294,90 @@ export default function InstructorAnnouncementsPage() {
         <div className="lg:col-span-3 space-y-5">
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-extrabold text-slate-900 flex items-center gap-2">
-              Published ({dummyAnnouncements.length})
+              Published Notices ({announcements.length})
             </h2>
-            <div className="flex items-center gap-2">
-              <Badge variant="default" className="text-xs font-bold">
-                <Pin className="h-3 w-3 mr-1 fill-current" />
-                Pinned · 1
-              </Badge>
-            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={fetchAnnouncements}
+              className="h-8 text-xs font-bold border-slate-200"
+            >
+              <RotateCw className="h-3 w-3 mr-1" />
+              Refresh
+            </Button>
           </div>
 
           <div className="space-y-4">
-            {dummyAnnouncements.map((ann, idx) => (
-              <Card
-                key={ann.id}
-                className={`overflow-hidden border-slate-100 group hover:shadow-xl transition-all duration-300 ${
-                  idx === 0 ? "ring-2 ring-aims-navy/10" : ""
-                }`}
-              >
-                <CardContent className="p-0">
-                  {idx === 0 && (
-                    <div className="bg-gradient-to-r from-aims-navy to-blue-700 px-5 md:px-6 py-2 flex items-center gap-2 text-white">
-                      <Pin className="h-3.5 w-3.5" />
-                      <span className="text-[11px] font-bold uppercase tracking-widest">
-                        Pinned Announcement
-                      </span>
-                    </div>
-                  )}
-                  <div className="p-5 md:p-6 space-y-4">
-                    <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
-                      <div className="flex items-start gap-3">
-                        <Avatar className="h-11 w-11 shrink-0 ring-2 ring-white shadow-sm">
-                          <AvatarImage src={me.avatar_url || ""} />
-                          <AvatarFallback className="text-xs font-bold bg-gradient-to-br from-aims-navy to-aims-green text-white">
-                            {initials(me.full_name)}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div className="min-w-0 flex-1">
-                          <div className="flex flex-wrap items-center gap-2 mb-2">
-                            <Badge
-                              variant={["warning", "default", "secondary", "destructive", "gold"][idx] as any}
-                              className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-1"
-                            >
-                              <Megaphone className="h-3 w-3 mr-1" />
-                              {["Admission", "Academic", "Event", "Exam", "Celebration"][idx]}
+            {loading ? (
+              <div className="py-16 text-center text-slate-400 font-semibold flex items-center justify-center gap-2">
+                <Loader2 className="h-5 w-5 animate-spin text-aims-green" />
+                Loading announcements...
+              </div>
+            ) : announcements.length === 0 ? (
+              <div className="p-12 text-center bg-slate-50 rounded-2xl border border-dashed border-slate-200 text-slate-400 font-semibold">
+                No announcements published yet. Write your first update on the left to notify all students.
+              </div>
+            ) : (
+              announcements.map((ann) => (
+                <Card
+                  key={ann.id}
+                  className={`overflow-hidden border-slate-100 group hover:shadow-lg transition-all ${
+                    ann.is_pinned ? "ring-2 ring-aims-navy/20" : ""
+                  }`}
+                >
+                  <CardContent className="p-0">
+                    {ann.is_pinned && (
+                      <div className="bg-gradient-to-r from-aims-navy to-blue-700 px-4 py-1.5 flex items-center gap-2 text-white">
+                        <Pin className="h-3 w-3" />
+                        <span className="text-[10px] font-bold uppercase tracking-widest">
+                          Pinned Notice
+                        </span>
+                      </div>
+                    )}
+                    <div className="p-4 sm:p-5 space-y-3">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="space-y-1 flex-1">
+                          <div className="flex items-center gap-2">
+                            <Badge variant="outline" className="text-[10px] font-bold text-aims-green border-emerald-200 bg-emerald-50">
+                              <Megaphone className="h-2.5 w-2.5 mr-1" />
+                              Official Notice
                             </Badge>
-                            <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                              <Eye className="h-3 w-3" />
-                              {[284, 210, 156, 302, 418][idx]} Views
-                            </span>
-                            <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                              <CheckCircle2 className="h-3 w-3 text-aims-green" />
-                              {[189, 156, 102, 220, 298][idx]} Read
+                            <span className="text-[11px] text-slate-400 font-medium">
+                              {ann.created_at ? new Date(ann.created_at).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : "—"}
                             </span>
                           </div>
-                          <h3 className="font-extrabold text-slate-900 text-lg md:text-xl tracking-tight leading-snug mb-1.5 group-hover:text-aims-green transition-colors">
+                          <h3 className="font-extrabold text-slate-900 text-base sm:text-lg tracking-tight leading-snug">
                             {ann.title}
                           </h3>
-                          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs font-semibold text-slate-500">
-                            <span>{me.full_name}</span>
-                            <span className="text-slate-300">·</span>
-                            <span className="flex items-center gap-1">
-                              <CalendarDays className="h-3 w-3" />
-                              {formatDate(ann.created_at)}
-                            </span>
-                          </div>
                         </div>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          disabled={deletingId === ann.id}
+                          onClick={() => handleDelete(ann.id)}
+                          className="h-8 w-8 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg shrink-0"
+                          title="Delete Notice"
+                        >
+                          {deletingId === ann.id ? (
+                            <Loader2 className="h-3.5 w-3.5 animate-spin text-red-600" />
+                          ) : (
+                            <Trash2 className="h-4 w-4" />
+                          )}
+                        </Button>
                       </div>
-                      <div className="flex items-center gap-1 shrink-0 md:mt-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <Button variant="ghost" size="icon" className="h-8.5 w-8.5 rounded-lg text-slate-400 hover:text-aims-navy hover:bg-aims-navy/10">
-                          <Pin className="h-4 w-4" />
-                        </Button>
-                        <Button variant="ghost" size="icon" className="h-8.5 w-8.5 rounded-lg text-slate-400 hover:text-aims-green hover:bg-aims-green/10">
-                          <Edit3 className="h-4 w-4" />
-                        </Button>
-                        <Button variant="ghost" size="icon" className="h-8.5 w-8.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50">
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+
+                      <p className="text-slate-600 leading-relaxed text-xs sm:text-sm whitespace-pre-wrap">
+                        {ann.content}
+                      </p>
+
+                      <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-400">
+                        <span>Posted by: <strong className="text-slate-600">{ann.creator?.full_name || "Faculty / Admin"}</strong></span>
                       </div>
                     </div>
-                    <p className="text-slate-600 leading-relaxed text-[15px]">
-                      {ann.content}
-                    </p>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-
-          <div className="text-center pt-4">
-            <Button variant="outline" size="lg" className="gap-2 h-11 px-8 border-slate-200">
-              Load More
-            </Button>
+                  </CardContent>
+                </Card>
+              ))
+            )}
           </div>
         </div>
       </div>

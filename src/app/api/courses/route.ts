@@ -32,7 +32,7 @@ export async function GET() {
 
     const { data: courses, error } = await supabase
       .from("courses")
-      .select("id, title, description, thumbnail_url, instructor_id, youtube_playlist, created_at")
+      .select("id, title, description, thumbnail_url, instructor_id, youtube_playlist, created_at, instructor:profiles!instructor_id(id, full_name, email, whatsapp, avatar_url)")
       .order("created_at", { ascending: true });
 
     if (error) {
@@ -75,7 +75,7 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json();
-    const { title, description, thumbnail_url, youtube_playlist } = body;
+    const { title, description, thumbnail_url, youtube_playlist, instructor_id: requestedInstructorId } = body;
 
     if (!title || !String(title).trim()) {
       return NextResponse.json(
@@ -93,8 +93,8 @@ export async function POST(request: Request) {
 
     const supabase = getSupabaseClient();
 
-    // Verify if authContext.user.id exists in profiles table for foreign key constraint
-    let instructorId = authContext.user.id;
+    // Verify if requested or current user's profile exists in profiles table for foreign key constraint
+    let instructorId = requestedInstructorId || authContext.user.id;
     const { data: profileCheck } = await supabase
       .from("profiles")
       .select("id")

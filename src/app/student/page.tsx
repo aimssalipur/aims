@@ -18,12 +18,6 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
-  dummyCourses,
-  dummyAnnouncements,
-  dummyStudents,
-  dummyDeadlines,
-} from "@/lib/dummy-data";
-import {
   BookOpen,
   GraduationCap,
   TrendingUp,
@@ -40,6 +34,8 @@ import {
   MessageCircle,
   BarChart3,
   RotateCw,
+  FileCheck2,
+  Loader2,
 } from "lucide-react";
 import { cn, formatDate, formatProgress, initials } from "@/lib/utils";
 
@@ -47,42 +43,72 @@ export default function StudentDashboard() {
   const router = useRouter();
   const { toast } = useToast();
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [myCourses, setMyCourses] = useState<any[]>([]);
+  const [announcements, setAnnouncements] = useState<any[]>([]);
+  const [upcomingExams, setUpcomingExams] = useState<any[]>([]);
 
-  useEffect(() => {
-    return subscribeToDataRefresh(() => {
-      setIsRefreshing(true);
-      router.refresh();
-      setTimeout(() => setIsRefreshing(false), 600);
-    });
-  }, [router]);
+  const loadData = async () => {
+    try {
+      const [coursesRes, annRes, examsRes] = await Promise.all([
+        fetch("/api/student/courses", { cache: "no-store" }),
+        fetch("/api/announcements", { cache: "no-store" }),
+        fetch("/api/exams", { cache: "no-store" }),
+      ]);
 
-  const handleManualRefresh = () => {
-    if (isRefreshing) return;
-    setIsRefreshing(true);
-    triggerDataRefresh();
-    router.refresh();
-    toast({
-      title: "Student Portal Refreshed ✅",
-      description: "Latest courses and progress loaded.",
-      variant: "success",
-    });
-    setTimeout(() => setIsRefreshing(false), 600);
+      if (coursesRes.ok) {
+        const cData = await coursesRes.json();
+        if (cData.enrolledCourses && cData.enrolledCourses.length > 0) {
+          setMyCourses(cData.enrolledCourses);
+        } else if (cData.allCourses) {
+          setMyCourses(cData.allCourses.slice(0, 4));
+        }
+      }
+
+      if (annRes.ok) {
+        const aData = await annRes.json();
+        if (Array.isArray(aData)) setAnnouncements(aData);
+      }
+
+      if (examsRes.ok) {
+        const eData = await examsRes.json();
+        if (Array.isArray(eData)) setUpcomingExams(eData);
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const myCourses = dummyCourses.slice(0, 4).map((c, i) => ({
-    ...c,
-    progress: [68, 42, 85, 27][i],
-  }));
-  const avgProgress = Math.round(
-    myCourses.reduce((a, b) => a + b.progress, 0) / myCourses.length
-  );
-  const upcoming = dummyAnnouncements.slice(0, 3);
+  useEffect(() => {
+    loadData();
+    return subscribeToDataRefresh(() => {
+      loadData();
+    });
+  }, []);
+
+  const handleManualRefresh = async () => {
+    if (isRefreshing) return;
+    setIsRefreshing(true);
+    await loadData();
+    toast({
+      title: "Student Portal Refreshed ✅",
+      description: "Latest courses and assessment data loaded.",
+      variant: "success",
+    });
+    setIsRefreshing(false);
+  };
+
+  const avgProgress = myCourses.length > 0
+    ? Math.round(myCourses.reduce((a, b) => a + (b.progress || 0), 0) / myCourses.length)
+    : 0;
 
   const statCards = [
     {
       label: "Enrolled Courses",
-      value: "4",
-      sub: "2 new this semester",
+      value: String(myCourses.length),
+      sub: "Active curriculum",
       icon: BookOpen,
       gradient: "from-blue-500 to-blue-700",
       bg: "bg-blue-50",
@@ -91,26 +117,26 @@ export default function StudentDashboard() {
     {
       label: "Overall Progress",
       value: `${avgProgress}%`,
-      sub: "+12% this month",
+      sub: "Syllabus coverage",
       icon: TrendingUp,
       gradient: "from-aims-green to-emerald-700",
       bg: "bg-emerald-50",
       color: "text-emerald-600",
     },
     {
-      label: "Upcoming Deadlines",
-      value: "3",
-      sub: "2 due this week",
-      icon: CalendarClock,
+      label: "Active MCQ Exams",
+      value: String(upcomingExams.length),
+      sub: "Available online",
+      icon: FileCheck2,
       gradient: "from-amber-500 to-orange-600",
       bg: "bg-amber-50",
       color: "text-amber-600",
     },
     {
-      label: "Attendance",
-      value: "94%",
-      sub: "Excellent 🏆",
-      icon: CheckCircle2,
+      label: "Announcements",
+      value: String(announcements.length),
+      sub: "Official updates",
+      icon: Bell,
       gradient: "from-purple-500 to-violet-700",
       bg: "bg-purple-50",
       color: "text-purple-600",
@@ -345,23 +371,9 @@ export default function StudentDashboard() {
                       </div>
                       <Progress value={course.progress} className="h-2" />
                       <div className="flex items-center justify-between gap-3 pt-1">
-                        <div className="flex -space-x-2">
-                          {[0, 1, 2].map((i) => (
-                            <Avatar
-                              key={i}
-                              className="h-6 w-6 ring-2 ring-white shadow-sm"
-                            >
-                              <AvatarImage
-                                src={dummyStudents[(idx + i) % dummyStudents.length].avatar_url!}
-                              />
-                              <AvatarFallback className="text-[9px] font-bold">
-                                {initials(dummyStudents[(idx + i) % dummyStudents.length].full_name)}
-                              </AvatarFallback>
-                            </Avatar>
-                          ))}
-                          <div className="h-6 w-6 rounded-full ring-2 ring-white bg-slate-100 flex items-center justify-center text-[9px] font-bold text-slate-600">
-                            +{28 + idx}
-                          </div>
+                        <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-500">
+                          <span className="text-aims-green font-bold">Faculty:</span>
+                          <span>{course.instructor?.full_name || "AIMS Faculty"}</span>
                         </div>
                         <Button size="sm" variant="primary" className="gap-1.5 h-9" asChild>
                           <Link href={`/student/courses/${course.id}`}>
@@ -386,57 +398,52 @@ export default function StudentDashboard() {
               <div>
                 <CardTitle className="text-lg font-extrabold flex items-center gap-2">
                   <CalendarClock className="h-5 w-5 text-amber-500" />
-                  Upcoming
+                  Upcoming CBT Exams
                 </CardTitle>
                 <CardDescription className="text-sm">
-                  Due dates & exams
+                  Active mock tests & assessments
                 </CardDescription>
               </div>
               <Badge variant="warning" className="text-xs font-bold">
-                {dummyDeadlines.length} items
+                {upcomingExams.length} tests
               </Badge>
             </CardHeader>
             <CardContent className="p-0">
               <div className="space-y-0">
-                {dummyDeadlines.map((deadline, idx) => (
-                  <div
-                    key={deadline.id}
-                    className={cn(
-                      "flex items-start gap-3 p-4 md:p-5 hover:bg-slate-50 transition-colors",
-                      idx !== dummyDeadlines.length - 1 && "border-b border-slate-50"
-                    )}
-                  >
+                {upcomingExams.length === 0 ? (
+                  <div className="p-6 text-center text-xs text-slate-400 font-semibold">
+                    No active examinations scheduled at the moment.
+                  </div>
+                ) : (
+                  upcomingExams.slice(0, 4).map((exam, idx) => (
                     <div
+                      key={exam.id}
                       className={cn(
-                        "h-11 w-11 shrink-0 rounded-xl flex flex-col items-center justify-center",
-                        idx === 0
-                          ? "bg-red-50 text-red-600"
-                          : "bg-amber-50 text-amber-600"
+                        "flex items-start gap-3 p-4 md:p-5 hover:bg-slate-50 transition-colors",
+                        idx !== Math.min(upcomingExams.length, 4) - 1 && "border-b border-slate-50"
                       )}
                     >
-                      <span className="text-[10px] font-bold uppercase">
-                        {formatDate(deadline.date).split(" ")[0].slice(0, 3)}
-                      </span>
-                      <span className="text-lg font-extrabold leading-none">
-                        {formatDate(deadline.date).split(" ")[1].slice(0, 2)}
-                      </span>
+                      <div className="h-11 w-11 shrink-0 rounded-xl bg-amber-50 text-amber-600 flex flex-col items-center justify-center font-extrabold">
+                        <span className="text-[10px] uppercase">CBT</span>
+                        <span className="text-xs leading-none">{exam.duration_minutes || 60}m</span>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h4 className="font-bold text-slate-900 text-sm leading-tight line-clamp-2 mb-1">
+                          {exam.title}
+                        </h4>
+                        <p className="text-xs font-semibold text-slate-500 flex items-center gap-1.5">
+                          <FileText className="h-3 w-3" />
+                          {exam.course?.title || "Nursing Test Series"}
+                        </p>
+                      </div>
+                      <Button size="sm" variant="outline" className="text-xs font-bold text-aims-navy shrink-0" asChild>
+                        <Link href={`/student/exams/${exam.id}`}>
+                          Start
+                        </Link>
+                      </Button>
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <h4 className="font-bold text-slate-900 text-sm leading-tight line-clamp-2 mb-1">
-                        {deadline.title}
-                      </h4>
-                      <p className="text-xs font-semibold text-slate-500 flex items-center gap-1.5">
-                        <FileText className="h-3 w-3" />
-                        {deadline.course}
-                      </p>
-                    </div>
-                    {idx === 0 && (
-                      <Badge variant="destructive" className="text-[10px] font-bold px-2 py-0.5 bg-red-50 text-red-600 border border-red-100">
-                        URGENT
-                      </Badge>
-                    )}
-                  </div>
-                ))}
+                  ))
+                )}
               </div>
             </CardContent>
           </Card>
@@ -462,47 +469,53 @@ export default function StudentDashboard() {
             </CardHeader>
             <CardContent className="p-0">
               <div className="space-y-0">
-                {upcoming.map((ann, idx) => (
-                  <div
-                    key={ann.id}
-                    className={cn(
-                      "p-4 md:p-5 hover:bg-slate-50 transition-colors",
-                      idx !== upcoming.length - 1 && "border-b border-slate-50"
-                    )}
-                  >
-                    <div className="flex items-start justify-between gap-3 mb-2">
-                      <h4 className="font-bold text-slate-900 text-sm leading-tight">
-                        {ann.title}
-                      </h4>
-                      {idx === 0 && (
-                        <span className="shrink-0 inline-flex items-center gap-1 text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-red-100 text-red-600">
-                          ● New
-                        </span>
-                      )}
-                    </div>
-                    <p className="text-xs text-slate-500 line-clamp-2 leading-relaxed mb-2.5">
-                      {ann.content}
-                    </p>
-                    <div className="flex items-center justify-between">
-                      <span className="text-[11px] font-semibold text-slate-400 flex items-center gap-1">
-                        <Clock className="h-3 w-3" />
-                        {formatDate(ann.created_at)}
-                      </span>
-                      <Link
-                        href="/student/announcements"
-                        className="inline-flex items-center gap-0.5 text-[11px] font-bold text-aims-navy hover:underline"
-                      >
-                        Read
-                        <ChevronRight className="h-3 w-3" />
-                      </Link>
-                    </div>
+                {announcements.length === 0 ? (
+                  <div className="p-6 text-center text-xs text-slate-400 font-semibold">
+                    No announcements published yet.
                   </div>
-                ))}
+                ) : (
+                  announcements.slice(0, 4).map((ann, idx) => (
+                    <div
+                      key={ann.id}
+                      className={cn(
+                        "p-4 md:p-5 hover:bg-slate-50 transition-colors",
+                        idx !== Math.min(announcements.length, 4) - 1 && "border-b border-slate-50"
+                      )}
+                    >
+                      <div className="flex items-start justify-between gap-3 mb-2">
+                        <h4 className="font-bold text-slate-900 text-sm leading-tight">
+                          {ann.title}
+                        </h4>
+                        {idx === 0 && (
+                          <span className="shrink-0 inline-flex items-center gap-1 text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-red-100 text-red-600">
+                            ● New
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-xs text-slate-500 line-clamp-2 leading-relaxed mb-2.5">
+                        {ann.content}
+                      </p>
+                      <div className="flex items-center justify-between">
+                        <span className="text-[11px] font-semibold text-slate-400 flex items-center gap-1">
+                          <Clock className="h-3 w-3" />
+                          {ann.created_at ? formatDate(ann.created_at) : "Recent"}
+                        </span>
+                        <Link
+                          href="/student/announcements"
+                          className="inline-flex items-center gap-0.5 text-[11px] font-bold text-aims-navy hover:underline"
+                        >
+                          Read
+                          <ChevronRight className="h-3 w-3" />
+                        </Link>
+                      </div>
+                    </div>
+                  ))
+                )}
               </div>
             </CardContent>
           </Card>
 
-          {/* Faculty Card */}
+          {/* Academic Support Card */}
           <Card className="border-0 bg-gradient-to-br from-aims-green/[0.08] to-aims-navy/[0.08] overflow-hidden">
             <CardContent className="p-6 relative">
               <div className="absolute top-0 right-0 p-4">
@@ -512,34 +525,35 @@ export default function StudentDashboard() {
               </div>
               <div className="relative space-y-3">
                 <h3 className="font-extrabold text-slate-900 text-lg">
-                  Need help? Talk to your mentor
+                  Need help? Academic Support Desk
                 </h3>
                 <p className="text-sm text-slate-600 leading-relaxed">
-                  Book a free 15-min session with Dr. Priyanka to discuss
-                  academics, career, or personal guidance.
+                  Have questions about test series, syllabus coverage, or exams? Reach out directly to our student support coordinator.
                 </p>
                 <div className="flex items-center gap-3 pt-2">
                   <Avatar className="h-10 w-10 ring-2 ring-white shadow">
-                    <AvatarImage src="https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=200&h=200&fit=crop&crop=faces" />
-                    <AvatarFallback className="text-xs font-bold">
-                      PS
+                    <AvatarFallback className="text-xs font-extrabold bg-gradient-to-br from-aims-navy to-aims-green text-white">
+                      AIMS
                     </AvatarFallback>
                   </Avatar>
                   <div className="flex-1">
                     <div className="font-extrabold text-sm text-slate-900">
-                      Dr. Priyanka Sharma
+                      AIMS Academic Support
                     </div>
                     <div className="text-xs text-slate-500">
-                      HOD · Nursing Dept.
+                      Faculty & Doubts Helpline · Salipur
                     </div>
                   </div>
                 </div>
                 <Button
                   variant="primary"
                   className="w-full mt-2 bg-aims-green hover:bg-aims-green/90 gap-2"
+                  asChild
                 >
-                  <MessageCircle className="h-4 w-4" />
-                  Book Mentorship Call
+                  <a href="https://wa.me/919437959054" target="_blank" rel="noopener noreferrer">
+                    <MessageCircle className="h-4 w-4" />
+                    Chat on WhatsApp
+                  </a>
                 </Button>
               </div>
             </CardContent>

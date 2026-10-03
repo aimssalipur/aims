@@ -5,7 +5,6 @@ import Image from "next/image";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { instagramImages } from "@/lib/dummy-data";
 import {
   Play,
   ExternalLink,
@@ -18,6 +17,13 @@ import {
 import { useGSAP } from "@/lib/use-gsap-animation";
 import { useFrontendImages } from "@/lib/frontend-images";
 import gsap from "gsap";
+
+const defaultCampusImages = [
+  "https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?w=600&h=600&fit=crop",
+  "https://images.unsplash.com/photo-1516549655169-df83a0774514?w=600&h=600&fit=crop",
+  "https://images.unsplash.com/photo-1584515979956-d9f6e5d09982?w=600&h=600&fit=crop",
+  "https://images.unsplash.com/photo-1532938911079-1b06ac7ceec7?w=600&h=600&fit=crop",
+];
 
 export function MediaSection() {
   const sectionRef = useRef<HTMLDivElement>(null);
@@ -178,7 +184,7 @@ export function MediaSection() {
 
             <div className="relative">
               <div className="grid grid-cols-2 gap-2 sm:gap-3">
-                {instagramImages.map((src, i) => {
+                {defaultCampusImages.map((src, i) => {
                   const igSrc = frontendImages[`instagram_${i + 1}`] || src;
 
                   return (

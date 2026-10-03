@@ -31,13 +31,6 @@ import {
   Sparkles,
   RotateCw,
 } from "lucide-react";
-import {
-  monthlyEnrollments,
-  dailyActiveUsers,
-  courseCompletionRates,
-  dummyCourses,
-  dummyStudents,
-} from "@/lib/dummy-data";
 import { cn } from "@/lib/utils";
 import {
   ResponsiveContainer,
@@ -68,7 +61,7 @@ const EnrollmentCustomTooltip = ({ active, payload, label }: any) => {
     return (
       <div className="bg-slate-950/95 backdrop-blur-md text-white px-3.5 py-2.5 rounded-xl shadow-2xl border border-slate-700/60 ring-1 ring-white/10 text-xs">
         <div className="flex items-center justify-between gap-3 border-b border-slate-800 pb-1.5 mb-1.5">
-          <span className="font-extrabold text-slate-200">{label} 2025</span>
+          <span className="font-extrabold text-slate-200">{label}</span>
           <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-400 bg-emerald-500/15 px-1.5 py-0.5 rounded-md">
             Admissions
           </span>
@@ -164,39 +157,104 @@ export default function AdminDashboardPage() {
   const [enrollmentTimeframe, setEnrollmentTimeframe] = useState<"12m" | "6m">("12m");
   const [activeUsersMode, setActiveUsersMode] = useState<"breakdown" | "total">("breakdown");
   const [activePieIndex, setActivePieIndex] = useState<number | null>(null);
+  const [users, setUsers] = useState<any[]>([]);
+  const [courses, setCourses] = useState<any[]>([]);
+  const [enrollments, setEnrollments] = useState<any[]>([]);
+  const [fees, setFees] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const fetchData = async () => {
+    try {
+      const [uRes, cRes, eRes, fRes] = await Promise.all([
+        fetch("/api/admin/users", { cache: "no-store" }),
+        fetch("/api/courses", { cache: "no-store" }),
+        fetch("/api/admin/enrollments", { cache: "no-store" }),
+        fetch("/api/accountant/fees", { cache: "no-store" }),
+      ]);
+      if (uRes.ok) {
+        const u = await uRes.json();
+        if (Array.isArray(u)) setUsers(u);
+      }
+      if (cRes.ok) {
+        const c = await cRes.json();
+        if (c.courses && Array.isArray(c.courses)) setCourses(c.courses);
+      }
+      if (eRes.ok) {
+        const e = await eRes.json();
+        if (Array.isArray(e)) setEnrollments(e);
+      }
+      if (fRes.ok) {
+        const f = await fRes.json();
+        if (Array.isArray(f)) setFees(f);
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchData();
+  }, []);
 
   useEffect(() => {
     return subscribeToDataRefresh(() => {
       setIsRefreshing(true);
+      fetchData();
       router.refresh();
       setTimeout(() => setIsRefreshing(false), 600);
     });
   }, [router]);
 
-  const handleManualRefresh = () => {
+  const handleManualRefresh = async () => {
     if (isRefreshing) return;
     setIsRefreshing(true);
     triggerDataRefresh();
+    await fetchData();
     router.refresh();
     toast({
       title: "Dashboard Refreshed ✅",
-      description: "Latest analytics and metrics reloaded.",
+      description: "Latest analytics and real data reloaded.",
       variant: "success",
     });
     setTimeout(() => setIsRefreshing(false), 600);
   };
 
+  // 100% Real Monthly Enrollments computed from database records
+  const monthlyEnrollments = useMemo(() => {
+    const now = new Date();
+    const result: { month: string; enrollments: number }[] = [];
+
+    for (let i = 11; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const monthLabel = d.toLocaleString("en-US", { month: "short" });
+      const year = d.getFullYear();
+      const monthIndex = d.getMonth();
+
+      const count = enrollments.filter((e) => {
+        if (!e.enrolled_at) return false;
+        const eDate = new Date(e.enrolled_at);
+        return eDate.getFullYear() === year && eDate.getMonth() === monthIndex;
+      }).length;
+
+      result.push({ month: monthLabel, enrollments: count });
+    }
+    return result;
+  }, [enrollments]);
+
   const displayedEnrollments = useMemo(() => {
     return enrollmentTimeframe === "6m"
       ? monthlyEnrollments.slice(-6)
       : monthlyEnrollments;
-  }, [enrollmentTimeframe]);
+  }, [enrollmentTimeframe, monthlyEnrollments]);
 
   const totalEnrollments = useMemo(() => {
     return displayedEnrollments.reduce((sum, d) => sum + d.enrollments, 0);
   }, [displayedEnrollments]);
 
   const peakEnrollment = useMemo(() => {
+    if (displayedEnrollments.length === 0) return { month: "N/A", enrollments: 0 };
     return displayedEnrollments.reduce(
       (max, d) => (d.enrollments > max.enrollments ? d : max),
       displayedEnrollments[0]
@@ -204,21 +262,54 @@ export default function AdminDashboardPage() {
   }, [displayedEnrollments]);
 
   const avgEnrollment = useMemo(() => {
+    if (displayedEnrollments.length === 0) return 0;
     return Math.round(totalEnrollments / displayedEnrollments.length);
   }, [totalEnrollments, displayedEnrollments]);
 
+  // Real daily user activity grouped by weekday from registered profiles
   const processedActiveUsers = useMemo(() => {
-    return dailyActiveUsers.map((d) => ({
-      ...d,
-      total: (d.students || 0) + (d.instructors || 0) + (d.admin || 0),
-    }));
-  }, []);
+    const dayNames = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+    const counts: Record<string, { students: number; instructors: number; admin: number }> = {
+      Mon: { students: 0, instructors: 0, admin: 0 },
+      Tue: { students: 0, instructors: 0, admin: 0 },
+      Wed: { students: 0, instructors: 0, admin: 0 },
+      Thu: { students: 0, instructors: 0, admin: 0 },
+      Fri: { students: 0, instructors: 0, admin: 0 },
+      Sat: { students: 0, instructors: 0, admin: 0 },
+      Sun: { students: 0, instructors: 0, admin: 0 },
+    };
+
+    users.forEach((u) => {
+      if (!u.created_at) return;
+      const day = new Date(u.created_at).toLocaleDateString("en-US", { weekday: "short" });
+      if (counts[day]) {
+        const isStudent = u.roles?.includes("student") || u.role === "student";
+        const isInstructor = u.roles?.includes("instructor") || u.role === "instructor";
+        const isAdmin = u.roles?.includes("admin") || u.role === "admin";
+        if (isStudent) counts[day].students += 1;
+        else if (isInstructor) counts[day].instructors += 1;
+        else if (isAdmin) counts[day].admin += 1;
+      }
+    });
+
+    return dayNames.map((day) => {
+      const d = counts[day];
+      return {
+        day,
+        students: d.students,
+        instructors: d.instructors,
+        admin: d.admin,
+        total: d.students + d.instructors + d.admin,
+      };
+    });
+  }, [users]);
 
   const weeklyTotalLogins = useMemo(() => {
     return processedActiveUsers.reduce((sum, d) => sum + d.total, 0);
   }, [processedActiveUsers]);
 
   const peakActiveDay = useMemo(() => {
+    if (processedActiveUsers.length === 0) return { day: "N/A", total: 0, students: 0, instructors: 0, admin: 0 };
     return processedActiveUsers.reduce(
       (max, d) => (d.total > max.total ? d : max),
       processedActiveUsers[0]
@@ -226,17 +317,46 @@ export default function AdminDashboardPage() {
   }, [processedActiveUsers]);
 
   const avgDailyLogins = useMemo(() => {
+    if (processedActiveUsers.length === 0) return 0;
     return Math.round(weeklyTotalLogins / processedActiveUsers.length);
   }, [weeklyTotalLogins, processedActiveUsers]);
+
+  // Real Course Completion Metrics calculated directly from live enrollments
+  const courseCompletionRates = useMemo(() => {
+    const total = enrollments.length;
+    if (total === 0) {
+      return [
+        { name: "Completed", value: 0, color: "#059669" },
+        { name: "In Progress", value: 0, color: "#2563EB" },
+        { name: "Not Started", value: 100, color: "#94A3B8" },
+      ];
+    }
+    const completed = enrollments.filter((e) => (e.progress || 0) >= 100).length;
+    const inProgress = enrollments.filter((e) => (e.progress || 0) > 0 && (e.progress || 0) < 100).length;
+    const notStarted = enrollments.filter((e) => !e.progress || e.progress === 0).length;
+
+    const completedPct = Math.round((completed / total) * 100);
+    const inProgressPct = Math.round((inProgress / total) * 100);
+    const notStartedPct = Math.max(0, 100 - completedPct - inProgressPct);
+
+    return [
+      { name: "Completed", value: completedPct, color: "#059669" },
+      { name: "In Progress", value: inProgressPct, color: "#2563EB" },
+      { name: "Not Started", value: notStartedPct, color: "#94A3B8" },
+    ];
+  }, [enrollments]);
 
   const currentPieSelection =
     activePieIndex !== null ? courseCompletionRates[activePieIndex] : null;
 
+  const studentCount = users.filter((u) => u.roles?.includes("student") || u.role === "student").length;
+  const facultyCount = users.filter((u) => u.roles?.includes("instructor") || u.role === "instructor").length;
+
   const metrics = [
     {
       label: "Total Students",
-      value: "328",
-      change: "+15 this month",
+      value: String(studentCount),
+      change: "Active registrations",
       trend: "up",
       icon: Users,
       gradient: "from-amber-500 to-orange-600",
@@ -244,9 +364,9 @@ export default function AdminDashboardPage() {
       color: "text-amber-600",
     },
     {
-      label: "Faculty",
-      value: "18",
-      change: "+2 this month",
+      label: "Faculty Members",
+      value: String(facultyCount),
+      change: "Assigned instructors",
       trend: "up",
       icon: GraduationCap,
       gradient: "from-purple-500 to-violet-700",
@@ -254,9 +374,9 @@ export default function AdminDashboardPage() {
       color: "text-purple-600",
     },
     {
-      label: "Active Programs",
-      value: "8",
-      change: "Across 3 departments",
+      label: "Active Courses",
+      value: String(courses.length),
+      change: "Nursing programs",
       trend: "neutral",
       icon: BookOpen,
       gradient: "from-aims-navy to-blue-700",
@@ -265,8 +385,8 @@ export default function AdminDashboardPage() {
     },
     {
       label: "Total Enrollments",
-      value: "1,442",
-      change: "+8.2% MoM",
+      value: String(enrollments.length),
+      change: "Student course seats",
       trend: "up",
       icon: TrendingUp,
       gradient: "from-aims-green to-teal-600",
@@ -275,17 +395,125 @@ export default function AdminDashboardPage() {
     },
   ];
 
-  const topCourses = dummyCourses.slice(0, 5).map((c, i) => ({
-    ...c,
-    students: [98, 87, 76, 68, 54][i],
-    revenue: [84500, 72500, 62000, 58000, 48000][i],
-  }));
+  // 100% Real Top Programs: Real student counts + Real fee receipts from fees_payments table
+  const topCourses = useMemo(() => {
+    return courses
+      .map((c) => {
+        const studentCount = enrollments.filter((e) => e.course_id === c.id).length;
+        const realRevenue = fees
+          .filter((f) => f.course_id === c.id && f.status !== "rejected")
+          .reduce((sum, f) => sum + (Number(f.amount_paid) || 0), 0);
+        return {
+          id: c.id,
+          title: c.title,
+          students: studentCount,
+          revenue: realRevenue,
+        };
+      })
+      .sort((a, b) => b.revenue - a.revenue || b.students - a.students)
+      .slice(0, 5);
+  }, [courses, enrollments, fees]);
 
   const maxRevenue = useMemo(() => {
-    return Math.max(...topCourses.map((c) => c.revenue));
+    const revs = topCourses.map((c) => c.revenue);
+    const max = Math.max(...revs, 0);
+    return max > 0 ? max : 0;
   }, [topCourses]);
 
-  const recentStudents = dummyStudents.slice(0, 6);
+  const maxStudents = useMemo(() => {
+    const studs = topCourses.map((c) => c.students);
+    const max = Math.max(...studs, 0);
+    return max > 0 ? max : 1;
+  }, [topCourses]);
+
+  const recentStudents = useMemo(() => {
+    return enrollments.slice(0, 6).map((e) => ({
+      id: e.id,
+      full_name: e.student?.full_name || "Enrolled Student",
+      course_of_interest: e.course?.title || "Nursing Program",
+      avatar_url: e.student?.avatar_url || "",
+    }));
+  }, [enrollments]);
+
+  // Real stats for Admin Hero Banner (Zero Fake Data)
+  const currentMonthAdmits = useMemo(() => {
+    const now = new Date();
+    const curYear = now.getFullYear();
+    const curMonth = now.getMonth();
+    return enrollments.filter((e) => {
+      if (!e.enrolled_at) return false;
+      const d = new Date(e.enrolled_at);
+      return d.getFullYear() === curYear && d.getMonth() === curMonth;
+    }).length;
+  }, [enrollments]);
+
+  const totalRevenueCollected = useMemo(() => {
+    return fees
+      .filter((f) => f.status !== "rejected")
+      .reduce((sum, f) => sum + (Number(f.amount_paid) || 0), 0);
+  }, [fees]);
+
+  const formattedTotalRevenue = useMemo(() => {
+    if (totalRevenueCollected >= 100000) {
+      return `₹${(totalRevenueCollected / 100000).toFixed(1)}L`;
+    }
+    if (totalRevenueCollected >= 1000) {
+      return `₹${(totalRevenueCollected / 1000).toFixed(0)}K`;
+    }
+    return `₹${totalRevenueCollected.toLocaleString("en-IN")}`;
+  }, [totalRevenueCollected]);
+
+  const heroStatCards = useMemo(() => [
+    { k: "New Admits", v: String(currentMonthAdmits), c: "from-aims-navy to-blue-700" },
+    { k: "Active Students", v: String(studentCount), c: "from-aims-green to-teal-600" },
+    { k: "Total Revenue", v: formattedTotalRevenue, c: "from-purple-500 to-violet-700" },
+    { k: "Active Programs", v: String(courses.length), c: "from-rose-500 to-pink-600" },
+  ], [currentMonthAdmits, studentCount, formattedTotalRevenue, courses.length]);
+
+  const momGrowth = useMemo(() => {
+    const now = new Date();
+    const thisYear = now.getFullYear();
+    const thisMonth = now.getMonth();
+
+    const lastMonthDate = new Date(thisYear, thisMonth - 1, 1);
+    const lastYear = lastMonthDate.getFullYear();
+    const lastMonth = lastMonthDate.getMonth();
+
+    const thisMonthCount = enrollments.filter((e) => {
+      if (!e.enrolled_at) return false;
+      const d = new Date(e.enrolled_at);
+      return d.getFullYear() === thisYear && d.getMonth() === thisMonth;
+    }).length;
+
+    const lastMonthCount = enrollments.filter((e) => {
+      if (!e.enrolled_at) return false;
+      const d = new Date(e.enrolled_at);
+      return d.getFullYear() === lastYear && d.getMonth() === lastMonth;
+    }).length;
+
+    if (lastMonthCount === 0) {
+      if (thisMonthCount === 0) {
+        return {
+          pct: "0%",
+          label: "no new admits this month",
+          trend: "neutral" as const,
+        };
+      }
+      return {
+        pct: `+${thisMonthCount}`,
+        label: "new students enrolled",
+        trend: "up" as const,
+      };
+    }
+
+    const diff = thisMonthCount - lastMonthCount;
+    const pct = Math.round((diff / lastMonthCount) * 100);
+    return {
+      pct: pct >= 0 ? `+${pct}%` : `${pct}%`,
+      label: "vs last month",
+      trend: pct >= 0 ? ("up" as const) : ("down" as const),
+    };
+  }, [enrollments]);
 
   return (
     <div className="space-y-6 lg:space-y-8 max-w-[1440px] mx-auto">
@@ -330,12 +558,7 @@ export default function AdminDashboardPage() {
               </span>
             </h1>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-3 pt-1 sm:pt-3 max-w-2xl">
-              {[
-                { k: "New Admits", v: "24", c: "from-aims-navy to-blue-700" },
-                { k: "Placement Rate", v: "95%", c: "from-aims-green to-teal-600" },
-                { k: "Revenue", v: "₹3.4L", c: "from-purple-500 to-violet-700" },
-                { k: "Satisfaction", v: "98%", c: "from-rose-500 to-pink-600" },
-              ].map((s) => (
+              {heroStatCards.map((s) => (
                 <div
                   key={s.k}
                   className="bg-white/10 backdrop-blur rounded-xl sm:rounded-2xl p-2.5 sm:p-4 border border-white/15"
@@ -379,11 +602,11 @@ export default function AdminDashboardPage() {
             </div>
             <div>
               <div className="text-2xl sm:text-4xl font-extrabold tracking-tight">
-                +32%
+                {momGrowth.pct}
               </div>
               <div className="text-[10px] sm:text-xs font-bold text-white/75 flex items-center gap-1.5">
-                <ArrowUpRight className="h-3.5 w-3.5" />
-                compared to last month
+                <ArrowUpRight className={cn("h-3.5 w-3.5", momGrowth.trend === "down" && "rotate-90")} />
+                {momGrowth.label}
               </div>
             </div>
           </div>
@@ -893,63 +1116,101 @@ export default function AdminDashboardPage() {
                 <CardTitle className="text-base sm:text-lg font-extrabold text-slate-900">
                   Top Programs by Revenue
                 </CardTitle>
+                <p className="text-[11px] font-semibold text-slate-400 mt-0.5">
+                  Real verified student fees & active enrollments
+                </p>
               </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => router.push("/accountant/fees")}
+                className="text-xs font-bold text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50"
+              >
+                Fees Ledger →
+              </Button>
             </div>
           </CardHeader>
           <CardContent className="p-0">
-            <div className="divide-y divide-slate-50">
-              {topCourses.map((c, i) => {
-                const percent = Math.round((c.revenue / maxRevenue) * 100);
-                return (
-                  <div
-                    key={c.id}
-                    className="p-3 sm:p-4 hover:bg-slate-50/80 transition-colors space-y-1.5"
-                  >
-                    <div className="flex items-center gap-2.5 sm:gap-3">
-                      <div
-                        className={cn(
-                          "h-7 w-7 sm:h-8 sm:w-8 shrink-0 rounded-xl font-extrabold text-xs flex items-center justify-center shadow-sm",
-                          i === 0
-                            ? "bg-gradient-to-br from-amber-400 to-amber-600 text-white shadow-amber-200"
-                            : i === 1
-                            ? "bg-gradient-to-br from-slate-300 to-slate-500 text-white shadow-slate-200"
-                            : i === 2
-                            ? "bg-gradient-to-br from-orange-400 to-orange-600 text-white shadow-orange-200"
-                            : "bg-slate-100 text-slate-500"
-                        )}
-                      >
-                        #{i + 1}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="font-extrabold text-xs sm:text-sm text-slate-900 truncate leading-tight">
-                          {c.title}
-                        </div>
-                        <div className="text-[10px] sm:text-[11px] font-semibold text-slate-500 flex items-center gap-1.5 mt-0.5">
-                          <Users className="h-3 w-3 text-slate-400" /> {c.students} active students
-                        </div>
-                      </div>
-                      <div className="text-right shrink-0">
-                        <div className="font-extrabold text-slate-900 text-xs sm:text-sm tabular-nums">
-                          ₹{(c.revenue / 1000).toFixed(0)}K
-                        </div>
-                        <div className="text-[9px] sm:text-[10px] font-bold uppercase tracking-wider text-aims-green flex items-center justify-end gap-0.5">
-                          <DollarSign className="h-2.5 w-2.5" />
-                          Earned
-                        </div>
-                      </div>
-                    </div>
+            {topCourses.length === 0 ? (
+              <div className="p-8 text-center text-slate-400 text-xs font-semibold">
+                No active courses found.
+              </div>
+            ) : (
+              <div className="divide-y divide-slate-50">
+                {topCourses.map((c, i) => {
+                  const hasAnyRevenue = maxRevenue > 0;
+                  const percent = hasAnyRevenue
+                    ? Math.round((c.revenue / maxRevenue) * 100)
+                    : Math.round((c.students / maxStudents) * 100);
 
-                    {/* Visual Bar Diagram Indicator */}
-                    <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
-                      <div
-                        className="h-full rounded-full bg-gradient-to-r from-aims-navy via-blue-600 to-teal-500 transition-all duration-500"
-                        style={{ width: `${percent}%` }}
-                      />
+                  const formattedRevenue =
+                    c.revenue >= 100000
+                      ? `₹${(c.revenue / 100000).toFixed(1)}L`
+                      : c.revenue >= 1000
+                      ? `₹${(c.revenue / 1000).toFixed(c.revenue % 1000 === 0 ? 0 : 1)}K`
+                      : `₹${c.revenue.toLocaleString("en-IN")}`;
+
+                  return (
+                    <div
+                      key={c.id}
+                      className="p-3 sm:p-4 hover:bg-slate-50/80 transition-colors space-y-1.5"
+                    >
+                      <div className="flex items-center gap-2.5 sm:gap-3">
+                        <div
+                          className={cn(
+                            "h-7 w-7 sm:h-8 sm:w-8 shrink-0 rounded-xl font-extrabold text-xs flex items-center justify-center shadow-sm",
+                            i === 0
+                              ? "bg-gradient-to-br from-amber-400 to-amber-600 text-white shadow-amber-200"
+                              : i === 1
+                              ? "bg-gradient-to-br from-slate-300 to-slate-500 text-white shadow-slate-200"
+                              : i === 2
+                              ? "bg-gradient-to-br from-orange-400 to-orange-600 text-white shadow-orange-200"
+                              : "bg-slate-100 text-slate-500"
+                          )}
+                        >
+                          #{i + 1}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="font-extrabold text-xs sm:text-sm text-slate-900 truncate leading-tight">
+                            {c.title}
+                          </div>
+                          <div className="text-[10px] sm:text-[11px] font-semibold text-slate-500 flex items-center gap-1.5 mt-0.5">
+                            <Users className="h-3 w-3 text-slate-400" /> {c.students} active students
+                          </div>
+                        </div>
+                        <div className="text-right shrink-0">
+                          <div
+                            className={cn(
+                              "font-extrabold text-xs sm:text-sm tabular-nums",
+                              c.revenue > 0 ? "text-slate-900" : "text-slate-400"
+                            )}
+                          >
+                            {formattedRevenue}
+                          </div>
+                          <div
+                            className={cn(
+                              "text-[9px] sm:text-[10px] font-bold uppercase tracking-wider flex items-center justify-end gap-0.5",
+                              c.revenue > 0 ? "text-aims-green" : "text-slate-400"
+                            )}
+                          >
+                            <DollarSign className="h-2.5 w-2.5" />
+                            {c.revenue > 0 ? "Earned" : "Collected"}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Visual Bar Diagram Indicator */}
+                      <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
+                        <div
+                          className="h-full rounded-full bg-gradient-to-r from-aims-navy via-blue-600 to-teal-500 transition-all duration-500"
+                          style={{ width: `${percent}%` }}
+                        />
+                      </div>
                     </div>
-                  </div>
-                );
-              })}
-            </div>
+                  );
+                })}
+              </div>
+            )}
           </CardContent>
         </Card>
 
@@ -964,12 +1225,22 @@ export default function AdminDashboardPage() {
               Recent Admissions
             </CardTitle>
           </div>
-          <Button variant="ghost" size="sm" className="text-aims-navy font-bold text-xs h-8 sm:h-9 -mr-2">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => router.push("/admin/users")}
+            className="text-aims-navy font-bold text-xs h-8 sm:h-9 -mr-2"
+          >
             View All
             <ArrowUpRight className="h-3.5 w-3.5 ml-1" />
           </Button>
         </CardHeader>
         <CardContent className="p-0">
+          {recentStudents.length === 0 ? (
+            <div className="p-8 text-center text-slate-400 text-xs font-semibold">
+              No recent admissions found.
+            </div>
+          ) : (
           <div className="divide-y divide-slate-50">
             {recentStudents.map((s, i) => (
               <div
@@ -996,6 +1267,7 @@ export default function AdminDashboardPage() {
               </div>
             ))}
             </div>
+          )}
           </CardContent>
         </Card>
       </div>

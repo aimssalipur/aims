@@ -20,7 +20,6 @@ import {
   Volume2,
   FileText
 } from "lucide-react";
-import { dummyCourses } from "@/lib/dummy-data";
 
 export default function StudentCourseDetailPage({
   params,
@@ -41,22 +40,20 @@ export default function StudentCourseDetailPage({
   const [selectedVideo, setSelectedVideo] = useState<any>(null);
   
   useEffect(() => {
-    // 1. Resolve course details from dummyData first
-    const resolvedCourse = dummyCourses.find((c) => c.id === courseId);
-    if (resolvedCourse) {
-      setCourse(resolvedCourse);
-    } else {
-      // Fallback
-      setCourse(dummyCourses[0]);
-    }
-
-    // 2. Fetch resources from DB
     const fetchData = async () => {
       try {
-        const [resVideos, resLive] = await Promise.all([
+        const [resCourse, resVideos, resLive] = await Promise.all([
+          fetch(`/api/courses/${courseId}`),
           fetch(`/api/courses/${courseId}/youtube-resources`),
-          fetch(`/api/courses/${courseId}/live-classes`)
+          fetch(`/api/courses/${courseId}/live-classes`),
         ]);
+
+        if (resCourse.ok) {
+          const courseData = await resCourse.json();
+          if (courseData.course) {
+            setCourse(courseData.course);
+          }
+        }
 
         if (resVideos.ok) {
           const videos = await resVideos.json();

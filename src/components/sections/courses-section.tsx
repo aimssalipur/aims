@@ -10,7 +10,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { dummyCourses } from "@/lib/dummy-data";
 import {
   ArrowRight,
   BookOpen,
@@ -47,7 +46,7 @@ const courseInfo: Record<string, { category: string; duration: string }> = {
 
 export function CoursesSection() {
   const sectionRef = useRef<HTMLDivElement>(null);
-  const [coursesList, setCoursesList] = useState<any[]>(dummyCourses);
+  const [coursesList, setCoursesList] = useState<any[]>([]);
   const frontendImages = useFrontendImages();
 
   useEffect(() => {

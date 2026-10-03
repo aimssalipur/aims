@@ -48,6 +48,7 @@ import {
   Image as ImageIcon,
   RotateCw,
   Landmark,
+  FileCheck2,
 } from "lucide-react";
 import { useState } from "react";
 import { triggerDataRefresh } from "@/lib/refresh-event";
@@ -62,13 +63,15 @@ interface NavItem {
 const navConfig: Record<UserRole, NavItem[]> = {
   student: [
     { href: "/student", label: "Dashboard", icon: LayoutDashboard },
-    { href: "/student/courses", label: "My Courses", icon: BookOpen, badge: "4" },
-    { href: "/student/announcements", label: "Announcements", icon: Bell, badge: "New" },
+    { href: "/student/courses", label: "My Courses", icon: BookOpen },
+    { href: "/student/exams", label: "Online MCQ Exams", icon: FileCheck2 },
+    { href: "/student/announcements", label: "Announcements", icon: Bell },
     { href: "/student/profile", label: "My Profile", icon: UserIcon },
   ],
   instructor: [
     { href: "/instructor", label: "Overview", icon: LayoutDashboard },
     { href: "/instructor/courses", label: "Manage Courses", icon: FileEdit },
+    { href: "/instructor/exams", label: "MCQ Exams", icon: FileCheck2 },
     { href: "/instructor/students", label: "My Students", icon: Users },
     { href: "/instructor/announcements", label: "Announcements", icon: MessageSquarePlus },
     { href: "/instructor/profile", label: "Profile", icon: UserIcon },
@@ -76,6 +79,7 @@ const navConfig: Record<UserRole, NavItem[]> = {
   admin: [
     { href: "/admin", label: "Analytics", icon: BarChart3 },
     { href: "/instructor/courses", label: "Manage Courses", icon: FileEdit },
+    { href: "/instructor/exams", label: "MCQ Exams", icon: FileCheck2 },
     { href: "/admin/media", label: "Frontend Images", icon: ImageIcon },
     { href: "/admin/users", label: "User Management", icon: ShieldCheck },
     { href: "/admin/announcements", label: "Announcements", icon: MessageSquarePlus },

@@ -53,9 +53,9 @@ export default async function AdminLayout({
   }
 
   const currentUser = {
-    full_name: profile?.full_name || user?.user_metadata?.full_name || user?.user_metadata?.name || "Admin User",
-    email: user?.email || "admin@aims.edu",
-    avatar_url: profile?.avatar_url || user?.user_metadata?.avatar_url || "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=400&h=400&fit=crop&crop=faces",
+    full_name: profile?.full_name || user?.user_metadata?.full_name || user?.user_metadata?.name || user?.email?.split("@")[0] || "Admin",
+    email: user?.email || "",
+    avatar_url: profile?.avatar_url || user?.user_metadata?.avatar_url || "",
     roles: roles,
   };
 

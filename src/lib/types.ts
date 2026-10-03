@@ -29,6 +29,7 @@ export interface BusinessTransaction {
 export interface FeePayment {
   id: string;
   student_id: string;
+  course_id?: string | null;
   amount_paid: number;
   payment_date: string;
   payment_method: "UPI" | "Cash" | "Bank Transfer" | "Card" | "Other";
@@ -40,6 +41,7 @@ export interface FeePayment {
   created_at: string;
   student?: Profile;
   verifier?: Profile;
+  course?: Course;
 }
 
 export interface Course {
@@ -100,4 +102,51 @@ export interface Toast {
   title: string;
   description?: string;
   variant: "default" | "destructive" | "success";
+}
+
+export interface Exam {
+  id: string;
+  course_id: string;
+  title: string;
+  description?: string | null;
+  duration_minutes: number;
+  pass_percentage: number;
+  total_marks: number;
+  is_published: boolean;
+  created_by?: string | null;
+  created_at: string;
+  course?: Course;
+  creator?: Profile;
+  questions_count?: number;
+  user_submission?: ExamSubmission | null;
+}
+
+export interface ExamQuestion {
+  id: string;
+  exam_id: string;
+  question_text: string;
+  option_a: string;
+  option_b: string;
+  option_c: string;
+  option_d: string;
+  correct_option?: "A" | "B" | "C" | "D";
+  marks: number;
+  order_index: number;
+  explanation?: string | null;
+  created_at: string;
+}
+
+export interface ExamSubmission {
+  id: string;
+  exam_id: string;
+  student_id: string;
+  answers: Record<string, "A" | "B" | "C" | "D">;
+  score: number;
+  total_marks: number;
+  percentage: number;
+  passed: boolean;
+  started_at: string;
+  submitted_at: string;
+  student?: Profile;
+  exam?: Exam;
 }

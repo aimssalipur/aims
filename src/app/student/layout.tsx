@@ -53,9 +53,9 @@ export default async function StudentLayout({
   }
 
   const currentUser = {
-    full_name: profile?.full_name || user?.user_metadata?.full_name || user?.user_metadata?.name || "Riya Sahu",
-    email: user?.email || "riya.sahu@aims.edu",
-    avatar_url: profile?.avatar_url || user?.user_metadata?.avatar_url || "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=400&h=400&fit=crop&crop=faces",
+    full_name: profile?.full_name || user?.user_metadata?.full_name || user?.user_metadata?.name || user?.email?.split("@")[0] || "Student",
+    email: user?.email || "",
+    avatar_url: profile?.avatar_url || user?.user_metadata?.avatar_url || "",
     roles: roles,
   };
 

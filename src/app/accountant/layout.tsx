@@ -53,9 +53,9 @@ export default async function AccountantLayout({
   }
 
   const currentUser = {
-    full_name: profile?.full_name || user?.user_metadata?.full_name || user?.user_metadata?.name || "Accountant",
-    email: user?.email || "finance@aims.edu",
-    avatar_url: profile?.avatar_url || user?.user_metadata?.avatar_url || "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=400&h=400&fit=crop&crop=faces",
+    full_name: profile?.full_name || user?.user_metadata?.full_name || user?.user_metadata?.name || user?.email?.split("@")[0] || "Accountant",
+    email: user?.email || "",
+    avatar_url: profile?.avatar_url || user?.user_metadata?.avatar_url || "",
     roles: roles,
   };
 

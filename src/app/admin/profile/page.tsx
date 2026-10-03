@@ -35,8 +35,8 @@ export default function AdminProfilePage() {
   const { toast } = useToast();
   const [saving, setSaving] = useState(false);
   const [profile, setProfile] = useState<any>({
-    full_name: "Admin User",
-    email: "admin@aims.edu",
+    full_name: "AIMS Administrator",
+    email: "aimssalipur@gmail.com",
     phone: "+91 94379 59054",
     office: "AIMS Central Administration, Salipur",
     role: "System Administrator",

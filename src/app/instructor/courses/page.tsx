@@ -40,7 +40,13 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { dummyCourses } from "@/lib/dummy-data";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useState, useEffect } from "react";
 import { useToast } from "@/components/ui/use-toast";
 import Link from "next/link";
@@ -57,6 +63,7 @@ export default function InstructorCoursesPage() {
     title: "",
     description: "",
     thumbnail_url: "",
+    instructor_id: "",
   });
   const [uploadingImage, setUploadingImage] = useState(false);
 
@@ -67,38 +74,82 @@ export default function InstructorCoursesPage() {
     title: "",
     description: "",
     thumbnail_url: "",
+    instructor_id: "",
   });
   const [savingEdit, setSavingEdit] = useState(false);
   const [uploadingEditImage, setUploadingEditImage] = useState(false);
+  const [instructors, setInstructors] = useState<any[]>([]);
+  const [enrollmentCounts, setEnrollmentCounts] = useState<Record<string, number>>({});
 
   // Fetch all courses from the database
   const fetchCourses = async () => {
     setLoadingCourses(true);
     try {
-      const res = await fetch("/api/courses");
+      const res = await fetch("/api/courses", { cache: "no-store" });
       if (res.ok) {
         const data = await res.json();
-        if (data.courses && Array.isArray(data.courses) && data.courses.length > 0) {
+        if (data.courses && Array.isArray(data.courses)) {
           setCourses(data.courses);
           return;
         }
       }
-      // If database has no courses or on unexpected format, fallback to default seed
-      setCourses(dummyCourses);
+      setCourses([]);
     } catch (err) {
       console.error("Error loading courses:", err);
-      setCourses(dummyCourses);
+      setCourses([]);
     } finally {
       setLoadingCourses(false);
     }
   };
 
+  const fetchMeta = async () => {
+    try {
+      const [usersRes, enrollRes] = await Promise.all([
+        fetch("/api/admin/users", { cache: "no-store" }),
+        fetch("/api/admin/enrollments", { cache: "no-store" }),
+      ]);
+
+      if (usersRes.ok) {
+        const usersData = await usersRes.json();
+        if (Array.isArray(usersData)) {
+          const staff = usersData.filter(
+            (u) =>
+              u.roles?.includes("instructor") ||
+              u.role === "instructor" ||
+              u.roles?.includes("admin") ||
+              u.role === "admin"
+          );
+          setInstructors(staff);
+        }
+      }
+
+      if (enrollRes.ok) {
+        const enrollData = await enrollRes.json();
+        if (Array.isArray(enrollData)) {
+          const counts: Record<string, number> = {};
+          enrollData.forEach((enr: any) => {
+            if (enr.course_id) {
+              counts[enr.course_id] = (counts[enr.course_id] || 0) + 1;
+            }
+          });
+          setEnrollmentCounts(counts);
+        }
+      }
+    } catch (e) {
+      console.error("Error fetching metadata in courses page:", e);
+    }
+  };
+
   useEffect(() => {
     fetchCourses();
+    fetchMeta();
+  }, []);
+
+  useEffect(() => {
     return subscribeToDataRefresh(() => {
       fetchCourses();
+      fetchMeta();
     });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>, isEdit = false) => {
@@ -176,7 +227,12 @@ export default function InstructorCoursesPage() {
       const res = await fetch("/api/courses", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(courseForm),
+        body: JSON.stringify({
+          title: courseForm.title,
+          description: courseForm.description,
+          thumbnail_url: courseForm.thumbnail_url,
+          instructor_id: courseForm.instructor_id || undefined,
+        }),
       });
 
       const data = await res.json();
@@ -191,7 +247,7 @@ export default function InstructorCoursesPage() {
       });
 
       setDialogOpen(false);
-      setCourseForm({ title: "", description: "", thumbnail_url: "" });
+      setCourseForm({ title: "", description: "", thumbnail_url: "", instructor_id: "" });
       fetchCourses();
     } catch (err: any) {
       toast({
@@ -211,6 +267,7 @@ export default function InstructorCoursesPage() {
       title: course.title || "",
       description: course.description || "",
       thumbnail_url: course.thumbnail_url || "",
+      instructor_id: course.instructor_id || "",
     });
     setEditDialogOpen(true);
   };
@@ -231,7 +288,12 @@ export default function InstructorCoursesPage() {
       const res = await fetch(`/api/courses/${selectedEditCourse.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(editForm),
+        body: JSON.stringify({
+          title: editForm.title,
+          description: editForm.description,
+          thumbnail_url: editForm.thumbnail_url,
+          instructor_id: editForm.instructor_id || null,
+        }),
       });
 
       const data = await res.json();
@@ -315,45 +377,15 @@ export default function InstructorCoursesPage() {
   const [addingResource, setAddingResource] = useState(false);
 
   // All active AIMS nursing courses mapping
-  const enrollmentMap: Record<
-    string,
-    {
-      enrolled: number;
-      avgProgress: number;
-      lectures: number;
-      badge: string;
-      badgeVariant: "default" | "secondary" | "warning" | "gold";
-    }
-  > = {
-    "c1c1c1c1-c1c1-c1c1-c1c1-c1c1c1c1c1c1": { enrolled: 68, avgProgress: 64, lectures: 54, badge: "Active", badgeVariant: "default" },
-    "c2c2c2c2-c2c2-c2c2-c2c2-c2c2c2c2c2c2": { enrolled: 62, avgProgress: 70, lectures: 60, badge: "Active", badgeVariant: "gold" },
-    "c3c3c3c3-c3c3-c3c3-c3c3-c3c3c3c3c3c3": { enrolled: 48, avgProgress: 58, lectures: 48, badge: "Active", badgeVariant: "default" },
-    "c4c4c4c4-c4c4-c4c4-c4c4-c4c4c4c4c4c4": { enrolled: 38, avgProgress: 65, lectures: 42, badge: "Active", badgeVariant: "warning" },
-    "c5c5c5c5-c5c5-c5c5-c5c5-c5c5c5c5c5c5": { enrolled: 44, avgProgress: 62, lectures: 46, badge: "Active", badgeVariant: "secondary" },
-    "c6c6c6c6-c6c6-c6c6-c6c6-c6c6c6c6c6c6": { enrolled: 54, avgProgress: 72, lectures: 44, badge: "Active", badgeVariant: "warning" },
-    "c7c7c7c7-c7c7-c7c7-c7c7-c7c7c7c7c7c7": { enrolled: 32, avgProgress: 50, lectures: 48, badge: "Active", badgeVariant: "secondary" },
-    "c9c9c9c9-c9c9-c9c9-c9c9-c9c9c9c9c9c9": { enrolled: 42, avgProgress: 55, lectures: 45, badge: "Active", badgeVariant: "gold" },
-    "ca10ca10-ca10-ca10-ca10-ca10ca10ca10": { enrolled: 50, avgProgress: 63, lectures: 56, badge: "Active", badgeVariant: "default" },
-    "cb11cb11-cb11-cb11-cb11-cb11cb11cb11": { enrolled: 45, avgProgress: 60, lectures: 50, badge: "Active", badgeVariant: "gold" },
-    "cc12cc12-cc12-cc12-cc12-cc12cc12cc12": { enrolled: 46, avgProgress: 61, lectures: 52, badge: "Active", badgeVariant: "default" },
-    "cd13cd13-cd13-cd13-cd13-cd13cd13cd13": { enrolled: 76, avgProgress: 74, lectures: 48, badge: "Active", badgeVariant: "gold" },
-  };
-
-  const myCourses = (courses.length > 0 ? courses : dummyCourses).map((c, i) => {
-    const meta = enrollmentMap[c.id] || {
-      enrolled: 40 + ((i + 1) * 7) % 35,
-      avgProgress: 55 + ((i + 1) * 5) % 30,
-      lectures: 48,
-      badge: "Active",
-      badgeVariant: "default" as const,
-    };
+  const myCourses = courses.map((c) => {
+    const enrolled = enrollmentCounts[c.id] || 0;
     return {
       ...c,
-      enrolled: meta.enrolled,
-      avgProgress: meta.avgProgress,
-      lectures: meta.lectures,
-      badge: meta.badge,
-      badgeVariant: meta.badgeVariant,
+      enrolled,
+      avgProgress: 0,
+      lectures: 0,
+      badge: "Active",
+      badgeVariant: "default" as const,
     };
   });
 
@@ -569,6 +601,24 @@ export default function InstructorCoursesPage() {
                   />
                 </div>
                 <div className="space-y-2 sm:col-span-2">
+                  <Label>Lead Faculty / Instructor</Label>
+                  <Select
+                    value={courseForm.instructor_id}
+                    onValueChange={(val) => setCourseForm((prev) => ({ ...prev, instructor_id: val }))}
+                  >
+                    <SelectTrigger className="h-11">
+                      <SelectValue placeholder="Select faculty member (optional)" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {instructors.map((ins) => (
+                        <SelectItem key={ins.id} value={ins.id}>
+                          {ins.full_name} ({ins.email})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2 sm:col-span-2">
                   <Label>Thumbnail Image</Label>
                   <div className="relative flex items-center gap-4 p-4 rounded-xl border-2 border-dashed border-slate-200 hover:border-aims-navy/30 bg-slate-50/50 cursor-pointer">
                     {courseForm.thumbnail_url ? (
@@ -617,7 +667,7 @@ export default function InstructorCoursesPage() {
               <DialogFooter className="flex-col sm:flex-row gap-2 pt-2">
                 <Button variant="outline" onClick={() => {
                   setDialogOpen(false);
-                  setCourseForm({ title: "", description: "", thumbnail_url: "" });
+                  setCourseForm({ title: "", description: "", thumbnail_url: "", instructor_id: "" });
                 }}>
                   Cancel
                 </Button>
@@ -670,6 +720,24 @@ export default function InstructorCoursesPage() {
                 value={editForm.description}
                 onChange={(e) => setEditForm((prev) => ({ ...prev, description: e.target.value }))}
               />
+            </div>
+            <div className="space-y-2 sm:col-span-2">
+              <Label>Lead Faculty / Instructor</Label>
+              <Select
+                value={editForm.instructor_id}
+                onValueChange={(val) => setEditForm((prev) => ({ ...prev, instructor_id: val }))}
+              >
+                <SelectTrigger className="h-11">
+                  <SelectValue placeholder="Select faculty member" />
+                </SelectTrigger>
+                <SelectContent>
+                  {instructors.map((ins) => (
+                    <SelectItem key={ins.id} value={ins.id}>
+                      {ins.full_name} ({ins.email})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div className="space-y-2 sm:col-span-2">
               <Label>Thumbnail Image</Label>
@@ -799,13 +867,13 @@ export default function InstructorCoursesPage() {
                 </div>
               <div className="absolute bottom-3 left-3 right-3 sm:bottom-4 sm:left-4 sm:right-4 flex items-center justify-between text-white">
                 <div className="flex items-center gap-2 sm:gap-3 text-[11px] sm:text-xs font-bold drop-shadow-md">
-                  <span className="flex items-center gap-1">
+                  <span className="flex items-center gap-1 bg-black/40 backdrop-blur-xs px-2 py-0.5 rounded-md">
                     <Users className="h-3.5 w-3.5" />
                     {course.enrolled} Enrolled
                   </span>
                 </div>
-                <div className="text-base sm:text-lg font-extrabold drop-shadow-md">
-                  {course.avgProgress}% avg
+                <div className="text-xs font-bold drop-shadow-md bg-black/40 backdrop-blur-xs px-2 py-0.5 rounded-md truncate max-w-[160px]">
+                  {course.instructor?.full_name ? `👨‍🏫 ${course.instructor.full_name}` : "Faculty Unassigned"}
                 </div>
               </div>
             </div>
@@ -813,6 +881,9 @@ export default function InstructorCoursesPage() {
               <CardTitle className="text-base sm:text-lg font-extrabold leading-tight line-clamp-2 group-hover:text-aims-green transition-colors">
                 {course.title}
               </CardTitle>
+              <div className="text-xs font-semibold text-slate-500 pt-1">
+                <span className="text-aims-green font-bold">Faculty Lead:</span> {course.instructor?.full_name || "Unassigned"}
+              </div>
             </CardHeader>
             <CardContent className="p-3.5 sm:p-5 pt-0 space-y-3 sm:space-y-4 flex-1">
               <CardDescription className="text-xs sm:text-sm text-slate-600 leading-relaxed line-clamp-2 min-h-0 sm:min-h-[2.5rem]">
@@ -821,11 +892,10 @@ export default function InstructorCoursesPage() {
               <div className="space-y-1.5 sm:space-y-2">
                 <div className="flex items-center justify-between text-[11px] sm:text-xs font-bold">
                   <span className="text-slate-500 flex items-center gap-1">
-                    <TrendingUp className="h-3 w-3" /> Student Completion Rate
+                    <Users className="h-3 w-3" /> Active Enrolled Students
                   </span>
-                  <span className="text-emerald-600 font-extrabold">{course.avgProgress}%</span>
+                  <span className="text-emerald-600 font-extrabold">{course.enrolled}</span>
                 </div>
-                <Progress value={course.avgProgress} className="h-1.5 sm:h-2" />
               </div>
             </CardContent>
             <CardFooter className="p-3.5 sm:p-5 pt-0 mt-auto flex gap-2 sm:gap-3">

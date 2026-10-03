@@ -22,7 +22,31 @@ function getSupabaseClient() {
   });
 }
 
-// 1. PATCH: Update an existing course (Title, Description, Thumbnail, YouTube playlist)
+// 0. GET: Fetch course details by ID
+export async function GET(
+  request: Request,
+  { params }: { params: { courseId: string } }
+) {
+  try {
+    const { courseId } = params;
+    const supabase = getSupabaseClient();
+    const { data: course, error } = await supabase
+      .from("courses")
+      .select("id, title, description, thumbnail_url, instructor_id, youtube_playlist, created_at, instructor:profiles!instructor_id(id, full_name, email, whatsapp, avatar_url)")
+      .eq("id", courseId)
+      .single();
+
+    if (error || !course) {
+      return NextResponse.json({ error: "Course not found" }, { status: 404 });
+    }
+
+    return NextResponse.json({ course });
+  } catch (err: any) {
+    return NextResponse.json({ error: err?.message || "Failed to fetch course" }, { status: 500 });
+  }
+}
+
+// 1. PATCH: Update an existing course (Title, Description, Thumbnail, YouTube playlist, Instructor)
 export async function PATCH(
   request: Request,
   { params }: { params: { courseId: string } }
@@ -56,6 +80,7 @@ export async function PATCH(
     if (body.title !== undefined) updateData.title = String(body.title).trim();
     if (body.description !== undefined) updateData.description = String(body.description).trim();
     if (body.thumbnail_url !== undefined) updateData.thumbnail_url = String(body.thumbnail_url).trim();
+    if (body.instructor_id !== undefined) updateData.instructor_id = String(body.instructor_id).trim();
     if (body.youtube_playlist !== undefined) updateData.youtube_playlist = body.youtube_playlist ? String(body.youtube_playlist).trim() : null;
 
     if (Object.keys(updateData).length === 0) {

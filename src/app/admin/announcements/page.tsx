@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Card,
   CardContent,
@@ -14,16 +14,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
   Bell,
   Megaphone,
-  Plus,
   Trash2,
   Calendar,
   Send,
@@ -35,51 +27,56 @@ import {
   PartyPopper,
   Filter,
   Search,
+  Loader2,
+  RotateCw,
+  Pin,
 } from "lucide-react";
-import { dummyAnnouncements } from "@/lib/dummy-data";
 import { formatDate } from "@/lib/utils";
 import { useToast } from "@/components/ui/use-toast";
-
-const categoryIcon: Record<string, any> = {
-  Admission: GraduationCap,
-  Academic: BookOpen,
-  Event: CalendarDays,
-  Exam: AlertCircle,
-  Info: Info,
-  Celebration: PartyPopper,
-};
-
-const categoryBadge: Record<string, any> = {
-  Admission: "warning",
-  Academic: "default",
-  Event: "secondary",
-  Exam: "destructive",
-  Info: "outline",
-  Celebration: "gold",
-};
+import { subscribeToDataRefresh, triggerDataRefresh } from "@/lib/refresh-event";
 
 export default function AdminAnnouncementsPage() {
   const { toast } = useToast();
-  const [announcements, setAnnouncements] = useState<any[]>(
-    dummyAnnouncements.map((a, i) => ({
-      ...a,
-      category: ["Admission", "Event", "Academic", "Exam", "Celebration", "Info"][i % 6],
-      priority: i === 0 ? "High" : "Normal",
-    }))
-  );
-
+  const [announcements, setAnnouncements] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
-  const [categoryFilter, setCategoryFilter] = useState("all");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const [form, setForm] = useState({
     title: "",
-    category: "Academic",
-    priority: "Normal",
     content: "",
+    is_pinned: false,
   });
 
-  const handleCreateAnnouncement = (e: React.FormEvent) => {
+  const fetchAnnouncements = async () => {
+    try {
+      const res = await fetch("/api/announcements", { cache: "no-store" });
+      const data = await res.json();
+      if (Array.isArray(data)) {
+        setAnnouncements(data);
+      } else {
+        setAnnouncements([]);
+      }
+    } catch (err) {
+      console.error("Error fetching announcements:", err);
+      setAnnouncements([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchAnnouncements();
+  }, []);
+
+  useEffect(() => {
+    return subscribeToDataRefresh(() => {
+      fetchAnnouncements();
+    });
+  }, []);
+
+  const handleCreateAnnouncement = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.title.trim() || !form.content.trim()) {
       toast({
@@ -91,46 +88,88 @@ export default function AdminAnnouncementsPage() {
     }
 
     setIsSubmitting(true);
-    const newNotice = {
-      id: `ann-${Date.now()}`,
-      title: form.title.trim(),
-      content: form.content.trim(),
-      category: form.category,
-      priority: form.priority,
-      created_at: new Date().toISOString(),
-    };
+    try {
+      const res = await fetch("/api/announcements", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: form.title.trim(),
+          content: form.content.trim(),
+          is_pinned: form.is_pinned,
+        }),
+      });
 
-    setTimeout(() => {
-      setAnnouncements([newNotice, ...announcements]);
-      setForm({
-        title: "",
-        category: "Academic",
-        priority: "Normal",
-        content: "",
-      });
-      setIsSubmitting(false);
+      const data = await res.json();
+      if (!res.ok || data.error) {
+        toast({
+          title: "Broadcast Failed",
+          description: data.error || "Unable to save announcement.",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Announcement Published 📢",
+          description: "Your circular has been broadcast to all students and faculty.",
+          variant: "success",
+        });
+        setForm({
+          title: "",
+          content: "",
+          is_pinned: false,
+        });
+        fetchAnnouncements();
+        triggerDataRefresh();
+      }
+    } catch (err: any) {
       toast({
-        title: "Announcement Published 📢",
-        description: "Your circular has been broadcast to all students and faculty.",
-        variant: "success",
+        title: "Error",
+        description: err.message,
+        variant: "destructive",
       });
-    }, 400);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
-  const handleDeleteAnnouncement = (id: string) => {
-    setAnnouncements(announcements.filter((a) => a.id !== id));
-    toast({
-      title: "Notice Removed",
-      description: "The announcement has been deleted.",
-    });
+  const handleDeleteAnnouncement = async (id: string) => {
+    if (!confirm("Are you sure you want to remove this announcement?")) return;
+    setDeletingId(id);
+    try {
+      const res = await fetch(`/api/announcements?id=${id}`, {
+        method: "DELETE",
+      });
+      const data = await res.json();
+      if (!res.ok || data.error) {
+        toast({
+          title: "Failed to delete",
+          description: data.error || "Could not remove announcement.",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Notice Removed",
+          description: "The announcement has been deleted.",
+          variant: "success",
+        });
+        fetchAnnouncements();
+        triggerDataRefresh();
+      }
+    } catch (err: any) {
+      toast({
+        title: "Error",
+        description: err.message,
+        variant: "destructive",
+      });
+    } finally {
+      setDeletingId(null);
+    }
   };
 
   const filteredAnnouncements = announcements.filter((a) => {
-    const matchesCategory = categoryFilter === "all" || a.category === categoryFilter;
     const matchesSearch =
-      a.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      a.content.toLowerCase().includes(searchTerm.toLowerCase());
-    return matchesCategory && matchesSearch;
+      a.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      a.content?.toLowerCase().includes(searchTerm.toLowerCase());
+    return matchesSearch;
   });
 
   return (
@@ -150,6 +189,15 @@ export default function AdminAnnouncementsPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={fetchAnnouncements}
+            className="h-9 gap-1.5 font-bold border-slate-200"
+          >
+            <RotateCw className="h-3.5 w-3.5" />
+            Refresh
+          </Button>
           <Badge variant="outline" className="text-xs font-semibold px-3 py-1 bg-white">
             {announcements.length} Total Notices
           </Badge>
@@ -190,48 +238,6 @@ export default function AdminAnnouncementsPage() {
                   />
                 </div>
 
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-1.5">
-                    <Label className="text-xs font-bold text-slate-700 uppercase tracking-wider">
-                      Category
-                    </Label>
-                    <Select
-                      value={form.category}
-                      onValueChange={(val) => setForm({ ...form, category: val })}
-                    >
-                      <SelectTrigger className="h-11 rounded-xl text-sm">
-                        <SelectValue placeholder="Select Category" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Academic">Academic</SelectItem>
-                        <SelectItem value="Admission">Admission</SelectItem>
-                        <SelectItem value="Exam">Exam / Test</SelectItem>
-                        <SelectItem value="Event">Campus Event</SelectItem>
-                        <SelectItem value="Celebration">Celebration</SelectItem>
-                        <SelectItem value="Info">General Info</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <Label className="text-xs font-bold text-slate-700 uppercase tracking-wider">
-                      Priority
-                    </Label>
-                    <Select
-                      value={form.priority}
-                      onValueChange={(val) => setForm({ ...form, priority: val })}
-                    >
-                      <SelectTrigger className="h-11 rounded-xl text-sm">
-                        <SelectValue placeholder="Priority" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Normal">Normal</SelectItem>
-                        <SelectItem value="High">Urgent / High</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-
                 <div className="space-y-1.5">
                   <Label htmlFor="notice-content" className="text-xs font-bold text-slate-700 uppercase tracking-wider">
                     Notice Details <span className="text-red-500">*</span>
@@ -239,10 +245,22 @@ export default function AdminAnnouncementsPage() {
                   <Textarea
                     id="notice-content"
                     placeholder="Write detailed instructions, dates, timings, or links for the students..."
-                    className="min-h-[120px] rounded-xl text-sm p-3"
+                    className="min-h-[140px] rounded-xl text-sm p-3"
                     value={form.content}
                     onChange={(e) => setForm({ ...form, content: e.target.value })}
                   />
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <label className="flex items-center gap-2 text-xs font-semibold text-slate-600 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={form.is_pinned}
+                      onChange={(e) => setForm({ ...form, is_pinned: e.target.checked })}
+                      className="rounded text-amber-600 focus:ring-amber-500 h-4 w-4"
+                    />
+                    Pin to top of student dashboard
+                  </label>
                 </div>
 
                 <Button
@@ -251,8 +269,17 @@ export default function AdminAnnouncementsPage() {
                   disabled={isSubmitting}
                   className="w-full h-11 rounded-xl gap-2 font-bold bg-amber-600 hover:bg-amber-700 text-white shadow-lg shadow-amber-600/20"
                 >
-                  <Send className="h-4 w-4" />
-                  {isSubmitting ? "Broadcasting..." : "Broadcast Notice"}
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Broadcasting...
+                    </>
+                  ) : (
+                    <>
+                      <Send className="h-4 w-4" />
+                      Broadcast Notice
+                    </>
+                  )}
                 </Button>
               </form>
             </CardContent>
@@ -261,93 +288,85 @@ export default function AdminAnnouncementsPage() {
 
         {/* Right column: Live Notice Feed */}
         <div className="lg:col-span-7 space-y-4">
-          {/* Search and Filters */}
-          <div className="flex flex-col sm:flex-row gap-3">
-            <div className="relative flex-1">
-              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-              <Input
-                placeholder="Search circulars..."
-                className="pl-10 h-11 rounded-xl bg-white text-sm"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
-            </div>
-            <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-              <SelectTrigger className="h-11 rounded-xl sm:w-44 bg-white text-sm">
-                <Filter className="h-4 w-4 text-slate-400 mr-2" />
-                <SelectValue placeholder="Category" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Categories</SelectItem>
-                <SelectItem value="Academic">Academic</SelectItem>
-                <SelectItem value="Admission">Admission</SelectItem>
-                <SelectItem value="Exam">Exam / Test</SelectItem>
-                <SelectItem value="Event">Campus Event</SelectItem>
-                <SelectItem value="Celebration">Celebration</SelectItem>
-                <SelectItem value="Info">General Info</SelectItem>
-              </SelectContent>
-            </Select>
+          {/* Search */}
+          <div className="relative">
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+            <Input
+              placeholder="Search circulars..."
+              className="pl-10 h-11 rounded-xl bg-white text-sm"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
           </div>
 
           {/* List */}
           <div className="space-y-3">
-            {filteredAnnouncements.length === 0 ? (
+            {loading ? (
+              <Card className="border-slate-100 p-12 text-center bg-white rounded-2xl">
+                <Loader2 className="h-6 w-6 text-amber-600 animate-spin mx-auto mb-2" />
+                <p className="text-xs text-slate-500 font-semibold">Loading notices...</p>
+              </Card>
+            ) : filteredAnnouncements.length === 0 ? (
               <Card className="border-slate-100 p-12 text-center bg-white rounded-2xl">
                 <div className="h-12 w-12 rounded-2xl bg-slate-100 flex items-center justify-center mx-auto mb-3 text-slate-400">
                   <Megaphone className="h-6 w-6" />
                 </div>
                 <h3 className="font-extrabold text-slate-800 text-base mb-1">No announcements found</h3>
                 <p className="text-xs text-slate-500 max-w-xs mx-auto">
-                  Try adjusting your search or category filter, or post a new circular above.
+                  Post your first notice on the left to broadcast it to the platform.
                 </p>
               </Card>
             ) : (
-              filteredAnnouncements.map((item) => {
-                const Icon = categoryIcon[item.category] || Megaphone;
-                return (
-                  <Card
-                    key={item.id}
-                    className="border-slate-100 hover:shadow-lg transition-all duration-200 overflow-hidden bg-white group"
-                  >
-                    <CardContent className="p-4 sm:p-5">
-                      <div className="flex items-start justify-between gap-3 mb-2">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <Badge variant={categoryBadge[item.category]} className="text-[10px] font-bold px-2 py-0.5">
-                            <Icon className="h-3 w-3 mr-1" />
-                            {item.category}
+              filteredAnnouncements.map((item) => (
+                <Card
+                  key={item.id}
+                  className={`border-slate-100 hover:shadow-lg transition-all duration-200 overflow-hidden bg-white group ${
+                    item.is_pinned ? "ring-2 ring-amber-500/20" : ""
+                  }`}
+                >
+                  <CardContent className="p-4 sm:p-5">
+                    <div className="flex items-start justify-between gap-3 mb-2">
+                      <div className="flex flex-wrap items-center gap-2">
+                        {item.is_pinned && (
+                          <Badge variant="warning" className="text-[10px] font-bold px-2 py-0.5 bg-amber-50 text-amber-700 border-amber-200">
+                            <Pin className="h-3 w-3 mr-1 fill-current" />
+                            Pinned
                           </Badge>
-                          {item.priority === "High" && (
-                            <Badge variant="destructive" className="text-[9px] font-extrabold uppercase px-2 py-0.5">
-                              Urgent
-                            </Badge>
-                          )}
-                          <span className="text-[11px] text-slate-400 font-medium flex items-center gap-1">
-                            <Calendar className="h-3 w-3" />
-                            {formatDate(item.created_at)}
-                          </span>
-                        </div>
-
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleDeleteAnnouncement(item.id)}
-                          className="h-8 w-8 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                          title="Delete notice"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                        )}
+                        <span className="text-[11px] text-slate-400 font-medium flex items-center gap-1">
+                          <Calendar className="h-3 w-3" />
+                          {item.created_at ? formatDate(item.created_at) : "—"}
+                        </span>
                       </div>
 
-                      <h3 className="font-extrabold text-slate-900 text-base mb-1.5 leading-snug">
-                        {item.title}
-                      </h3>
-                      <p className="text-slate-600 text-xs sm:text-sm leading-relaxed whitespace-pre-line">
-                        {item.content}
-                      </p>
-                    </CardContent>
-                  </Card>
-                );
-              })
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        disabled={deletingId === item.id}
+                        onClick={() => handleDeleteAnnouncement(item.id)}
+                        className="h-8 w-8 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                        title="Delete notice"
+                      >
+                        {deletingId === item.id ? (
+                          <Loader2 className="h-3.5 w-3.5 animate-spin text-red-600" />
+                        ) : (
+                          <Trash2 className="h-4 w-4" />
+                        )}
+                      </Button>
+                    </div>
+
+                    <h3 className="font-extrabold text-slate-900 text-base mb-1.5 leading-snug">
+                      {item.title}
+                    </h3>
+                    <p className="text-slate-600 text-xs sm:text-sm leading-relaxed whitespace-pre-line">
+                      {item.content}
+                    </p>
+                    <div className="pt-2 mt-2 border-t border-slate-50 text-[11px] text-slate-400">
+                      Author: <strong className="text-slate-600">{item.creator?.full_name || "Admin"}</strong>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))
             )}
           </div>
         </div>

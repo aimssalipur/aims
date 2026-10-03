@@ -27,6 +27,8 @@ import {
   DollarSign,
   Loader2,
   RotateCw,
+  BookOpen,
+  UserCheck,
 } from "lucide-react";
 import {
   Tabs,
@@ -94,6 +96,23 @@ export default function AdminUsersPage() {
     password: "AIMS@2026!",
   });
 
+  const [courses, setCourses] = useState<any[]>([]);
+
+  // Student Course Enrollment State
+  const [enrollModalOpen, setEnrollModalOpen] = useState(false);
+  const [selectedStudent, setSelectedStudent] = useState<any>(null);
+  const [studentEnrollments, setStudentEnrollments] = useState<any[]>([]);
+  const [loadingEnrollments, setLoadingEnrollments] = useState(false);
+  const [selectedCourseToEnroll, setSelectedCourseToEnroll] = useState("");
+  const [enrollingStudent, setEnrollingStudent] = useState(false);
+  const [unenrollingId, setUnenrollingId] = useState<string | null>(null);
+
+  // Faculty Course Assignment State
+  const [staffModalOpen, setStaffModalOpen] = useState(false);
+  const [selectedStaff, setSelectedStaff] = useState<any>(null);
+  const [selectedCourseToAssign, setSelectedCourseToAssign] = useState("");
+  const [assigningStaff, setAssigningStaff] = useState(false);
+
   const fetchUsers = async () => {
     try {
       const response = await fetch("/api/admin/users", { cache: "no-store" });
@@ -108,21 +127,189 @@ export default function AdminUsersPage() {
     }
   };
 
+  const fetchCourses = async () => {
+    try {
+      const response = await fetch("/api/courses", { cache: "no-store" });
+      const data = await response.json();
+      if (data.courses && Array.isArray(data.courses)) {
+        setCourses(data.courses);
+      }
+    } catch (err) {
+      console.error("Error fetching courses:", err);
+    }
+  };
+
   useEffect(() => {
     fetchUsers();
+    fetchCourses();
   }, []);
 
   useEffect(() => {
     return subscribeToDataRefresh(() => {
       fetchUsers();
+      fetchCourses();
     });
   }, []);
+
+  const openEnrollModal = async (student: any) => {
+    setSelectedStudent(student);
+    setSelectedCourseToEnroll("");
+    setEnrollModalOpen(true);
+    setLoadingEnrollments(true);
+    try {
+      const res = await fetch(`/api/admin/enrollments?student_id=${student.id}`);
+      const data = await res.json();
+      if (Array.isArray(data)) {
+        setStudentEnrollments(data);
+      } else {
+        setStudentEnrollments([]);
+      }
+    } catch (err) {
+      console.error(err);
+      setStudentEnrollments([]);
+    } finally {
+      setLoadingEnrollments(false);
+    }
+  };
+
+  const handleEnrollStudent = async () => {
+    if (!selectedStudent || !selectedCourseToEnroll) {
+      toast({
+        title: "Course Selection Required",
+        description: "Please choose a course to enroll the student.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setEnrollingStudent(true);
+    try {
+      const res = await fetch("/api/admin/enrollments", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          student_id: selectedStudent.id,
+          course_id: selectedCourseToEnroll,
+        }),
+      });
+      const data = await res.json();
+
+      if (!res.ok || data.error) {
+        toast({
+          title: "Enrollment Failed",
+          description: data.error || "Could not complete enrollment.",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Enrolled Successfully ✅",
+          description: data.message || `Student enrolled successfully.`,
+          variant: "success",
+        });
+        setSelectedCourseToEnroll("");
+        // Reload student's enrollments
+        const freshRes = await fetch(`/api/admin/enrollments?student_id=${selectedStudent.id}`);
+        const freshData = await freshRes.json();
+        if (Array.isArray(freshData)) setStudentEnrollments(freshData);
+        fetchUsers();
+      }
+    } catch (err: any) {
+      toast({
+        title: "Enrollment Error",
+        description: err.message,
+        variant: "destructive",
+      });
+    } finally {
+      setEnrollingStudent(false);
+    }
+  };
+
+  const handleUnenrollStudent = async (enrollmentId: string) => {
+    if (!confirm("Are you sure you want to remove this course enrollment?")) return;
+    setUnenrollingId(enrollmentId);
+    try {
+      const res = await fetch(`/api/admin/enrollments?id=${enrollmentId}`, {
+        method: "DELETE",
+      });
+      const data = await res.json();
+
+      if (!res.ok || data.error) {
+        toast({
+          title: "Failed to Unenroll",
+          description: data.error || "Could not remove enrollment.",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Enrollment Removed ✅",
+          description: "Student unenrolled from course.",
+          variant: "success",
+        });
+        setStudentEnrollments((prev) => prev.filter((e) => e.id !== enrollmentId));
+        fetchUsers();
+      }
+    } catch (err: any) {
+      toast({
+        title: "Error",
+        description: err.message,
+        variant: "destructive",
+      });
+    } finally {
+      setUnenrollingId(null);
+    }
+  };
+
+  const openStaffModal = (staff: any) => {
+    setSelectedStaff(staff);
+    setSelectedCourseToAssign("");
+    setStaffModalOpen(true);
+  };
+
+  const handleAssignFaculty = async (courseId: string, instructorId: string | null) => {
+    setAssigningStaff(true);
+    try {
+      const res = await fetch(`/api/courses/${courseId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ instructor_id: instructorId }),
+      });
+      const data = await res.json();
+
+      if (!res.ok || data.error) {
+        toast({
+          title: "Assignment Failed",
+          description: data.error || "Unable to update faculty assignment.",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: instructorId ? "Course Assigned to Faculty ✅" : "Faculty Assignment Cleared",
+          description: instructorId
+            ? "Faculty member designated as course lead."
+            : "Course unassigned from faculty member.",
+          variant: "success",
+        });
+        setSelectedCourseToAssign("");
+        fetchCourses();
+        fetchUsers();
+      }
+    } catch (err: any) {
+      toast({
+        title: "Error",
+        description: err.message,
+        variant: "destructive",
+      });
+    } finally {
+      setAssigningStaff(false);
+    }
+  };
 
   const handleManualRefresh = async () => {
     if (isRefreshing) return;
     setIsRefreshing(true);
     try {
       await fetchUsers();
+      await fetchCourses();
       toast({
         title: "Users List Updated ✅",
         description: "Latest user records and approvals loaded.",
@@ -736,6 +923,17 @@ export default function AdminUsersPage() {
                                 {u.roles?.includes("student") ? "✓ Student (Click to Remove)" : "Add Student Role"}
                               </DropdownMenuItem>
                               <DropdownMenuSeparator />
+                              <DropdownMenuItem className="gap-2 font-semibold text-aims-navy focus:bg-blue-50 cursor-pointer" onClick={() => openEnrollModal(u)}>
+                                <BookOpen className="h-4 w-4 text-blue-600" />
+                                Assign Course (Enroll)
+                              </DropdownMenuItem>
+                              {(u.roles?.includes("instructor") || u.role === "instructor" || u.roles?.includes("admin") || u.role === "admin") && (
+                                <DropdownMenuItem className="gap-2 font-semibold text-emerald-700 focus:bg-emerald-50 cursor-pointer" onClick={() => openStaffModal(u)}>
+                                  <UserCheck className="h-4 w-4 text-emerald-600" />
+                                  Assign Course to Faculty
+                                </DropdownMenuItem>
+                              )}
+                              <DropdownMenuSeparator />
                               <DropdownMenuItem className="gap-2 text-red-600 focus:text-red-600 focus:bg-red-50" onClick={() => handleDeleteUser(u.id)}>
                                 <Trash2 className="h-4 w-4" /> Remove User
                               </DropdownMenuItem>
@@ -848,6 +1046,17 @@ export default function AdminUsersPage() {
                             {u.roles?.includes("student") ? "✓ Student (Click to Remove)" : "Add Student Role"}
                           </DropdownMenuItem>
                           <DropdownMenuSeparator />
+                          <DropdownMenuItem className="gap-2 font-semibold text-aims-navy focus:bg-blue-50 cursor-pointer" onClick={() => openEnrollModal(u)}>
+                            <BookOpen className="h-4 w-4 text-blue-600" />
+                            Assign Course (Enroll)
+                          </DropdownMenuItem>
+                          {(u.roles?.includes("instructor") || u.role === "instructor" || u.roles?.includes("admin") || u.role === "admin") && (
+                            <DropdownMenuItem className="gap-2 font-semibold text-emerald-700 focus:bg-emerald-50 cursor-pointer" onClick={() => openStaffModal(u)}>
+                              <UserCheck className="h-4 w-4 text-emerald-600" />
+                              Assign Course to Faculty
+                            </DropdownMenuItem>
+                          )}
+                          <DropdownMenuSeparator />
                           <DropdownMenuItem className="gap-2 text-red-600 focus:text-red-600 focus:bg-red-50" onClick={() => handleDeleteUser(u.id)}>
                             <Trash2 className="h-4 w-4" /> Remove User
                           </DropdownMenuItem>
@@ -861,6 +1070,216 @@ export default function AdminUsersPage() {
           )}
         </div>
       </Card>
+
+      {/* Student Course Enrollment Dialog */}
+      <Dialog open={enrollModalOpen} onOpenChange={setEnrollModalOpen}>
+        <DialogContent className="w-[95vw] sm:max-w-xl max-h-[90vh] overflow-y-auto p-4 sm:p-6 rounded-2xl sm:rounded-3xl border-slate-200">
+          <DialogHeader className="space-y-1 text-left">
+            <DialogTitle className="text-lg sm:text-xl font-extrabold text-slate-900 flex items-center gap-2">
+              <BookOpen className="h-5 w-5 text-blue-600" />
+              Course Enrollment & Assignments
+            </DialogTitle>
+            <DialogDescription className="font-semibold text-slate-500 text-xs sm:text-sm">
+              Enroll <span className="text-slate-900 font-bold">{selectedStudent?.full_name}</span> into courses or manage current enrollments.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-6 py-3">
+            {/* Enroll in new course */}
+            <div className="bg-blue-50/60 border border-blue-100 rounded-2xl p-4 space-y-3">
+              <Label className="font-bold text-xs sm:text-sm text-slate-800">Enroll into Course</Label>
+              <div className="flex flex-col sm:flex-row gap-2">
+                <Select value={selectedCourseToEnroll} onValueChange={setSelectedCourseToEnroll}>
+                  <SelectTrigger className="flex-1 h-10 rounded-xl bg-white border-slate-200 font-semibold text-xs sm:text-sm">
+                    <SelectValue placeholder="Select course..." />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-56">
+                    {courses.map((course) => (
+                      <SelectItem key={course.id} value={course.id} className="text-xs sm:text-sm font-semibold">
+                        {course.title}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Button
+                  onClick={handleEnrollStudent}
+                  disabled={enrollingStudent || !selectedCourseToEnroll}
+                  className="h-10 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs sm:text-sm gap-1.5 shrink-0"
+                >
+                  {enrollingStudent ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Enrolling...
+                    </>
+                  ) : (
+                    "Enroll Student"
+                  )}
+                </Button>
+              </div>
+            </div>
+
+            {/* Currently enrolled courses */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <h4 className="text-xs sm:text-sm font-bold text-slate-700">Currently Enrolled Courses</h4>
+                <Badge variant="outline" className="text-xs font-bold">
+                  {studentEnrollments.length} Active
+                </Badge>
+              </div>
+
+              {loadingEnrollments ? (
+                <div className="py-6 text-center text-xs text-slate-500 flex items-center justify-center gap-2">
+                  <Loader2 className="h-4 w-4 animate-spin text-blue-600" />
+                  Loading student enrollments...
+                </div>
+              ) : studentEnrollments.length === 0 ? (
+                <div className="py-6 text-center text-xs sm:text-sm text-slate-400 bg-slate-50 rounded-2xl border border-dashed border-slate-200 font-semibold">
+                  This student is not enrolled in any course yet.
+                </div>
+              ) : (
+                <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
+                  {studentEnrollments.map((enr) => (
+                    <div
+                      key={enr.id}
+                      className="flex items-center justify-between p-3 rounded-xl bg-slate-50 border border-slate-100 hover:border-slate-200 transition-colors"
+                    >
+                      <div className="min-w-0 pr-3">
+                        <div className="font-bold text-xs sm:text-sm text-slate-900 truncate">
+                          {enr.course?.title || "Course"}
+                        </div>
+                        <div className="text-[11px] text-slate-500 font-medium">
+                          Enrolled: {enr.enrolled_at ? new Date(enr.enrolled_at).toLocaleDateString("en-IN") : "—"}
+                        </div>
+                      </div>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        disabled={unenrollingId === enr.id}
+                        onClick={() => handleUnenrollStudent(enr.id)}
+                        className="h-8 text-xs font-bold text-rose-600 border-rose-200 hover:bg-rose-50 hover:text-rose-700 rounded-lg px-2.5 shrink-0"
+                      >
+                        {unenrollingId === enr.id ? (
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        ) : (
+                          "Unenroll"
+                        )}
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEnrollModalOpen(false)} className="rounded-xl font-semibold">
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Staff Course Lead Assignment Dialog */}
+      <Dialog open={staffModalOpen} onOpenChange={setStaffModalOpen}>
+        <DialogContent className="w-[95vw] sm:max-w-xl max-h-[90vh] overflow-y-auto p-4 sm:p-6 rounded-2xl sm:rounded-3xl border-slate-200">
+          <DialogHeader className="space-y-1 text-left">
+            <DialogTitle className="text-lg sm:text-xl font-extrabold text-slate-900 flex items-center gap-2">
+              <UserCheck className="h-5 w-5 text-emerald-600" />
+              Assign Faculty to Courses
+            </DialogTitle>
+            <DialogDescription className="font-semibold text-slate-500 text-xs sm:text-sm">
+              Designate <span className="text-slate-900 font-bold">{selectedStaff?.full_name}</span> as the lead instructor for courses.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-6 py-3">
+            {/* Assign a course */}
+            <div className="bg-emerald-50/60 border border-emerald-100 rounded-2xl p-4 space-y-3">
+              <Label className="font-bold text-xs sm:text-sm text-slate-800">Assign Course to this Faculty</Label>
+              <div className="flex flex-col sm:flex-row gap-2">
+                <Select value={selectedCourseToAssign} onValueChange={setSelectedCourseToAssign}>
+                  <SelectTrigger className="flex-1 h-10 rounded-xl bg-white border-slate-200 font-semibold text-xs sm:text-sm">
+                    <SelectValue placeholder="Choose course..." />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-56">
+                    {courses.map((course) => (
+                      <SelectItem key={course.id} value={course.id} className="text-xs sm:text-sm font-semibold">
+                        {course.title}
+                        {course.instructor?.full_name ? ` (Lead: ${course.instructor.full_name})` : " (Unassigned)"}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Button
+                  onClick={() => handleAssignFaculty(selectedCourseToAssign, selectedStaff?.id)}
+                  disabled={assigningStaff || !selectedCourseToAssign}
+                  className="h-10 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs sm:text-sm gap-1.5 shrink-0"
+                >
+                  {assigningStaff ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Assigning...
+                    </>
+                  ) : (
+                    "Assign Lead Faculty"
+                  )}
+                </Button>
+              </div>
+            </div>
+
+            {/* Currently assigned courses for this staff */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <h4 className="text-xs sm:text-sm font-bold text-slate-700">Currently Taught Courses</h4>
+                <Badge variant="outline" className="text-xs font-bold">
+                  {courses.filter((c) => c.instructor_id === selectedStaff?.id).length} Courses
+                </Badge>
+              </div>
+
+              {courses.filter((c) => c.instructor_id === selectedStaff?.id).length === 0 ? (
+                <div className="py-6 text-center text-xs sm:text-sm text-slate-400 bg-slate-50 rounded-2xl border border-dashed border-slate-200 font-semibold">
+                  No courses are currently assigned to this faculty member.
+                </div>
+              ) : (
+                <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
+                  {courses
+                    .filter((c) => c.instructor_id === selectedStaff?.id)
+                    .map((c) => (
+                      <div
+                        key={c.id}
+                        className="flex items-center justify-between p-3 rounded-xl bg-slate-50 border border-slate-100 hover:border-slate-200 transition-colors"
+                      >
+                        <div className="min-w-0 pr-3">
+                          <div className="font-bold text-xs sm:text-sm text-slate-900 truncate">
+                            {c.title}
+                          </div>
+                          <div className="text-[11px] text-slate-500 font-medium">
+                            {c.description ? c.description.slice(0, 60) + "..." : "No description"}
+                          </div>
+                        </div>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          disabled={assigningStaff}
+                          onClick={() => handleAssignFaculty(c.id, null)}
+                          className="h-8 text-xs font-bold text-amber-700 border-amber-200 hover:bg-amber-50 rounded-lg px-2.5 shrink-0"
+                        >
+                          Unassign
+                        </Button>
+                      </div>
+                    ))}
+                </div>
+              )}
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setStaffModalOpen(false)} className="rounded-xl font-semibold">
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

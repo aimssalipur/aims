@@ -17,7 +17,6 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { dummyCourses, dummyStudents } from "@/lib/dummy-data";
 import {
   PlayCircle,
   Clock,
@@ -43,17 +42,20 @@ export default function StudentCoursesPage() {
   const initialQuery = searchParams.get("q") || "";
   const [searchTerm, setSearchTerm] = useState(initialQuery);
   const [activeTab, setActiveTab] = useState("all");
-  const [coursesList, setCoursesList] = useState<any[]>(dummyCourses);
+  const [coursesList, setCoursesList] = useState<any[]>([]);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   const loadCourses = async (silent = false) => {
     if (!silent) setIsRefreshing(true);
     try {
-      const res = await fetch("/api/courses");
+      const res = await fetch("/api/student/courses");
       if (res.ok) {
         const data = await res.json();
-        if (data.courses && Array.isArray(data.courses) && data.courses.length > 0) {
-          setCoursesList(data.courses);
+        // If student has enrolled courses, display them; otherwise display all academy courses
+        if (data.enrolledCourses && data.enrolledCourses.length > 0) {
+          setCoursesList(data.enrolledCourses);
+        } else if (data.allCourses && data.allCourses.length > 0) {
+          setCoursesList(data.allCourses);
         }
       }
       if (!silent) {
@@ -80,10 +82,10 @@ export default function StudentCoursesPage() {
 
   const myCourses = coursesList.map((c, i) => ({
     ...c,
-    progress: [68, 42, 85, 27, 55, 72, 15][i] || ((i * 17) % 70) + 20,
-    category: ["Recruitment", "Recruitment", "Recruitment", "Entrance", "Recruitment", "Entrance", "Lecturer"][i] || "Recruitment",
-    lectures: [42, 36, 28, 50, 22, 38, 30][i] || 32,
-    completed: [28, 15, 24, 13, 12, 27, 4][i] || 10,
+    progress: c.progress || 0,
+    category: "Coaching",
+    lectures: 24,
+    completed: Math.round(((c.progress || 0) / 100) * 24),
   }));
 
   const filteredCourses = myCourses.filter((c) =>

@@ -19,7 +19,7 @@ export async function GET(request: Request) {
   const supabase = createAdminClient();
   let query = supabase
     .from("fees_payments")
-    .select("*, student:profiles!student_id(full_name, email, whatsapp, course_of_interest), verifier:profiles!verified_by(full_name)")
+    .select("*, student:profiles!student_id(full_name, email, whatsapp, course_of_interest), verifier:profiles!verified_by(full_name), course:courses!course_id(id, title)")
     .order("created_at", { ascending: false });
 
   if (status && status !== "all" && ALLOWED_PAYMENT_STATUSES.has(status)) {
@@ -44,7 +44,7 @@ export async function POST(request: Request) {
 
   try {
     const body = await request.json();
-    const { student_id, amount_paid, payment_method, transaction_id, remarks, status } = body;
+    const { student_id, course_id, amount_paid, payment_method, transaction_id, remarks, status } = body;
 
     if (!student_id || amount_paid === undefined || !payment_method) {
       return NextResponse.json(
@@ -96,6 +96,7 @@ export async function POST(request: Request) {
       .from("fees_payments")
       .insert({
         student_id,
+        course_id: course_id || null,
         amount_paid: parsedAmount,
         payment_method: sanitizedMethod,
         transaction_id: transaction_id ? String(transaction_id).trim().slice(0, 100) : null,
@@ -104,7 +105,7 @@ export async function POST(request: Request) {
         verified_by: isManualVerification ? context.user.id : null,
         payment_date: new Date().toISOString(),
       })
-      .select()
+      .select("*, student:profiles!student_id(full_name, email, whatsapp, course_of_interest), course:courses!course_id(id, title)")
       .single();
 
     if (error) {
@@ -114,19 +115,14 @@ export async function POST(request: Request) {
 
     // Automatically record this as an income transaction in business_transactions if it is verified
     if (isManualVerification) {
-      const studentProfile = await supabase
-        .from("profiles")
-        .select("full_name")
-        .eq("id", student_id)
-        .single();
-      
-      const studentName = studentProfile.data?.full_name || "Student";
+      const studentName = data.student?.full_name || "Student";
+      const courseTitle = data.course?.title || data.student?.course_of_interest || "";
       
       await supabase.from("business_transactions").insert({
         type: "income",
         category: "Course Fee",
         amount: parsedAmount,
-        description: `Fee received from ${studentName}${remarks ? ` (${remarks})` : ""}`,
+        description: `Fee received from ${studentName}${courseTitle ? ` for ${courseTitle}` : ""}${remarks ? ` (${remarks})` : ""}`,
         recorded_by: context.user.id,
         reference_no: transaction_id,
         date: new Date().toISOString(),

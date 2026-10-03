@@ -56,6 +56,7 @@ export default function AccountantFeesPage() {
   const { toast } = useToast();
   const [fees, setFees] = useState<any[]>([]);
   const [students, setStudents] = useState<any[]>([]);
+  const [courses, setCourses] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -68,14 +69,18 @@ export default function AccountantFeesPage() {
   const [rejectId, setRejectId] = useState<string | null>(null);
   const [rejectionReason, setRejectionReason] = useState("");
 
+  // Search inside Log Fee Modal
+  const [studentSearchTerm, setStudentSearchTerm] = useState("");
+
   // Receipt Modal State
   const [receiptData, setReceiptData] = useState<ReceiptData | null>(null);
   const [receiptOpen, setReceiptOpen] = useState(false);
 
   const [form, setForm] = useState({
     student_id: "",
+    course_id: "",
     amount_paid: "",
-    payment_method: "UPI",
+    payment_method: "Cash",
     transaction_id: "",
     remarks: "",
     status: "verified", // Manual logging by accountant is pre-verified
@@ -99,6 +104,18 @@ export default function AccountantFeesPage() {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchCourses = async () => {
+    try {
+      const response = await fetch("/api/courses");
+      const data = await response.json();
+      if (data.courses && Array.isArray(data.courses)) {
+        setCourses(data.courses);
+      }
+    } catch (err) {
+      console.error(err);
     }
   };
 
@@ -130,7 +147,7 @@ export default function AccountantFeesPage() {
     if (isRefreshing) return;
     setIsRefreshing(true);
     try {
-      await Promise.all([fetchFees(), fetchStudents()]);
+      await Promise.all([fetchFees(), fetchStudents(), fetchCourses()]);
       toast({
         title: "Fees Ledger Updated ✅",
         description: "Latest student fee submissions loaded.",
@@ -142,6 +159,7 @@ export default function AccountantFeesPage() {
 
   useEffect(() => {
     fetchStudents();
+    fetchCourses();
     if (typeof window !== "undefined") {
       const params = new URLSearchParams(window.location.search);
       if (params.get("log") === "true") {
@@ -156,7 +174,7 @@ export default function AccountantFeesPage() {
 
     const studentName = fee.student?.full_name || "AIMS Enrolled Student";
     const studentEmail = fee.student?.email;
-    const course = fee.student?.course_of_interest || "AIMS Nursing & Medical Coaching";
+    const course = fee.course?.title || fee.student?.course_of_interest || "AIMS Nursing & Medical Coaching";
 
     const data: ReceiptData = {
       receiptNo,
@@ -310,19 +328,23 @@ export default function AccountantFeesPage() {
       } else {
         toast({
           title: "Payment recorded ✅",
-          description: "Manually logged student fee payment successfully.",
+          description: "Student fee payment logged. Opening official receipt...",
           variant: "success",
         });
         setLogOpen(false);
         fetchFees();
         setForm({
           student_id: "",
+          course_id: "",
           amount_paid: "",
-          payment_method: "UPI",
+          payment_method: "Cash",
           transaction_id: "",
           remarks: "",
           status: "verified",
         });
+        setStudentSearchTerm("");
+        // Automatically pop up the official bill receipt!
+        handleOpenFeeReceipt(data);
       }
     } catch (err: any) {
       toast({
@@ -343,13 +365,32 @@ export default function AccountantFeesPage() {
     }).format(val || 0);
   };
 
+  const filteredStudentsForPicker = students.filter((s) => {
+    if (!studentSearchTerm.trim()) return true;
+    const term = studentSearchTerm.toLowerCase();
+    return (
+      (s.full_name || "").toLowerCase().includes(term) ||
+      (s.email || "").toLowerCase().includes(term) ||
+      (s.whatsapp || "").toLowerCase().includes(term) ||
+      (s.course_of_interest || "").toLowerCase().includes(term)
+    );
+  });
+
+  const selectedStudentObj = students.find((s) => s.id === form.student_id);
+
   const filteredFees = fees.filter((fee) => {
     const studentName = fee.student?.full_name?.toLowerCase() || "";
     const studentEmail = fee.student?.email?.toLowerCase() || "";
+    const courseTitle = (fee.course?.title || fee.student?.course_of_interest || "").toLowerCase();
     const refNo = fee.transaction_id?.toLowerCase() || "";
     const term = searchTerm.toLowerCase();
 
-    return studentName.includes(term) || studentEmail.includes(term) || refNo.includes(term);
+    return (
+      studentName.includes(term) ||
+      studentEmail.includes(term) ||
+      courseTitle.includes(term) ||
+      refNo.includes(term)
+    );
   });
 
   return (
@@ -388,27 +429,117 @@ export default function AccountantFeesPage() {
               <DialogHeader className="space-y-1 text-left">
                 <DialogTitle className="text-lg sm:text-xl font-extrabold text-slate-900 flex items-center gap-2">
                   <PlusCircle className="h-5 w-5 text-indigo-600 shrink-0" />
-                  Record Offline Payment
+                  Record Course Fee & Bill
                 </DialogTitle>
                 <DialogDescription className="font-semibold text-slate-500 text-xs sm:text-sm">
-                  Log direct payments paid directly at the office counter.
+                  Search student, assign course fee, and generate their official bill receipt.
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-3.5 sm:space-y-4 py-2 sm:py-3">
-                {/* Student Select */}
-                <div className="space-y-1.5 sm:space-y-2">
-                  <Label className="font-semibold text-xs sm:text-sm">Select Student <span className="text-rose-500">*</span></Label>
+                {/* Searchable Student Picker */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Label className="font-semibold text-xs sm:text-sm">
+                      Select Student <span className="text-rose-500">*</span>
+                    </Label>
+                    {form.student_id && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setForm({ ...form, student_id: "", course_id: "" });
+                          setStudentSearchTerm("");
+                        }}
+                        className="text-[11px] font-bold text-indigo-600 hover:underline"
+                      >
+                        Change Student
+                      </button>
+                    )}
+                  </div>
+
+                  {form.student_id && selectedStudentObj ? (
+                    <div className="p-3 rounded-xl bg-indigo-50/70 border border-indigo-200 flex items-center justify-between gap-3">
+                      <div className="min-w-0">
+                        <div className="text-slate-900 font-extrabold text-xs sm:text-sm flex items-center gap-1.5">
+                          <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
+                          <span className="truncate">{selectedStudentObj.full_name}</span>
+                        </div>
+                        <div className="text-slate-500 text-[11px] flex flex-wrap gap-x-2 gap-y-0.5 mt-0.5">
+                          <span>{selectedStudentObj.email}</span>
+                          {selectedStudentObj.whatsapp && <span>• {selectedStudentObj.whatsapp}</span>}
+                        </div>
+                      </div>
+                      <Badge className="bg-indigo-600 text-white text-[10px] shrink-0 font-bold">
+                        Selected
+                      </Badge>
+                    </div>
+                  ) : (
+                    <div className="space-y-1.5">
+                      <div className="relative">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
+                        <Input
+                          placeholder="Type student name, phone, or email..."
+                          value={studentSearchTerm}
+                          onChange={(e) => setStudentSearchTerm(e.target.value)}
+                          className="pl-8 h-10 text-xs sm:text-sm rounded-xl font-medium"
+                        />
+                      </div>
+                      <div className="max-h-40 overflow-y-auto rounded-xl border border-slate-200 divide-y divide-slate-100 bg-white shadow-xs">
+                        {filteredStudentsForPicker.length === 0 ? (
+                          <div className="p-3 text-center text-xs text-slate-400 font-medium">
+                            No students found matching &quot;{studentSearchTerm}&quot;
+                          </div>
+                        ) : (
+                          filteredStudentsForPicker.map((stud) => (
+                            <button
+                              type="button"
+                              key={stud.id}
+                              onClick={() => {
+                                let matchedCourseId = "";
+                                if (stud.course_of_interest) {
+                                  const match = courses.find(
+                                    (c) => c.title.toLowerCase() === stud.course_of_interest.toLowerCase()
+                                  );
+                                  if (match) matchedCourseId = match.id;
+                                }
+                                setForm({ ...form, student_id: stud.id, course_id: matchedCourseId });
+                              }}
+                              className="w-full text-left p-2.5 hover:bg-indigo-50/60 transition-colors flex items-center justify-between gap-2"
+                            >
+                              <div className="min-w-0">
+                                <div className="text-xs font-bold text-slate-900 truncate">
+                                  {stud.full_name}
+                                </div>
+                                <div className="text-[10px] text-slate-500 truncate">
+                                  {stud.email} {stud.whatsapp ? `• ${stud.whatsapp}` : ""}
+                                </div>
+                              </div>
+                              {stud.course_of_interest && (
+                                <Badge variant="outline" className="text-[9px] text-slate-600 bg-slate-50 shrink-0 font-normal">
+                                  {stud.course_of_interest}
+                                </Badge>
+                              )}
+                            </button>
+                          ))
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Target Course Select */}
+                <div className="space-y-1.5">
+                  <Label className="font-semibold text-xs sm:text-sm">Course / Academic Program</Label>
                   <Select
-                    value={form.student_id}
-                    onValueChange={(val) => setForm({ ...form, student_id: val })}
+                    value={form.course_id}
+                    onValueChange={(val) => setForm({ ...form, course_id: val })}
                   >
                     <SelectTrigger className="h-10 sm:h-11 rounded-xl text-xs sm:text-sm font-semibold">
-                      <SelectValue placeholder="Search student profile..." />
+                      <SelectValue placeholder="Select course..." />
                     </SelectTrigger>
                     <SelectContent className="max-h-60">
-                      {students.map((student) => (
-                        <SelectItem key={student.id} value={student.id}>
-                          {student.full_name} ({student.course_of_interest || "No Course Specified"})
+                      {courses.map((c) => (
+                        <SelectItem key={c.id} value={c.id}>
+                          {c.title}
                         </SelectItem>
                       ))}
                     </SelectContent>

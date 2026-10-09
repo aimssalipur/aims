@@ -222,30 +222,43 @@ export default function StudentExamsListPage() {
                   </div>
                 </CardContent>
 
-                <CardFooter className="p-4 sm:p-5 pt-0 border-t border-slate-100 flex items-center justify-between gap-2 mt-auto">
-                  <Button
-                    asChild
-                    size="sm"
-                    className={`w-full h-10 rounded-xl font-bold text-xs gap-2 ${
-                      hasAttempted
-                        ? "bg-slate-800 hover:bg-slate-900 text-white"
-                        : "bg-blue-600 hover:bg-blue-700 text-white shadow-md shadow-blue-600/20"
-                    }`}
-                  >
-                    <Link href={`/student/exams/${exam.id}`}>
-                      {hasAttempted ? (
-                        <>
+                <CardFooter className="p-4 sm:p-5 pt-0 border-t border-slate-100 flex flex-col sm:flex-row items-center gap-2 mt-auto">
+                  {hasAttempted ? (
+                    <>
+                      <Button
+                        asChild
+                        size="sm"
+                        className="w-full sm:flex-1 h-10 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs gap-1.5 shadow-xs"
+                      >
+                        <Link href={`/student/exams/${exam.id}?review=true`}>
+                          <BookOpen className="h-3.5 w-3.5" />
+                          <span>Review Answers</span>
+                        </Link>
+                      </Button>
+                      <Button
+                        asChild
+                        variant="outline"
+                        size="sm"
+                        className="w-full sm:w-auto h-10 rounded-xl font-bold text-xs gap-1.5 hover:bg-slate-100"
+                      >
+                        <Link href={`/student/exams/${exam.id}`}>
                           <RotateCcw className="h-3.5 w-3.5" />
-                          <span>Re-attempt Exam</span>
-                        </>
-                      ) : (
-                        <>
-                          <PlayCircle className="h-4 w-4" />
-                          <span>Start Exam Now</span>
-                        </>
-                      )}
-                    </Link>
-                  </Button>
+                          <span>Retake</span>
+                        </Link>
+                      </Button>
+                    </>
+                  ) : (
+                    <Button
+                      asChild
+                      size="sm"
+                      className="w-full h-10 rounded-xl font-bold text-xs gap-2 bg-blue-600 hover:bg-blue-700 text-white shadow-md shadow-blue-600/20"
+                    >
+                      <Link href={`/student/exams/${exam.id}`}>
+                        <PlayCircle className="h-4 w-4" />
+                        <span>Start Exam Now</span>
+                      </Link>
+                    </Button>
+                  )}
                 </CardFooter>
               </Card>
             );

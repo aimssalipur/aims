@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Image from "next/image";
 import {
   Card,
@@ -36,39 +36,89 @@ import {
 } from "lucide-react";
 import { initials, formatDate } from "@/lib/utils";
 import { useToast } from "@/components/ui/use-toast";
+import { createClient } from "@/lib/supabase/client";
 
 export default function StudentProfilePage() {
   const { toast } = useToast();
   const [saving, setSaving] = useState(false);
+  const [profileAvatar, setProfileAvatar] = useState("");
   const [form, setForm] = useState({
-    full_name: "Riya Sahu",
-    email: "riya.sahu@aims.edu",
-    phone: "+91 99000 00010",
-    whatsapp: "+91 99000 00010",
+    full_name: "Student",
+    email: "",
+    phone: "",
+    whatsapp: "",
     dob: "12th March 2006",
     address: "Salipur, Cuttack, Odisha - 754202",
-    guardian: "Sanjay Kumar Sahu",
+    guardian: "Guardian",
     blood: "O+ve",
-    bio: "Passionate nursing student committed to patient care. Excels in clinical skills and wants to specialize in Pediatric Nursing.",
+    bio: "Passionate nursing student committed to patient care and clinical excellence at AIMS.",
   });
 
-  const save = () => {
+  const supabase = createClient();
+
+  useEffect(() => {
+    async function loadProfile() {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          const { data } = await supabase
+            .from("profiles")
+            .select("*")
+            .eq("id", user.id)
+            .single();
+
+          if (data) {
+            setForm((prev) => ({
+              ...prev,
+              full_name: data.full_name || user.user_metadata?.full_name || prev.full_name,
+              email: data.email || user.email || prev.email,
+              phone: data.whatsapp || prev.phone,
+              whatsapp: data.whatsapp || prev.whatsapp,
+            }));
+            if (data.avatar_url) {
+              setProfileAvatar(data.avatar_url);
+            }
+          }
+        }
+      } catch (err) {
+        console.error("Error loading student profile:", err);
+      }
+    }
+    loadProfile();
+  }, [supabase]);
+
+  const save = async () => {
     setSaving(true);
-    setTimeout(() => {
-      setSaving(false);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        await supabase
+          .from("profiles")
+          .update({
+            full_name: form.full_name,
+            whatsapp: form.whatsapp,
+          })
+          .eq("id", user.id);
+      }
       toast({
         title: "Profile updated successfully",
         description: "Your changes have been saved.",
         variant: "success",
       });
-    }, 900);
+    } catch (err) {
+      console.error(err);
+      toast({
+        title: "Update failed",
+        description: "Could not save profile changes.",
+        variant: "destructive",
+      });
+    } finally {
+      setSaving(false);
+    }
   };
 
   const update = (k: keyof typeof form) => (e: React.ChangeEvent<any>) =>
     setForm((f) => ({ ...f, [k]: e.target.value }));
-
-  const profileAvatar =
-    "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=400&h=400&fit=crop&crop=faces";
 
   return (
     <div className="space-y-6 lg:space-y-8 max-w-[1200px] mx-auto">

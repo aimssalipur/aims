@@ -38,23 +38,43 @@ import {
   Loader2,
 } from "lucide-react";
 import { cn, formatDate, formatProgress, initials } from "@/lib/utils";
+import { createClient } from "@/lib/supabase/client";
 
 export default function StudentDashboard() {
   const router = useRouter();
   const { toast } = useToast();
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [userName, setUserName] = useState<string>("");
   const [myCourses, setMyCourses] = useState<any[]>([]);
   const [announcements, setAnnouncements] = useState<any[]>([]);
   const [upcomingExams, setUpcomingExams] = useState<any[]>([]);
 
   const loadData = async () => {
     try {
-      const [coursesRes, annRes, examsRes] = await Promise.all([
+      const supabase = createClient();
+      const [coursesRes, annRes, examsRes, { data: authData }] = await Promise.all([
         fetch("/api/student/courses", { cache: "no-store" }),
         fetch("/api/announcements", { cache: "no-store" }),
         fetch("/api/exams", { cache: "no-store" }),
+        supabase.auth.getUser(),
       ]);
+
+      if (authData?.user) {
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("full_name")
+          .eq("id", authData.user.id)
+          .single();
+
+        const name =
+          profile?.full_name ||
+          authData.user.user_metadata?.full_name ||
+          authData.user.user_metadata?.name ||
+          authData.user.email?.split("@")[0] ||
+          "Student";
+        setUserName(name);
+      }
 
       if (coursesRes.ok) {
         const cData = await coursesRes.json();
@@ -179,7 +199,7 @@ export default function StudentDashboard() {
               </Button>
             </div>
             <h2 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-extrabold leading-tight">
-              Keep going, Riya!
+              Keep going, {userName ? userName.split(" ")[0] : "Student"}!
               <br />
               <span className="text-white/85 font-semibold text-sm sm:text-lg md:text-2xl">
                 You're {avgProgress}% close to your semester goal.

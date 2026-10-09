@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useRef } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import {
   Card,
@@ -39,13 +39,19 @@ import {
   ZoomIn,
   ZoomOut,
   Maximize2,
+  BookOpen,
+  Lightbulb,
+  Check,
+  Target,
+  Search,
 } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
-import { Exam, ExamQuestion } from "@/lib/types";
+import { Exam, ExamQuestion, QuestionReviewItem } from "@/lib/types";
 
 export default function StudentExamRoom() {
   const { examId } = useParams() as { examId: string };
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { toast } = useToast();
 
   const [exam, setExam] = useState<Exam | null>(null);
@@ -60,12 +66,49 @@ export default function StudentExamRoom() {
   const [confirmSubmitOpen, setConfirmSubmitOpen] = useState(false);
   const [examResult, setExamResult] = useState<any>(null);
   const [startedAt, setStartedAt] = useState<string | null>(null);
+  const [priorSubmission, setPriorSubmission] = useState<any>(null);
+  const [loadingReview, setLoadingReview] = useState(false);
+
+  // Review screen filter: "all" | "wrong" | "correct" | "unanswered"
+  const [reviewFilter, setReviewFilter] = useState<"all" | "wrong" | "correct" | "unanswered">("all");
+  const [reviewSearch, setReviewSearch] = useState("");
 
   // Question Image Zoom State
   const [zoomedImage, setZoomedImage] = useState<string | null>(null);
+  const [zoomedTitle, setZoomedTitle] = useState<string>("Question Diagram");
   const [zoomScale, setZoomScale] = useState(1);
 
   const timerRef = useRef<NodeJS.Timeout | null>(null);
+
+  const handleLoadReview = async () => {
+    setLoadingReview(true);
+    try {
+      const res = await fetch(`/api/exams/${examId}/review`, { cache: "no-store" });
+      const data = await res.json();
+      if (!res.ok || data.error) {
+        toast({
+          title: "Could not load review",
+          description: data.error || "Please try again later.",
+          variant: "destructive",
+        });
+        return;
+      }
+      setExamResult({
+        ...data.submission,
+        review: data.review,
+      });
+      setExamState("result");
+    } catch (err: any) {
+      console.error(err);
+      toast({
+        title: "Error loading review",
+        description: err?.message || "Please check your network connection.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoadingReview(false);
+    }
+  };
 
   useEffect(() => {
     async function loadExam() {
@@ -86,6 +129,24 @@ export default function StudentExamRoom() {
         if (data.exam?.duration_minutes) {
           setSecondsRemaining(data.exam.duration_minutes * 60);
         }
+
+        if (data.student_submission) {
+          setPriorSubmission(data.student_submission);
+          // If review requested in URL (?review=true), load review right away
+          if (searchParams.get("review") === "true") {
+            const revRes = await fetch(`/api/exams/${examId}/review`, { cache: "no-store" });
+            if (revRes.ok) {
+              const revData = await revRes.json();
+              if (revData.review) {
+                setExamResult({
+                  ...revData.submission,
+                  review: revData.review,
+                });
+                setExamState("result");
+              }
+            }
+          }
+        }
       } catch (err) {
         console.error(err);
       } finally {
@@ -93,7 +154,7 @@ export default function StudentExamRoom() {
       }
     }
     if (examId) loadExam();
-  }, [examId]);
+  }, [examId, searchParams]);
 
   // Start Exam
   const handleStartExam = () => {
@@ -168,10 +229,11 @@ export default function StudentExamRoom() {
         setExamState("taking");
       } else {
         setExamResult(data);
+        setPriorSubmission(data);
         setExamState("result");
         toast({
           title: data.passed ? "Congratulations! 🎉" : "Exam Complete",
-          description: `You scored ${data.score} out of ${data.total_marks} marks (${data.percentage}%).`,
+          description: `You scored ${data.score} out of ${data.total_marks} marks (${data.percentage}%). Review your mistakes below to learn!`,
           variant: data.passed ? "success" : "default",
         });
       }
@@ -193,6 +255,97 @@ export default function StudentExamRoom() {
 
   const answeredCount = Object.keys(answers).length;
   const currentQ = questions[currentIdx];
+
+  const renderZoomDialog = () => (
+    <Dialog open={Boolean(zoomedImage)} onOpenChange={(open) => !open && setZoomedImage(null)}>
+      <DialogContent className="max-w-[95vw] sm:max-w-4xl max-h-[92vh] p-4 sm:p-6 rounded-3xl flex flex-col overflow-hidden bg-white">
+        <DialogHeader className="pb-3 border-b border-slate-100 flex flex-row items-center justify-between gap-3">
+          <div>
+            <DialogTitle className="text-base sm:text-lg font-bold text-slate-900 flex items-center gap-2">
+              <Maximize2 className="h-4 w-4 text-blue-600" />
+              <span>{zoomedTitle}</span>
+            </DialogTitle>
+            <DialogDescription className="text-xs text-slate-500">
+              Use the zoom controls or scroll to inspect full diagram details.
+            </DialogDescription>
+          </div>
+
+          <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl shrink-0">
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => setZoomScale((prev) => Math.max(0.75, prev - 0.5))}
+              disabled={zoomScale <= 0.75}
+              className="h-8 w-8 p-0 rounded-lg hover:bg-white text-slate-700"
+              title="Zoom Out"
+            >
+              <ZoomOut className="h-4 w-4" />
+            </Button>
+
+            <span className="text-xs font-mono font-bold px-2 text-slate-700 min-w-[3.5rem] text-center">
+              {Math.round(zoomScale * 100)}%
+            </span>
+
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => setZoomScale((prev) => Math.min(3.5, prev + 0.5))}
+              disabled={zoomScale >= 3.5}
+              className="h-8 w-8 p-0 rounded-lg hover:bg-white text-slate-700"
+              title="Zoom In"
+            >
+              <ZoomIn className="h-4 w-4" />
+            </Button>
+
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => setZoomScale(1)}
+              className="h-8 w-8 p-0 rounded-lg hover:bg-white text-slate-700 ml-1"
+              title="Reset Zoom"
+            >
+              <RotateCcw className="h-3.5 w-3.5" />
+            </Button>
+          </div>
+        </DialogHeader>
+
+        <div className="flex-1 overflow-auto rounded-2xl bg-slate-950/5 p-4 sm:p-8 flex items-center justify-center min-h-[350px] max-h-[65vh]">
+          {zoomedImage && (
+            <div
+              className="transition-transform duration-200 ease-out origin-center"
+              style={{ transform: `scale(${zoomScale})` }}
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={zoomedImage}
+                alt="Zoomed diagram"
+                className="max-h-[60vh] max-w-full object-contain rounded-xl shadow-lg border border-slate-200 bg-white"
+              />
+            </div>
+          )}
+        </div>
+
+        <DialogFooter className="pt-3 border-t border-slate-100 flex items-center justify-between">
+          <span className="text-[11px] text-slate-400 font-medium">
+            Tip: Click + to zoom in up to 350%, or Reset to return to normal view.
+          </span>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => setZoomedImage(null)}
+            className="rounded-xl font-bold text-xs"
+          >
+            Close Viewer
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+
 
   if (loading) {
     return (
@@ -226,6 +379,52 @@ export default function StudentExamRoom() {
             Back to Exams
           </Link>
         </Button>
+
+        {/* If student previously completed this exam */}
+        {priorSubmission && (
+          <Card className="border-indigo-100 bg-gradient-to-br from-indigo-950 via-slate-900 to-indigo-900 text-white rounded-3xl p-5 sm:p-6 shadow-xl">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <div className="space-y-1.5">
+                <div className="flex items-center gap-2">
+                  <Badge
+                    className={`border-0 text-white text-[10px] font-bold ${
+                      priorSubmission.passed ? "bg-emerald-600" : "bg-amber-600"
+                    }`}
+                  >
+                    {priorSubmission.passed ? "Passed ✓" : "Previous Attempt"}
+                  </Badge>
+                  <span className="text-[11px] text-slate-300">
+                    {new Date(priorSubmission.submitted_at).toLocaleDateString("en-US", {
+                      month: "short",
+                      day: "numeric",
+                      year: "numeric",
+                    })}
+                  </span>
+                </div>
+                <h3 className="text-lg font-black text-white">
+                  Previous Score: {priorSubmission.score} / {priorSubmission.total_marks} ({priorSubmission.percentage}%)
+                </h3>
+                <p className="text-xs text-indigo-200">
+                  You can inspect the questions you got wrong, review correct answers, and study clinical explanations to learn from your mistakes.
+                </p>
+              </div>
+
+              <Button
+                type="button"
+                onClick={handleLoadReview}
+                disabled={loadingReview}
+                className="w-full sm:w-auto rounded-xl bg-white text-indigo-950 hover:bg-indigo-50 font-extrabold text-xs h-11 px-5 gap-2 shrink-0 shadow-md"
+              >
+                {loadingReview ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <BookOpen className="h-4 w-4 text-indigo-600" />
+                )}
+                <span>Review Answers & Explanations 📖</span>
+              </Button>
+            </div>
+          </Card>
+        )}
 
         <Card className="border-slate-200/90 rounded-3xl shadow-lg bg-white overflow-hidden">
           <div className="bg-gradient-to-r from-blue-700 via-indigo-700 to-blue-900 p-6 sm:p-8 text-white">
@@ -277,7 +476,7 @@ export default function StudentExamRoom() {
               disabled={questions.length === 0}
               className="w-full h-12 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-base shadow-lg shadow-blue-600/25"
             >
-              Start Online Exam Now 🚀
+              {priorSubmission ? "Retake Online Exam Now 🚀" : "Start Online Exam Now 🚀"}
             </Button>
           </CardContent>
         </Card>
@@ -552,111 +751,82 @@ export default function StudentExamRoom() {
         </Dialog>
 
         {/* Interactive Diagram Zoom Modal */}
-        <Dialog open={Boolean(zoomedImage)} onOpenChange={(open) => !open && setZoomedImage(null)}>
-          <DialogContent className="max-w-[95vw] sm:max-w-4xl max-h-[92vh] p-4 sm:p-6 rounded-3xl flex flex-col overflow-hidden bg-white">
-            <DialogHeader className="pb-3 border-b border-slate-100 flex flex-row items-center justify-between gap-3">
-              <div>
-                <DialogTitle className="text-base sm:text-lg font-bold text-slate-900 flex items-center gap-2">
-                  <Maximize2 className="h-4 w-4 text-blue-600" />
-                  <span>Question Diagram (Question {currentIdx + 1})</span>
-                </DialogTitle>
-                <DialogDescription className="text-xs text-slate-500">
-                  Use the zoom controls or scroll to inspect full diagram details.
-                </DialogDescription>
-              </div>
-
-              {/* Zoom Controls */}
-              <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl shrink-0">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setZoomScale((prev) => Math.max(0.75, prev - 0.5))}
-                  disabled={zoomScale <= 0.75}
-                  className="h-8 w-8 p-0 rounded-lg hover:bg-white text-slate-700"
-                  title="Zoom Out"
-                >
-                  <ZoomOut className="h-4 w-4" />
-                </Button>
-
-                <span className="text-xs font-mono font-bold px-2 text-slate-700 min-w-[3.5rem] text-center">
-                  {Math.round(zoomScale * 100)}%
-                </span>
-
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setZoomScale((prev) => Math.min(3.5, prev + 0.5))}
-                  disabled={zoomScale >= 3.5}
-                  className="h-8 w-8 p-0 rounded-lg hover:bg-white text-slate-700"
-                  title="Zoom In"
-                >
-                  <ZoomIn className="h-4 w-4" />
-                </Button>
-
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setZoomScale(1)}
-                  className="h-8 w-8 p-0 rounded-lg hover:bg-white text-slate-700 ml-1"
-                  title="Reset Zoom"
-                >
-                  <RotateCcw className="h-3.5 w-3.5" />
-                </Button>
-              </div>
-            </DialogHeader>
-
-            {/* Pannable/Zoomable Image Area */}
-            <div className="flex-1 overflow-auto rounded-2xl bg-slate-950/5 p-4 sm:p-8 flex items-center justify-center min-h-[350px] max-h-[65vh]">
-              {zoomedImage && (
-                <div
-                  className="transition-transform duration-200 ease-out origin-center"
-                  style={{ transform: `scale(${zoomScale})` }}
-                >
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={zoomedImage}
-                    alt="Zoomed diagram"
-                    className="max-h-[60vh] max-w-full object-contain rounded-xl shadow-lg border border-slate-200 bg-white"
-                  />
-                </div>
-              )}
-            </div>
-
-            <DialogFooter className="pt-3 border-t border-slate-100 flex items-center justify-between">
-              <span className="text-[11px] text-slate-400 font-medium">
-                Tip: Click + to zoom in up to 350%, or Reset to return to normal view.
-              </span>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => setZoomedImage(null)}
-                className="rounded-xl font-bold text-xs"
-              >
-                Close Viewer
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+        {renderZoomDialog()}
       </div>
     );
   }
 
   // ==========================================
-  // 3. POST-EXAM RESULT SCREEN
+  // 3. POST-EXAM RESULT & QUESTION REVIEW SCREEN
   // ==========================================
   if (examState === "result" && examResult) {
-    const passed = examResult.passed;
+    const passed = Boolean(examResult.passed);
+    const reviewItems: QuestionReviewItem[] = examResult.review || [];
+    const wrongCount = examResult.wrong_count ?? reviewItems.filter((i) => i.is_wrong).length;
+    const correctCount = examResult.correct_count ?? reviewItems.filter((i) => i.is_correct).length;
+    const unansweredCount = examResult.unanswered_count ?? reviewItems.filter((i) => i.is_unanswered).length;
+
+    const filteredReview = reviewItems.filter((item) => {
+      // Filter by status tab
+      if (reviewFilter === "wrong" && !item.is_wrong) return false;
+      if (reviewFilter === "correct" && !item.is_correct) return false;
+      if (reviewFilter === "unanswered" && !item.is_unanswered) return false;
+
+      // Filter by search text
+      if (reviewSearch.trim()) {
+        const query = reviewSearch.toLowerCase();
+        const textMatch = item.question_text.toLowerCase().includes(query);
+        const explMatch = (item.explanation || "").toLowerCase().includes(query);
+        const optMatch =
+          item.option_a.toLowerCase().includes(query) ||
+          item.option_b.toLowerCase().includes(query) ||
+          item.option_c.toLowerCase().includes(query) ||
+          item.option_d.toLowerCase().includes(query);
+        return textMatch || explMatch || optMatch;
+      }
+
+      return true;
+    });
+
+    const getOptionText = (item: QuestionReviewItem, key: "A" | "B" | "C" | "D") => {
+      if (key === "A") return item.option_a;
+      if (key === "B") return item.option_b;
+      if (key === "C") return item.option_c;
+      return item.option_d;
+    };
 
     return (
-      <div className="max-w-2xl mx-auto py-8 sm:py-12 space-y-6">
+      <div className="max-w-4xl mx-auto py-6 sm:py-10 space-y-6 pb-20">
+        {/* Navigation Breadcrumb */}
+        <div className="flex items-center justify-between">
+          <Button asChild variant="outline" size="sm" className="rounded-xl gap-2 font-semibold">
+            <Link href="/student/exams">
+              <ArrowLeft className="h-4 w-4" />
+              Back to Exams
+            </Link>
+          </Button>
+
+          <Button
+            onClick={() => {
+              setAnswers({});
+              setCurrentIdx(0);
+              setStartedAt(new Date().toISOString());
+              setExamState("taking");
+              setSecondsRemaining((exam.duration_minutes || 30) * 60);
+              window.scrollTo({ top: 0, behavior: "smooth" });
+            }}
+            size="sm"
+            className="rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold gap-2 text-xs"
+          >
+            <RotateCcw className="h-3.5 w-3.5" />
+            <span>Retake Exam</span>
+          </Button>
+        </div>
+
+        {/* Scorecard Hero */}
         <Card className="border-slate-200/90 rounded-3xl shadow-xl bg-white overflow-hidden text-center">
-          {/* Header Banner */}
           <div
-            className={`p-8 text-white ${
+            className={`p-6 sm:p-8 text-white ${
               passed
                 ? "bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700"
                 : "bg-gradient-to-r from-slate-800 via-slate-900 to-slate-800"
@@ -672,16 +842,16 @@ export default function StudentExamRoom() {
             <h1 className="text-2xl sm:text-3xl font-black tracking-tight">
               {passed ? "Congratulations! You Passed! 🎉" : "Exam Completed"}
             </h1>
-            <p className="text-white/80 text-xs sm:text-sm mt-1 max-w-sm mx-auto">
+            <p className="text-white/85 text-xs sm:text-sm mt-1 max-w-md mx-auto">
               {passed
                 ? `You successfully cleared the ${exam.title} assessment!`
-                : "Good effort! Review key medical concepts and try again to improve your score."}
+                : "Good effort! Carefully review your incorrect answers and clinical explanations below to learn and prepare for your next attempt."}
             </p>
           </div>
 
           <CardContent className="p-6 sm:p-8 space-y-6">
-            {/* Score Highlight */}
-            <div className="p-6 rounded-2xl bg-slate-50 border border-slate-100 max-w-md mx-auto">
+            {/* Score Highlight Box */}
+            <div className="p-5 sm:p-6 rounded-2xl bg-slate-50 border border-slate-100 max-w-md mx-auto">
               <div className="text-xs font-bold text-slate-400 uppercase tracking-wider">
                 Your Final Score
               </div>
@@ -698,40 +868,391 @@ export default function StudentExamRoom() {
               >
                 Accuracy: {examResult.percentage}% · Passing Mark: {exam.pass_percentage}%
               </div>
+              {examResult.time_taken_seconds && (
+                <div className="text-[11px] text-slate-500 font-medium mt-1">
+                  Time taken: {Math.floor(examResult.time_taken_seconds / 60)}m{" "}
+                  {examResult.time_taken_seconds % 60}s
+                </div>
+              )}
             </div>
 
-            {/* Performance Breakdown */}
+            {/* Performance Breakdown Tiles */}
             <div className="grid grid-cols-3 gap-3 text-xs">
               <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-100 text-center">
                 <div className="text-[10px] font-bold text-emerald-800 uppercase">Correct</div>
-                <div className="text-lg font-black text-emerald-700 mt-0.5">
-                  {examResult.correct_count}
-                </div>
+                <div className="text-lg font-black text-emerald-700 mt-0.5">{correctCount}</div>
               </div>
 
               <div className="p-3 rounded-xl bg-rose-50 border border-rose-100 text-center">
                 <div className="text-[10px] font-bold text-rose-800 uppercase">Incorrect</div>
-                <div className="text-lg font-black text-rose-700 mt-0.5">
-                  {examResult.wrong_count}
-                </div>
+                <div className="text-lg font-black text-rose-700 mt-0.5">{wrongCount}</div>
               </div>
 
               <div className="p-3 rounded-xl bg-slate-100 border border-slate-200 text-center">
                 <div className="text-[10px] font-bold text-slate-500 uppercase">Skipped</div>
-                <div className="text-lg font-black text-slate-700 mt-0.5">
-                  {examResult.unanswered_count}
-                </div>
+                <div className="text-lg font-black text-slate-700 mt-0.5">{unansweredCount}</div>
               </div>
             </div>
 
-            {/* CTAs */}
-            <div className="flex flex-col sm:flex-row items-center gap-3 pt-2">
+            {/* Quick Action to Focus on Mistakes */}
+            {wrongCount > 0 && (
+              <div className="p-3.5 rounded-2xl bg-rose-50/70 border border-rose-200/90 flex flex-col sm:flex-row items-center justify-between gap-3 text-left">
+                <div className="flex items-center gap-2.5">
+                  <div className="h-8 w-8 rounded-xl bg-rose-600 text-white flex items-center justify-center shrink-0">
+                    <Target className="h-4 w-4" />
+                  </div>
+                  <div>
+                    <div className="text-xs font-bold text-rose-950">
+                      You have {wrongCount} incorrect {wrongCount === 1 ? "answer" : "answers"} to learn from
+                    </div>
+                    <div className="text-[11px] text-rose-800">
+                      Filter directly to your mistakes below to review the right answers and rationale.
+                    </div>
+                  </div>
+                </div>
+
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={() => {
+                    setReviewFilter("wrong");
+                    const el = document.getElementById("review-analysis-section");
+                    el?.scrollIntoView({ behavior: "smooth" });
+                  }}
+                  className="rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs shrink-0 h-9 px-4 shadow-sm"
+                >
+                  <XCircle className="h-3.5 w-3.5 mr-1" />
+                  Review Mistakes Only ({wrongCount})
+                </Button>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* ==================================================== */}
+        {/* INTERACTIVE QUESTION-BY-QUESTION REVIEW & LEARNING */}
+        {/* ==================================================== */}
+        <div id="review-analysis-section" className="space-y-4 pt-2">
+          {/* Header & Controls */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <h2 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2">
+                <BookOpen className="h-6 w-6 text-blue-600" />
+                Exam Answer Key & Learning Analysis
+              </h2>
+              <p className="text-xs sm:text-sm text-slate-500 font-medium mt-0.5">
+                Inspect your answers, see what you got wrong vs. correct, and study faculty rationales to master key topics.
+              </p>
+            </div>
+          </div>
+
+          {/* Filter Pills Bar */}
+          <div className="flex flex-wrap items-center gap-2 bg-slate-100 p-1.5 rounded-2xl">
+            <button
+              type="button"
+              onClick={() => setReviewFilter("all")}
+              className={`px-3.5 py-1.5 rounded-xl font-bold text-xs transition-all flex items-center gap-1.5 ${
+                reviewFilter === "all"
+                  ? "bg-white text-slate-900 shadow-xs"
+                  : "text-slate-600 hover:text-slate-900"
+              }`}
+            >
+              <span>All Questions</span>
+              <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-slate-300">
+                {reviewItems.length}
+              </Badge>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setReviewFilter("wrong")}
+              className={`px-3.5 py-1.5 rounded-xl font-bold text-xs transition-all flex items-center gap-1.5 ${
+                reviewFilter === "wrong"
+                  ? "bg-rose-600 text-white shadow-xs"
+                  : "text-rose-700 hover:bg-rose-100/50"
+              }`}
+            >
+              <XCircle className="h-3.5 w-3.5" />
+              <span>Wrong Answers</span>
+              <span
+                className={`text-[10px] px-1.5 py-0 rounded-full font-black ${
+                  reviewFilter === "wrong" ? "bg-white/20 text-white" : "bg-rose-100 text-rose-800"
+                }`}
+              >
+                {wrongCount}
+              </span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setReviewFilter("correct")}
+              className={`px-3.5 py-1.5 rounded-xl font-bold text-xs transition-all flex items-center gap-1.5 ${
+                reviewFilter === "correct"
+                  ? "bg-emerald-600 text-white shadow-xs"
+                  : "text-emerald-700 hover:bg-emerald-100/50"
+              }`}
+            >
+              <CheckCircle2 className="h-3.5 w-3.5" />
+              <span>Correct Answers</span>
+              <span
+                className={`text-[10px] px-1.5 py-0 rounded-full font-black ${
+                  reviewFilter === "correct"
+                    ? "bg-white/20 text-white"
+                    : "bg-emerald-100 text-emerald-800"
+                }`}
+              >
+                {correctCount}
+              </span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setReviewFilter("unanswered")}
+              className={`px-3.5 py-1.5 rounded-xl font-bold text-xs transition-all flex items-center gap-1.5 ${
+                reviewFilter === "unanswered"
+                  ? "bg-slate-700 text-white shadow-xs"
+                  : "text-slate-600 hover:text-slate-900"
+              }`}
+            >
+              <AlertTriangle className="h-3.5 w-3.5" />
+              <span>Skipped</span>
+              <span
+                className={`text-[10px] px-1.5 py-0 rounded-full font-black ${
+                  reviewFilter === "unanswered"
+                    ? "bg-white/20 text-white"
+                    : "bg-slate-200 text-slate-700"
+                }`}
+              >
+                {unansweredCount}
+              </span>
+            </button>
+          </div>
+
+          {/* Search Question Box */}
+          <div className="relative">
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+            <input
+              type="text"
+              placeholder="Search in questions, answer choices, or explanations..."
+              value={reviewSearch}
+              onChange={(e) => setReviewSearch(e.target.value)}
+              className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-slate-200 bg-white text-xs sm:text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent"
+            />
+          </div>
+
+          {/* Filtered Questions List */}
+          {filteredReview.length === 0 ? (
+            <Card className="border-dashed border-2 border-slate-200 p-8 sm:p-12 text-center bg-white rounded-2xl">
+              <div className="h-12 w-12 rounded-2xl bg-slate-100 text-slate-400 flex items-center justify-center mx-auto mb-2">
+                <CheckCircle2 className="h-6 w-6 text-emerald-600" />
+              </div>
+              <h3 className="font-bold text-slate-800 text-sm">No Questions Match Filter</h3>
+              <p className="text-xs text-slate-500 mt-1 max-w-sm mx-auto">
+                {reviewFilter === "wrong"
+                  ? "Outstanding! You got 0 questions wrong in this exam!"
+                  : "Try clearing your search query or choosing another category above."}
+              </p>
+              {reviewFilter !== "all" && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setReviewFilter("all");
+                    setReviewSearch("");
+                  }}
+                  className="mt-3 rounded-xl font-bold text-xs"
+                >
+                  View All Questions
+                </Button>
+              )}
+            </Card>
+          ) : (
+            <div className="space-y-4">
+              {filteredReview.map((item, idx) => {
+                const questionNumber = item.order_index != null ? item.order_index + 1 : idx + 1;
+
+                return (
+                  <Card
+                    key={item.id}
+                    className={`border-2 rounded-2xl shadow-xs overflow-hidden transition-all bg-white ${
+                      item.is_wrong
+                        ? "border-rose-300 ring-1 ring-rose-200/50"
+                        : item.is_correct
+                        ? "border-emerald-300 ring-1 ring-emerald-200/50"
+                        : "border-slate-200"
+                    }`}
+                  >
+                    <CardHeader className="p-4 sm:p-6 pb-3 border-b border-slate-100">
+                      <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+                        <div className="flex items-center gap-2">
+                          <span
+                            className={`px-2.5 py-1 rounded-lg font-black text-xs ${
+                              item.is_wrong
+                                ? "bg-rose-100 text-rose-800"
+                                : item.is_correct
+                                ? "bg-emerald-100 text-emerald-800"
+                                : "bg-slate-100 text-slate-800"
+                            }`}
+                          >
+                            Question {questionNumber}
+                          </span>
+                          <span className="text-xs font-semibold text-slate-400">
+                            {item.marks} {item.marks === 1 ? "Mark" : "Marks"}
+                          </span>
+                        </div>
+
+                        {/* Status Badge */}
+                        <div>
+                          {item.is_correct && (
+                            <Badge className="bg-emerald-100 text-emerald-800 border-emerald-300 font-extrabold text-xs gap-1.5 py-1">
+                              <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
+                              <span>Correct (+{item.marks} Marks)</span>
+                            </Badge>
+                          )}
+                          {item.is_wrong && (
+                            <Badge className="bg-rose-100 text-rose-800 border-rose-300 font-extrabold text-xs gap-1.5 py-1">
+                              <XCircle className="h-3.5 w-3.5 text-rose-600" />
+                              <span>Your Answer: Option {item.student_answer} (Incorrect)</span>
+                            </Badge>
+                          )}
+                          {item.is_unanswered && (
+                            <Badge className="bg-amber-100 text-amber-800 border-amber-300 font-extrabold text-xs gap-1.5 py-1">
+                              <AlertTriangle className="h-3.5 w-3.5 text-amber-600" />
+                              <span>Skipped / Not Answered</span>
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
+
+                      <CardTitle className="text-base sm:text-lg font-bold text-slate-900 leading-relaxed">
+                        {item.question_text}
+                      </CardTitle>
+
+                      {/* Question Diagram if present */}
+                      {item.image_url && (
+                        <div className="mt-3 relative group rounded-2xl overflow-hidden border border-slate-200 bg-slate-50 flex items-center justify-center p-2 max-h-72">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={item.image_url}
+                            alt="Question diagram"
+                            onClick={() => {
+                              setZoomedImage(item.image_url!);
+                              setZoomedTitle(`Question ${questionNumber} Diagram`);
+                              setZoomScale(1);
+                            }}
+                            className="max-h-64 w-auto object-contain rounded-xl cursor-zoom-in transition-transform duration-200 group-hover:scale-[1.01]"
+                          />
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="secondary"
+                            onClick={() => {
+                              setZoomedImage(item.image_url!);
+                              setZoomedTitle(`Question ${questionNumber} Diagram`);
+                              setZoomScale(1);
+                            }}
+                            className="absolute bottom-3 right-3 h-8 px-3 rounded-xl bg-white/95 backdrop-blur hover:bg-white text-slate-800 shadow-md font-bold text-xs gap-1.5 border border-slate-200"
+                          >
+                            <ZoomIn className="h-3.5 w-3.5 text-blue-600" />
+                            <span>Zoom Diagram</span>
+                          </Button>
+                        </div>
+                      )}
+                    </CardHeader>
+
+                    <CardContent className="p-4 sm:p-6 space-y-2.5">
+                      {/* All 4 Choices */}
+                      {(["A", "B", "C", "D"] as const).map((optKey) => {
+                        const optText = getOptionText(item, optKey);
+                        const isStudentPick = item.student_answer === optKey;
+                        const isRightOption = item.correct_option === optKey;
+
+                        let cardStyle = "border-slate-200 bg-white text-slate-700";
+                        let badgeElement = null;
+
+                        if (isRightOption) {
+                          cardStyle = "border-2 border-emerald-500 bg-emerald-50/70 text-emerald-950 font-semibold shadow-xs";
+                          badgeElement = (
+                            <Badge className="bg-emerald-600 hover:bg-emerald-600 text-white border-0 text-[11px] font-black gap-1 shrink-0">
+                              <CheckCircle2 className="h-3 w-3" />
+                              {isStudentPick ? "Your Choice (Correct ✓)" : "Correct Answer ✓"}
+                            </Badge>
+                          );
+                        } else if (isStudentPick && !isRightOption) {
+                          cardStyle = "border-2 border-rose-500 bg-rose-50/70 text-rose-950 font-semibold shadow-xs";
+                          badgeElement = (
+                            <Badge className="bg-rose-600 hover:bg-rose-600 text-white border-0 text-[11px] font-black gap-1 shrink-0">
+                              <XCircle className="h-3 w-3" />
+                              Your Choice (Wrong ✗)
+                            </Badge>
+                          );
+                        }
+
+                        return (
+                          <div
+                            key={optKey}
+                            className={`p-3.5 sm:p-4 rounded-2xl border transition-all flex items-start sm:items-center justify-between gap-3 ${cardStyle}`}
+                          >
+                            <div className="flex items-start sm:items-center gap-3 min-w-0">
+                              <div
+                                className={`h-7 w-7 rounded-xl flex items-center justify-center font-black text-xs shrink-0 ${
+                                  isRightOption
+                                    ? "bg-emerald-600 text-white"
+                                    : isStudentPick
+                                    ? "bg-rose-600 text-white"
+                                    : "bg-slate-100 text-slate-700"
+                                }`}
+                              >
+                                {optKey}
+                              </div>
+                              <span className="font-semibold text-xs sm:text-sm leading-snug break-words">
+                                {optText}
+                              </span>
+                            </div>
+                            {badgeElement}
+                          </div>
+                        );
+                      })}
+
+                      {/* Clinical Rationale & Explanation Card for Learning */}
+                      <div className="mt-3.5 p-4 rounded-2xl bg-amber-50/80 border border-amber-200/90 text-amber-950 space-y-1.5 shadow-xs">
+                        <div className="flex items-center gap-1.5 font-black text-xs text-amber-900 uppercase tracking-wide">
+                          <Lightbulb className="h-4 w-4 text-amber-600 shrink-0" />
+                          <span>Clinical Rationale & Learning Concept</span>
+                        </div>
+                        {item.explanation ? (
+                          <p className="text-xs sm:text-sm text-slate-800 leading-relaxed font-medium">
+                            {item.explanation}
+                          </p>
+                        ) : (
+                          <p className="text-xs text-slate-600 leading-relaxed">
+                            The correct answer is <span className="font-bold text-slate-900">Option {item.correct_option}</span>: &ldquo;{getOptionText(item, item.correct_option)}&rdquo;. Make sure to revise your lecture materials and notes on this topic to strengthen your conceptual foundation.
+                          </p>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Bottom Navigation CTAs */}
+          <div className="pt-6 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-3">
+            <Button asChild variant="outline" className="w-full sm:w-auto rounded-xl font-bold text-xs">
+              <Link href="/student/exams">
+                <ArrowLeft className="h-4 w-4 mr-1.5" />
+                Back to Exams List
+              </Link>
+            </Button>
+
+            <div className="flex items-center gap-2 w-full sm:w-auto">
               <Button
                 variant="outline"
-                asChild
-                className="w-full sm:w-1/2 h-11 rounded-xl font-bold text-xs"
+                onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+                className="w-1/2 sm:w-auto rounded-xl font-bold text-xs"
               >
-                <Link href="/student/exams">Back to Exams List</Link>
+                Back to Top ↑
               </Button>
               <Button
                 onClick={() => {
@@ -739,18 +1260,23 @@ export default function StudentExamRoom() {
                   setCurrentIdx(0);
                   setStartedAt(new Date().toISOString());
                   setExamState("taking");
-                  setSecondsRemaining(exam.duration_minutes * 60);
+                  setSecondsRemaining((exam.duration_minutes || 30) * 60);
+                  window.scrollTo({ top: 0, behavior: "smooth" });
                 }}
-                className="w-full sm:w-1/2 h-11 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs"
+                className="w-1/2 sm:w-auto rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs"
               >
-                Retake Exam
+                Retake Exam 🚀
               </Button>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
+
+        {/* Zoom modal shared with review mode */}
+        {renderZoomDialog()}
       </div>
     );
   }
 
   return null;
 }
+

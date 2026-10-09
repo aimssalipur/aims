@@ -152,3 +152,21 @@ export interface ExamSubmission {
   student?: Profile;
   exam?: Exam;
 }
+
+export interface QuestionReviewItem {
+  id: string;
+  order_index: number;
+  question_text: string;
+  option_a: string;
+  option_b: string;
+  option_c: string;
+  option_d: string;
+  correct_option: "A" | "B" | "C" | "D";
+  marks: number;
+  explanation?: string | null;
+  image_url?: string | null;
+  student_answer?: "A" | "B" | "C" | "D" | null;
+  is_correct: boolean;
+  is_wrong: boolean;
+  is_unanswered: boolean;
+}

@@ -36,6 +36,9 @@ import {
   RotateCcw,
   Sparkles,
   ShieldAlert,
+  ZoomIn,
+  ZoomOut,
+  Maximize2,
 } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { Exam, ExamQuestion } from "@/lib/types";
@@ -56,6 +59,11 @@ export default function StudentExamRoom() {
   const [secondsRemaining, setSecondsRemaining] = useState(1800); // 30 min default
   const [confirmSubmitOpen, setConfirmSubmitOpen] = useState(false);
   const [examResult, setExamResult] = useState<any>(null);
+  const [startedAt, setStartedAt] = useState<string | null>(null);
+
+  // Question Image Zoom State
+  const [zoomedImage, setZoomedImage] = useState<string | null>(null);
+  const [zoomScale, setZoomScale] = useState(1);
 
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -97,6 +105,7 @@ export default function StudentExamRoom() {
       });
       return;
     }
+    setStartedAt(new Date().toISOString());
     setExamState("taking");
   };
 
@@ -146,7 +155,7 @@ export default function StudentExamRoom() {
       const res = await fetch(`/api/exams/${examId}/submit`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ answers }),
+        body: JSON.stringify({ answers, started_at: startedAt }),
       });
 
       const data = await res.json();
@@ -348,6 +357,33 @@ export default function StudentExamRoom() {
                   <CardTitle className="text-base sm:text-lg font-bold text-slate-900 leading-relaxed">
                     {currentQ.question_text}
                   </CardTitle>
+                  {currentQ.image_url && (
+                    <div className="mt-4 relative group rounded-2xl overflow-hidden border border-slate-200 bg-slate-50 flex items-center justify-center p-2 max-h-80">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={currentQ.image_url}
+                        alt="Question diagram"
+                        onClick={() => {
+                          setZoomedImage(currentQ.image_url!);
+                          setZoomScale(1);
+                        }}
+                        className="max-h-72 w-auto object-contain rounded-xl cursor-zoom-in transition-transform duration-200 group-hover:scale-[1.01]"
+                      />
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="secondary"
+                        onClick={() => {
+                          setZoomedImage(currentQ.image_url!);
+                          setZoomScale(1);
+                        }}
+                        className="absolute bottom-3 right-3 h-8 px-3 rounded-xl bg-white/95 backdrop-blur hover:bg-white text-slate-800 shadow-md font-bold text-xs gap-1.5 border border-slate-200 opacity-90 group-hover:opacity-100 transition-opacity"
+                      >
+                        <ZoomIn className="h-3.5 w-3.5 text-blue-600" />
+                        <span>Click to Zoom</span>
+                      </Button>
+                    </div>
+                  )}
                 </CardHeader>
 
                 <CardContent className="p-5 sm:p-6 space-y-3">
@@ -514,6 +550,97 @@ export default function StudentExamRoom() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+        {/* Interactive Diagram Zoom Modal */}
+        <Dialog open={Boolean(zoomedImage)} onOpenChange={(open) => !open && setZoomedImage(null)}>
+          <DialogContent className="max-w-[95vw] sm:max-w-4xl max-h-[92vh] p-4 sm:p-6 rounded-3xl flex flex-col overflow-hidden bg-white">
+            <DialogHeader className="pb-3 border-b border-slate-100 flex flex-row items-center justify-between gap-3">
+              <div>
+                <DialogTitle className="text-base sm:text-lg font-bold text-slate-900 flex items-center gap-2">
+                  <Maximize2 className="h-4 w-4 text-blue-600" />
+                  <span>Question Diagram (Question {currentIdx + 1})</span>
+                </DialogTitle>
+                <DialogDescription className="text-xs text-slate-500">
+                  Use the zoom controls or scroll to inspect full diagram details.
+                </DialogDescription>
+              </div>
+
+              {/* Zoom Controls */}
+              <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl shrink-0">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setZoomScale((prev) => Math.max(0.75, prev - 0.5))}
+                  disabled={zoomScale <= 0.75}
+                  className="h-8 w-8 p-0 rounded-lg hover:bg-white text-slate-700"
+                  title="Zoom Out"
+                >
+                  <ZoomOut className="h-4 w-4" />
+                </Button>
+
+                <span className="text-xs font-mono font-bold px-2 text-slate-700 min-w-[3.5rem] text-center">
+                  {Math.round(zoomScale * 100)}%
+                </span>
+
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setZoomScale((prev) => Math.min(3.5, prev + 0.5))}
+                  disabled={zoomScale >= 3.5}
+                  className="h-8 w-8 p-0 rounded-lg hover:bg-white text-slate-700"
+                  title="Zoom In"
+                >
+                  <ZoomIn className="h-4 w-4" />
+                </Button>
+
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setZoomScale(1)}
+                  className="h-8 w-8 p-0 rounded-lg hover:bg-white text-slate-700 ml-1"
+                  title="Reset Zoom"
+                >
+                  <RotateCcw className="h-3.5 w-3.5" />
+                </Button>
+              </div>
+            </DialogHeader>
+
+            {/* Pannable/Zoomable Image Area */}
+            <div className="flex-1 overflow-auto rounded-2xl bg-slate-950/5 p-4 sm:p-8 flex items-center justify-center min-h-[350px] max-h-[65vh]">
+              {zoomedImage && (
+                <div
+                  className="transition-transform duration-200 ease-out origin-center"
+                  style={{ transform: `scale(${zoomScale})` }}
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={zoomedImage}
+                    alt="Zoomed diagram"
+                    className="max-h-[60vh] max-w-full object-contain rounded-xl shadow-lg border border-slate-200 bg-white"
+                  />
+                </div>
+              )}
+            </div>
+
+            <DialogFooter className="pt-3 border-t border-slate-100 flex items-center justify-between">
+              <span className="text-[11px] text-slate-400 font-medium">
+                Tip: Click + to zoom in up to 350%, or Reset to return to normal view.
+              </span>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setZoomedImage(null)}
+                className="rounded-xl font-bold text-xs"
+              >
+                Close Viewer
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     );
   }
@@ -610,6 +737,7 @@ export default function StudentExamRoom() {
                 onClick={() => {
                   setAnswers({});
                   setCurrentIdx(0);
+                  setStartedAt(new Date().toISOString());
                   setExamState("taking");
                   setSecondsRemaining(exam.duration_minutes * 60);
                 }}

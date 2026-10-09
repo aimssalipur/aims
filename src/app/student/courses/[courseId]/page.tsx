@@ -31,6 +31,7 @@ export default function StudentCourseDetailPage({
   
   const [loading, setLoading] = useState(true);
   const [course, setCourse] = useState<any>(null);
+  const [isRestricted, setIsRestricted] = useState(false);
   
   // Database data
   const [youtubeResources, setYoutubeResources] = useState<any[]>([]);
@@ -53,6 +54,13 @@ export default function StudentCourseDetailPage({
           if (courseData.course) {
             setCourse(courseData.course);
           }
+        }
+
+        // Enrollment restriction check
+        if (resVideos.status === 403 || resLive.status === 403) {
+          setIsRestricted(true);
+          setLoading(false);
+          return;
         }
 
         if (resVideos.ok) {
@@ -189,6 +197,53 @@ export default function StudentCourseDetailPage({
               </div>
             </div>
           </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (isRestricted) {
+    return (
+      <div className="max-w-2xl mx-auto py-14 px-4 text-center space-y-6">
+        <div className="h-20 w-20 rounded-3xl bg-amber-50 border border-amber-200 text-amber-600 mx-auto flex items-center justify-center shadow-md">
+          <Lock className="h-10 w-10 text-amber-600" />
+        </div>
+        <div className="space-y-2">
+          <Badge variant="warning" className="text-xs font-bold px-3 py-1 bg-amber-100 text-amber-800 border-amber-300">
+            Access Restricted
+          </Badge>
+          <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
+            Course Not Assigned
+          </h1>
+          <p className="text-sm sm:text-base text-slate-600 leading-relaxed max-w-lg mx-auto">
+            You are not currently enrolled in <strong className="text-slate-900">{course?.title || "this course"}</strong>. Only courses assigned to you by the academy administration can be accessed.
+          </p>
+        </div>
+        <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
+          <Button
+            asChild
+            className="bg-aims-navy hover:bg-aims-navy/90 text-white font-bold rounded-xl h-11 px-5 shadow-md"
+          >
+            <Link href="/student/courses">
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back to My Courses
+            </Link>
+          </Button>
+          <Button
+            asChild
+            variant="outline"
+            className="border-emerald-300 text-emerald-700 hover:bg-emerald-50 font-bold rounded-xl h-11 px-5"
+          >
+            <a
+              href={`https://wa.me/919437959054?text=${encodeURIComponent(
+                `Hello AIMS Admissions, I would like to request enrollment in course: ${course?.title || courseId}`
+              )}`}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Contact Counselor on WhatsApp
+            </a>
+          </Button>
         </div>
       </div>
     );

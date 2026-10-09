@@ -133,6 +133,7 @@ export interface ExamQuestion {
   marks: number;
   order_index: number;
   explanation?: string | null;
+  image_url?: string | null;
   created_at: string;
 }
 
@@ -147,6 +148,7 @@ export interface ExamSubmission {
   passed: boolean;
   started_at: string;
   submitted_at: string;
+  time_taken_seconds?: number | null;
   student?: Profile;
   exam?: Exam;
 }

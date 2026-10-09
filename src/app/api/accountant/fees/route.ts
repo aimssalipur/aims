@@ -44,7 +44,7 @@ export async function POST(request: Request) {
 
   try {
     const body = await request.json();
-    const { student_id, course_id, amount_paid, payment_method, transaction_id, remarks, status } = body;
+    const { student_id, course_id, amount_paid, payment_method, transaction_id, remarks, status, payment_date } = body;
 
     if (!student_id || amount_paid === undefined || !payment_method) {
       return NextResponse.json(
@@ -72,6 +72,7 @@ export async function POST(request: Request) {
     const targetStatus = status && ALLOWED_PAYMENT_STATUSES.has(status) ? status : "pending";
     const supabase = createAdminClient();
     const isManualVerification = targetStatus === "verified";
+    const finalPaymentDate = payment_date ? new Date(payment_date).toISOString() : new Date().toISOString();
 
     // Prevent accidental double clicks / duplicate fee submissions within 8 seconds
     const eightSecondsAgo = new Date(Date.now() - 8_000).toISOString();
@@ -103,7 +104,7 @@ export async function POST(request: Request) {
         remarks: remarks ? String(remarks).trim().slice(0, 500) : null,
         status: targetStatus,
         verified_by: isManualVerification ? context.user.id : null,
-        payment_date: new Date().toISOString(),
+        payment_date: finalPaymentDate,
       })
       .select("*, student:profiles!student_id(full_name, email, whatsapp, course_of_interest), course:courses!course_id(id, title)")
       .single();
@@ -125,7 +126,7 @@ export async function POST(request: Request) {
         description: `Fee received from ${studentName}${courseTitle ? ` for ${courseTitle}` : ""}${remarks ? ` (${remarks})` : ""}`,
         recorded_by: context.user.id,
         reference_no: transaction_id,
-        date: new Date().toISOString(),
+        date: finalPaymentDate,
       });
     }
 
@@ -199,5 +200,168 @@ export async function PUT(request: Request) {
     return NextResponse.json(data);
   } catch (err: any) {
     return NextResponse.json({ error: "Failed to update fee record." }, { status: 500 });
+  }
+}
+
+// 4. PATCH: Edit and update an existing student fee payment record
+export async function PATCH(request: Request) {
+  const { context, errorResponse } = await requireRole(["admin", "accountant"]);
+  if (errorResponse) return errorResponse;
+
+  try {
+    const body = await request.json();
+    const { id, amount_paid, payment_method, transaction_id, remarks, course_id, payment_date, status } = body;
+
+    if (!id) {
+      return NextResponse.json({ error: "Missing required fee record id." }, { status: 400 });
+    }
+
+    const supabase = createAdminClient();
+
+    // Verify record exists
+    const { data: existing, error: fetchErr } = await supabase
+      .from("fees_payments")
+      .select("*, student:profiles!student_id(full_name, email, whatsapp, course_of_interest)")
+      .eq("id", id)
+      .single();
+
+    if (fetchErr || !existing) {
+      return NextResponse.json({ error: "Fee payment record not found." }, { status: 404 });
+    }
+
+    const updatePayload: Record<string, any> = {};
+
+    if (amount_paid !== undefined) {
+      const parsed = Number(amount_paid);
+      if (!Number.isFinite(parsed) || parsed <= 0 || parsed > 10_000_000) {
+        return NextResponse.json({ error: "Invalid payment amount." }, { status: 400 });
+      }
+      updatePayload.amount_paid = parsed;
+    }
+
+    if (payment_method) {
+      const meth = String(payment_method).trim();
+      if (!ALLOWED_PAYMENT_METHODS.has(meth)) {
+        return NextResponse.json({ error: "Invalid payment method." }, { status: 400 });
+      }
+      updatePayload.payment_method = meth;
+    }
+
+    if (transaction_id !== undefined) {
+      updatePayload.transaction_id = transaction_id ? String(transaction_id).trim().slice(0, 100) : null;
+    }
+
+    if (remarks !== undefined) {
+      updatePayload.remarks = remarks ? String(remarks).trim().slice(0, 500) : null;
+    }
+
+    if (course_id !== undefined) {
+      updatePayload.course_id = course_id || null;
+    }
+
+    if (payment_date) {
+      updatePayload.payment_date = new Date(payment_date).toISOString();
+    }
+
+    if (status && ALLOWED_PAYMENT_STATUSES.has(status)) {
+      updatePayload.status = status;
+      if (status === "verified" && !existing.verified_by) {
+        updatePayload.verified_by = context.user.id;
+      }
+    }
+
+    const { data: updated, error: updateErr } = await supabase
+      .from("fees_payments")
+      .update(updatePayload)
+      .eq("id", id)
+      .select("*, student:profiles!student_id(full_name, email, whatsapp, course_of_interest), course:courses!course_id(id, title), verifier:profiles!verified_by(full_name)")
+      .single();
+
+    if (updateErr) {
+      console.error("[api/accountant/fees] PATCH error:", updateErr);
+      return NextResponse.json({ error: updateErr.message || "Failed to update fee payment." }, { status: 500 });
+    }
+
+    // Sync business transaction if transaction_id exists or was updated
+    if (existing.transaction_id) {
+      await supabase
+        .from("business_transactions")
+        .update({
+          amount: updatePayload.amount_paid ?? existing.amount_paid,
+          reference_no: updatePayload.transaction_id !== undefined ? updatePayload.transaction_id : existing.transaction_id,
+          date: updatePayload.payment_date ?? existing.payment_date,
+        })
+        .eq("reference_no", existing.transaction_id);
+    }
+
+    return NextResponse.json(updated);
+  } catch (err: any) {
+    console.error("[api/accountant/fees] PATCH exception:", err);
+    return NextResponse.json({ error: err?.message || "Failed to edit fee record." }, { status: 500 });
+  }
+}
+
+// 5. DELETE: Delete an erroneous or accidental student fee payment record
+export async function DELETE(request: Request) {
+  const { context, errorResponse } = await requireRole(["admin", "accountant"]);
+  if (errorResponse) return errorResponse;
+
+  try {
+    const { searchParams } = new URL(request.url);
+    let id = searchParams.get("id");
+
+    if (!id) {
+      try {
+        const body = await request.json();
+        id = body?.id;
+      } catch {}
+    }
+
+    if (!id) {
+      return NextResponse.json({ error: "Missing required id parameter for deletion." }, { status: 400 });
+    }
+
+    const supabase = createAdminClient();
+
+    // Verify record exists before deletion
+    const { data: existing, error: fetchErr } = await supabase
+      .from("fees_payments")
+      .select("id, transaction_id, amount_paid, student:profiles!student_id(full_name)")
+      .eq("id", id)
+      .single();
+
+    if (fetchErr || !existing) {
+      return NextResponse.json({ error: "Fee payment record not found." }, { status: 404 });
+    }
+
+    // Clean up any linked business_transactions entry
+    if (existing.transaction_id) {
+      await supabase
+        .from("business_transactions")
+        .delete()
+        .eq("reference_no", existing.transaction_id);
+    }
+
+    // Delete fee payment
+    const { error: deleteErr } = await supabase
+      .from("fees_payments")
+      .delete()
+      .eq("id", id);
+
+    if (deleteErr) {
+      console.error("[api/accountant/fees] DELETE error:", deleteErr);
+      return NextResponse.json({ error: deleteErr.message || "Failed to delete fee record." }, { status: 500 });
+    }
+
+    const studentData = existing.student as any;
+    const studentName = (Array.isArray(studentData) ? studentData[0]?.full_name : studentData?.full_name) || "student";
+
+    return NextResponse.json({
+      success: true,
+      message: `Fee record of ₹${existing.amount_paid} for ${studentName} deleted successfully.`,
+    });
+  } catch (err: any) {
+    console.error("[api/accountant/fees] DELETE exception:", err);
+    return NextResponse.json({ error: err?.message || "Failed to delete fee record." }, { status: 500 });
   }
 }

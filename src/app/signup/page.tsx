@@ -22,6 +22,7 @@ import {
   EyeOff,
   MessageCircle,
   Check,
+  Search,
 } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { getFriendlyErrorMessage } from "@/lib/friendly-error";
@@ -38,14 +39,27 @@ const fallbackCourses = [
   { id: "ca10ca10-ca10-ca10-ca10-ca10ca10ca10", title: "DSSSB Nursing Officer Exam Coaching", description: "Delhi Govt Hospitals recruitment, 200 Questions CBT" },
   { id: "cb11cb11-cb11-cb11-cb11-cb11cb11cb11", title: "JIPMER Nursing Officer & Entrance Exam", description: "Puducherry Staff Nurse CBT (400 Marks) & B.Sc Entrance" },
   { id: "cc12cc12-cc12-cc12-cc12-cc12cc12cc12", title: "PGIMER Chandigarh Nursing Officer & Entrance", description: "Chandigarh Staff Nurse CBT (100 Qs) & B.Sc Nursing Entrance" },
-  { id: "cd13cd13-cd13-cd13-cd13-cd13cd13cd13", title: "CHO (Community Health Officer) Coaching", description: "Odisha & All-State NHM Ayushman Arogya Mandir recruitment" }
+  { id: "cd13cd13-cd13-cd13-cd13-cd13cd13cd13", title: "CHO (Community Health Officer) Coaching", description: "Odisha & All-State NHM Ayushman Arogya Mandir recruitment" },
+  { id: "ce14ce14-ce14-ce14-ce14-ce14ce14ce14", title: "NEET Entrance 2026 - Latest Pattern Updated", description: "NEET UG for B.Sc. Nursing in govt medical colleges (180 Compulsory MCQs, 720 Marks)" },
+  { id: "cf15cf15-cf15-cf15-cf15-cf15cf15cf15", title: "OSSSC MPHW (Multipurpose Health Worker) Exam", description: "100 Marks CBRT/OMR Exam covering ANM syllabus, practical skills & arithmetic" }
 ];
+
+const cleanCourseSummary = (desc?: string) => {
+  if (!desc) return "";
+  const clean = desc
+    .replace(/\|[^\n]+\|/g, " ")
+    .replace(/[-*#_`]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  return clean.length > 95 ? clean.slice(0, 95) + "..." : clean;
+};
 
 export default function SignupPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [courses, setCourses] = useState<{ id: string; title: string; description?: string }[]>(fallbackCourses);
   const [isLoadingCourses, setIsLoadingCourses] = useState(false);
   const [selectedCourses, setSelectedCourses] = useState<string[]>([]);
+  const [courseSearch, setCourseSearch] = useState("");
   
   const router = useRouter();
   const { toast } = useToast();
@@ -85,6 +99,28 @@ export default function SignupPage() {
   }, []);
 
   const coursesToDisplay = courses.length > 0 ? courses : fallbackCourses;
+
+  const filteredCoursesToDisplay = coursesToDisplay.filter((c) => {
+    if (!courseSearch.trim()) return true;
+    const term = courseSearch.toLowerCase();
+    return (
+      c.title.toLowerCase().includes(term) ||
+      (c.description || "").toLowerCase().includes(term)
+    );
+  });
+
+  const allFilteredSelected =
+    filteredCoursesToDisplay.length > 0 &&
+    filteredCoursesToDisplay.every((c) => selectedCourses.includes(c.id));
+
+  const handleToggleSelectAll = () => {
+    const currentIds = filteredCoursesToDisplay.map((c) => c.id);
+    if (allFilteredSelected) {
+      setSelectedCourses((prev) => prev.filter((id) => !currentIds.includes(id)));
+    } else {
+      setSelectedCourses((prev) => Array.from(new Set([...prev, ...currentIds])));
+    }
+  };
 
   const getWhatsAppLink = () => {
     const selectedTitles = coursesToDisplay
@@ -269,39 +305,77 @@ Please approve my email in the system. Thank you!`;
                     </div>
                   </div>
 
-                  <div className="space-y-2 sm:col-span-2">
-                    <div className="flex items-center justify-between">
-                      <Label className="text-slate-700 font-semibold block">
-                        Interested Course(s) <span className="text-red-500">*</span>
-                      </Label>
-                      {selectedCourses.length > 0 && (
-                        <span className="text-[11px] font-bold text-aims-green bg-aims-green/10 px-2.5 py-0.5 rounded-full">
-                          {selectedCourses.length} selected
-                        </span>
+                  <div className="space-y-2.5 sm:col-span-2">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        <Label className="text-slate-800 font-bold text-sm block">
+                          Interested Course(s) <span className="text-red-500">*</span>
+                        </Label>
+                        {selectedCourses.length > 0 && (
+                          <span className="text-[11px] font-extrabold text-aims-green bg-aims-green/10 px-2.5 py-0.5 rounded-full border border-aims-green/20">
+                            {selectedCourses.length} of {coursesToDisplay.length} selected
+                          </span>
+                        )}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleToggleSelectAll}
+                        className="text-xs font-bold text-aims-navy hover:text-aims-green transition-colors underline-offset-2 hover:underline focus:outline-none"
+                      >
+                        {allFilteredSelected ? "Deselect All" : `Select All (${filteredCoursesToDisplay.length})`}
+                      </button>
+                    </div>
+
+                    {/* Quick Search on Mobile & Desktop */}
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
+                      <Input
+                        type="text"
+                        value={courseSearch}
+                        onChange={(e) => setCourseSearch(e.target.value)}
+                        placeholder="Search courses (e.g. OSSSC, NORCET, NEET, ESIC)..."
+                        className="pl-9 h-10 text-xs sm:text-sm rounded-xl bg-white border-slate-200 focus:border-aims-green"
+                      />
+                      {courseSearch && (
+                        <button
+                          type="button"
+                          onClick={() => setCourseSearch("")}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-slate-400 hover:text-slate-700"
+                        >
+                          Clear
+                        </button>
                       )}
                     </div>
-                    <p className="text-xs text-slate-500 mb-2">
-                      Select one or more programs you would like to apply for:
-                    </p>
                     
                     {isLoadingCourses ? (
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 p-2 rounded-xl border border-slate-200 bg-white">
                         {[1, 2, 3, 4, 5, 6].map((idx) => (
                           <div
                             key={idx}
-                            className="flex items-start gap-2 p-2.5 rounded-lg border border-slate-100 bg-slate-50/60 animate-pulse"
+                            className="flex items-start gap-2.5 p-3 rounded-lg border border-slate-100 bg-slate-50/60 animate-pulse"
                           >
-                            <div className="h-4 w-4 rounded bg-slate-200 shrink-0 mt-0.5" />
+                            <div className="h-5 w-5 rounded bg-slate-200 shrink-0 mt-0.5" />
                             <div className="flex-1 space-y-1.5 min-w-0">
-                              <div className="h-3.5 bg-slate-200 rounded w-3/4" />
-                              <div className="h-2.5 bg-slate-100 rounded w-1/2" />
+                              <div className="h-4 bg-slate-200 rounded w-3/4" />
+                              <div className="h-3 bg-slate-100 rounded w-1/2" />
                             </div>
                           </div>
                         ))}
                       </div>
+                    ) : filteredCoursesToDisplay.length === 0 ? (
+                      <div className="p-6 text-center rounded-2xl border border-dashed border-slate-200 bg-slate-50 text-xs text-slate-500 font-medium">
+                        No courses match &quot;{courseSearch}&quot;.
+                        <button
+                          type="button"
+                          onClick={() => setCourseSearch("")}
+                          className="block mx-auto mt-2 text-aims-navy font-bold hover:underline"
+                        >
+                          Reset Search Filter
+                        </button>
+                      </div>
                     ) : (
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-[180px] sm:max-h-[230px] overflow-y-auto p-1.5 rounded-xl border border-slate-200 bg-white shadow-inner">
-                        {coursesToDisplay.map((c) => {
+                      <div className="space-y-2 sm:space-y-0 sm:grid sm:grid-cols-2 sm:gap-2.5 max-h-[300px] sm:max-h-[360px] overflow-y-auto p-2 sm:p-2.5 rounded-2xl border border-slate-200 bg-slate-50/60 shadow-inner">
+                        {filteredCoursesToDisplay.map((c) => {
                           const isSelected = selectedCourses.includes(c.id);
                           return (
                             <div
@@ -313,28 +387,28 @@ Please approve my email in the system. Thank you!`;
                                     : [...prev, c.id]
                                 );
                               }}
-                              className={`relative flex items-start gap-2 p-2 rounded-lg sm:rounded-xl border cursor-pointer transition-all hover:shadow-sm ${
+                              className={`relative flex items-start gap-3 p-3 rounded-xl border cursor-pointer transition-all select-none ${
                                 isSelected
-                                  ? "border-aims-green bg-aims-green/5 ring-1 ring-aims-green"
-                                  : "border-slate-200 hover:border-slate-300 bg-slate-50/50"
+                                  ? "border-emerald-600 bg-emerald-50/80 ring-2 ring-emerald-500/20 shadow-xs"
+                                  : "border-slate-200 hover:border-slate-300 bg-white shadow-2xs"
                               }`}
                             >
                               <div
-                                className={`mt-0.5 h-4 w-4 shrink-0 rounded flex items-center justify-center border transition-all ${
+                                className={`mt-0.5 h-5 w-5 shrink-0 rounded-md flex items-center justify-center border-2 transition-all ${
                                   isSelected
-                                    ? "bg-aims-green border-aims-green text-white"
+                                    ? "bg-emerald-600 border-emerald-600 text-white shadow-xs"
                                     : "bg-white border-slate-300"
                                 }`}
                               >
-                                {isSelected && <Check className="h-3 w-3" />}
+                                {isSelected && <Check className="h-3.5 w-3.5 stroke-[3]" />}
                               </div>
                               <div className="min-w-0 flex-1">
-                                <span className="text-xs sm:text-sm font-semibold text-slate-900 leading-tight block truncate">
+                                <span className="text-xs sm:text-sm font-bold text-slate-900 leading-snug block line-clamp-2">
                                   {c.title}
                                 </span>
                                 {c.description && (
-                                  <span className="text-[10px] sm:text-[11px] text-slate-500 block truncate mt-0.5">
-                                    {c.description}
+                                  <span className="text-[11px] text-slate-500 leading-tight block line-clamp-1 mt-0.5">
+                                    {cleanCourseSummary(c.description)}
                                   </span>
                                 )}
                               </div>

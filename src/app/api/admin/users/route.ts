@@ -14,19 +14,31 @@ export async function GET() {
   if (errorResponse) return errorResponse;
 
   const supabaseAdmin = createAdminClient();
-  const { data: profiles, error } = await supabaseAdmin
-    .from("profiles")
-    .select("*, user_roles(role)")
-    .order("created_at", { ascending: false });
+  const [{ data: profiles, error }, { data: enrollments }] = await Promise.all([
+    supabaseAdmin
+      .from("profiles")
+      .select("*, user_roles(role)")
+      .order("created_at", { ascending: false }),
+    supabaseAdmin
+      .from("enrollments")
+      .select("id, student_id, course_id, course:courses(id, title)")
+  ]);
 
   if (error) {
     return NextResponse.json({ error: "Failed to retrieve user profiles." }, { status: 500 });
   }
 
-  // Format profiles to include roles array
-  const formattedProfiles = profiles.map((p: any) => ({
+  const enrollmentsByStudent = (enrollments || []).reduce((acc: Record<string, any[]>, curr: any) => {
+    if (!acc[curr.student_id]) acc[curr.student_id] = [];
+    acc[curr.student_id].push(curr);
+    return acc;
+  }, {});
+
+  // Format profiles to include roles and enrollments array
+  const formattedProfiles = (profiles || []).map((p: any) => ({
     ...p,
     roles: p.user_roles?.map((ur: any) => ur.role) || [p.role],
+    enrollments: enrollmentsByStudent[p.id] || [],
   }));
 
   return NextResponse.json(formattedProfiles);

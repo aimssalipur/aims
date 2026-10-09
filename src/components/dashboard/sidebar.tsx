@@ -65,6 +65,7 @@ const navConfig: Record<UserRole, NavItem[]> = {
     { href: "/student", label: "Dashboard", icon: LayoutDashboard },
     { href: "/student/courses", label: "My Courses", icon: BookOpen },
     { href: "/student/exams", label: "Online MCQ Exams", icon: FileCheck2 },
+    { href: "/student/fees", label: "Fee Bills & Receipts", icon: DollarSign },
     { href: "/student/announcements", label: "Announcements", icon: Bell },
     { href: "/student/profile", label: "My Profile", icon: UserIcon },
   ],

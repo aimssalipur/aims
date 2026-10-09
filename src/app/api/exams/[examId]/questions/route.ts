@@ -27,7 +27,7 @@ export async function POST(
     }
 
     const body = await request.json();
-    const { question_text, option_a, option_b, option_c, option_d, correct_option, marks, explanation } = body;
+    const { question_text, option_a, option_b, option_c, option_d, correct_option, marks, explanation, image_url } = body;
 
     if (!question_text || !option_a || !option_b || !option_c || !option_d || !correct_option) {
       return NextResponse.json(
@@ -53,22 +53,37 @@ export async function POST(
       .select("id", { count: "exact", head: true })
       .eq("exam_id", examId);
 
-    const { data: newQuestion, error } = await supabase
+    const insertPayload: Record<string, any> = {
+      exam_id: examId,
+      question_text: String(question_text).trim(),
+      option_a: String(option_a).trim(),
+      option_b: String(option_b).trim(),
+      option_c: String(option_c).trim(),
+      option_d: String(option_d).trim(),
+      correct_option: upperCorrect,
+      marks: questionMarks,
+      order_index: count || 0,
+      explanation: explanation ? String(explanation).trim() : null,
+      image_url: image_url ? String(image_url).trim() : null,
+    };
+
+    let { data: newQuestion, error } = await supabase
       .from("exam_questions")
-      .insert({
-        exam_id: examId,
-        question_text: String(question_text).trim(),
-        option_a: String(option_a).trim(),
-        option_b: String(option_b).trim(),
-        option_c: String(option_c).trim(),
-        option_d: String(option_d).trim(),
-        correct_option: upperCorrect,
-        marks: questionMarks,
-        order_index: count || 0,
-        explanation: explanation ? String(explanation).trim() : null,
-      })
+      .insert(insertPayload)
       .select()
       .single();
+
+    // Fallback if image_url column doesn't exist yet
+    if (error && error.code === "42703") {
+      delete insertPayload.image_url;
+      const retryResult = await supabase
+        .from("exam_questions")
+        .insert(insertPayload)
+        .select()
+        .single();
+      newQuestion = retryResult.data;
+      error = retryResult.error;
+    }
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 });
@@ -169,7 +184,7 @@ export async function PATCH(
     }
 
     const body = await request.json();
-    const { id, question_text, option_a, option_b, option_c, option_d, correct_option, marks, explanation } = body;
+    const { id, question_text, option_a, option_b, option_c, option_d, correct_option, marks, explanation, image_url } = body;
 
     if (!id) {
       return NextResponse.json({ error: "Question ID is required" }, { status: 400 });
@@ -190,15 +205,30 @@ export async function PATCH(
     }
     if (marks !== undefined) updateData.marks = Math.max(1, Math.min(50, Number(marks) || 1));
     if (explanation !== undefined) updateData.explanation = explanation ? String(explanation).trim() : null;
+    if (image_url !== undefined) updateData.image_url = image_url ? String(image_url).trim() : null;
 
     const supabase = createAdminClient();
-    const { data: updatedQuestion, error } = await supabase
+    let { data: updatedQuestion, error } = await supabase
       .from("exam_questions")
       .update(updateData)
       .eq("id", id)
       .eq("exam_id", examId)
       .select()
       .single();
+
+    // Fallback if image_url column doesn't exist yet
+    if (error && error.code === "42703") {
+      delete updateData.image_url;
+      const retryResult = await supabase
+        .from("exam_questions")
+        .update(updateData)
+        .eq("id", id)
+        .eq("exam_id", examId)
+        .select()
+        .single();
+      updatedQuestion = retryResult.data;
+      error = retryResult.error;
+    }
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 });

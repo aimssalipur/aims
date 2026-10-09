@@ -501,7 +501,7 @@ export default function StaffExamsPage() {
                 >
                   <Link href={`/instructor/exams/${exam.id}`}>
                     <Edit className="h-3.5 w-3.5" />
-                    <span>Manage Questions</span>
+                    <span>Manage & Results</span>
                   </Link>
                 </Button>
               </CardFooter>

@@ -18,7 +18,7 @@ export async function POST(
 
     const studentId = authContext.user.id;
     const body = await request.json();
-    const { answers = {} } = body;
+    const { answers = {}, started_at } = body;
 
     const supabase = createAdminClient();
 
@@ -73,6 +73,16 @@ export async function POST(
     const percentage = totalMarks > 0 ? Number(((score / totalMarks) * 100).toFixed(2)) : 0;
     const passed = percentage >= (exam.pass_percentage || 50);
 
+    const submittedAt = new Date().toISOString();
+    let actualStartedAt = started_at;
+    if (!actualStartedAt || isNaN(new Date(actualStartedAt).getTime())) {
+      actualStartedAt = new Date(Date.now() - (exam.duration_minutes || 30) * 60 * 1000).toISOString();
+    }
+    const timeTakenSeconds = Math.max(
+      1,
+      Math.round((new Date(submittedAt).getTime() - new Date(actualStartedAt).getTime()) / 1000)
+    );
+
     // 4. Save submission
     const { data: submission, error: subError } = await supabase
       .from("exam_submissions")
@@ -84,8 +94,9 @@ export async function POST(
         total_marks: totalMarks,
         percentage: percentage,
         passed: passed,
-        started_at: new Date(Date.now() - (exam.duration_minutes || 30) * 60 * 1000).toISOString(),
-        submitted_at: new Date().toISOString(),
+        started_at: actualStartedAt,
+        submitted_at: submittedAt,
+        time_taken_seconds: timeTakenSeconds,
       })
       .select()
       .single();
@@ -102,6 +113,7 @@ export async function POST(
       total_marks: totalMarks,
       percentage,
       passed,
+      time_taken_seconds: timeTakenSeconds,
       correct_count: correctCount,
       wrong_count: wrongCount,
       unanswered_count: unansweredCount,

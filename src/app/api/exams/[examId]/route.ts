@@ -42,16 +42,37 @@ export async function GET(
       .from("exam_questions")
       .select(
         isStaff
-          ? "id, exam_id, question_text, option_a, option_b, option_c, option_d, correct_option, marks, order_index, explanation, created_at"
-          : "id, exam_id, question_text, option_a, option_b, option_c, option_d, marks, order_index, created_at"
+          ? "id, exam_id, question_text, option_a, option_b, option_c, option_d, correct_option, marks, order_index, explanation, image_url, created_at"
+          : "id, exam_id, question_text, option_a, option_b, option_c, option_d, marks, order_index, image_url, created_at"
       )
       .eq("exam_id", examId)
       .order("order_index", { ascending: true })
       .order("created_at", { ascending: true });
 
-    const { data: questions, error: questionsError } = await questionsQuery;
+    const firstResult = await questionsQuery;
+    let questions = firstResult.data as any;
+    let questionsError = firstResult.error;
+
+    // Graceful backward-compatibility: if image_url column doesn't exist yet in Supabase
+    if (questionsError && questionsError.code === "42703") {
+      const fallbackQuery = supabase
+        .from("exam_questions")
+        .select(
+          isStaff
+            ? "id, exam_id, question_text, option_a, option_b, option_c, option_d, correct_option, marks, order_index, explanation, created_at"
+            : "id, exam_id, question_text, option_a, option_b, option_c, option_d, marks, order_index, created_at"
+        )
+        .eq("exam_id", examId)
+        .order("order_index", { ascending: true })
+        .order("created_at", { ascending: true });
+
+      const fallbackResult = await fallbackQuery;
+      questions = fallbackResult.data as any;
+      questionsError = fallbackResult.error;
+    }
 
     if (questionsError) {
+      console.error("[api/exams/[examId]] Questions query error:", questionsError);
       return NextResponse.json({ error: questionsError.message }, { status: 500 });
     }
 

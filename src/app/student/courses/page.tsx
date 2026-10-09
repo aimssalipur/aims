@@ -51,12 +51,8 @@ export default function StudentCoursesPage() {
       const res = await fetch("/api/student/courses");
       if (res.ok) {
         const data = await res.json();
-        // If student has enrolled courses, display them; otherwise display all academy courses
-        if (data.enrolledCourses && data.enrolledCourses.length > 0) {
-          setCoursesList(data.enrolledCourses);
-        } else if (data.allCourses && data.allCourses.length > 0) {
-          setCoursesList(data.allCourses);
-        }
+        // Only display courses assigned to this student by admin
+        setCoursesList(data.enrolledCourses || []);
       }
       if (!silent) {
         toast({
@@ -163,7 +159,38 @@ export default function StudentCoursesPage() {
         </div>
 
         <TabsContent value="all" className="mt-0 space-y-0">
-          {filteredCourses.length === 0 ? (
+          {coursesList.length === 0 ? (
+            <div className="text-center py-16 px-4 rounded-3xl border-2 border-dashed border-blue-200 bg-blue-50/40">
+              <div className="h-16 w-16 mx-auto rounded-3xl bg-blue-100 flex items-center justify-center mb-4 text-aims-navy shadow-inner">
+                <BookOpen className="h-8 w-8 text-blue-600" />
+              </div>
+              <h3 className="font-extrabold text-slate-900 text-xl mb-1.5">No Courses Assigned Yet</h3>
+              <p className="text-sm text-slate-600 max-w-md mx-auto mb-5 leading-relaxed">
+                Your student account is active, but you have not yet been assigned to a course batch. Only courses assigned to you by the academy administration will be accessible here.
+              </p>
+              <div className="flex flex-wrap items-center justify-center gap-3">
+                <Button
+                  asChild
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl h-10 px-5 shadow-lg shadow-emerald-600/20"
+                >
+                  <a
+                    href="https://wa.me/919437959054?text=Hello%20AIMS,%20my%20student%20account%20needs%20course%20enrollment%20activation."
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    Contact Admissions on WhatsApp
+                  </a>
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => loadCourses(false)}
+                  className="rounded-xl h-10 px-4 font-bold border-slate-300"
+                >
+                  Refresh Courses
+                </Button>
+              </div>
+            </div>
+          ) : filteredCourses.length === 0 ? (
             <div className="text-center py-16 rounded-3xl border-2 border-dashed border-slate-200 bg-white">
               <div className="h-14 w-14 mx-auto rounded-2xl bg-slate-100 flex items-center justify-center mb-3 text-slate-400">
                 <Search className="h-6 w-6" />

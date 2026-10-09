@@ -35,6 +35,9 @@ export interface ReceiptData {
   partyName: string;
   partyRoleOrCourse?: string;
   partyContact?: string;
+  studentRollNo?: string;
+  guardianName?: string;
+  studentAddress?: string;
   category: string;
   amount: number;
   paymentMethod: string;
@@ -246,10 +249,10 @@ ACHYUTANANDA INSTITUTE OF MEDICAL SCIENCE (AIMS)
 OFFICIAL PAYMENT RECEIPT
 ===========================================
 Receipt No  : ${data.receiptNo}
-Date        : ${formattedDate}
+Date & Time : ${formattedDate} at ${formattedTime}
 Title       : ${data.title}
-Party       : ${data.partyName} ${data.partyRoleOrCourse ? `(${data.partyRoleOrCourse})` : ""}
-Category    : ${data.category}
+Party       : ${data.partyName} ${data.studentRollNo ? `[Roll: ${data.studentRollNo}]` : ""} ${data.partyRoleOrCourse ? `(${data.partyRoleOrCourse})` : ""}
+${data.guardianName ? `Guardian    : ${data.guardianName}\n` : ""}${data.studentAddress ? `Address     : ${data.studentAddress}\n` : ""}Category    : ${data.category}
 Amount      : ₹${data.amount.toLocaleString("en-IN")}
 In Words    : ${amountInWords}
 Method      : ${data.paymentMethod}
@@ -271,9 +274,9 @@ aimsacademy.vercel.app | +91 94372 00000`;
   const handleShareWhatsApp = () => {
     const message = `*AIMS SALIPUR - OFFICIAL RECEIPT* 🏥
 *Receipt No:* ${data.receiptNo}
-*Date:* ${formattedDate}
-*Party Name:* ${data.partyName}
-*Purpose/Course:* ${data.partyRoleOrCourse || data.category}
+*Date & Time:* ${formattedDate} at ${formattedTime}
+*Student / Party:* ${data.partyName} ${data.studentRollNo ? `(Roll: ${data.studentRollNo})` : ""}
+${data.guardianName ? `*Guardian:* ${data.guardianName}\n` : ""}*Course / Program:* ${data.partyRoleOrCourse || data.category}
 *Amount Paid:* ₹${data.amount.toLocaleString("en-IN")} (${amountInWords})
 *Payment Mode:* ${data.paymentMethod} ${data.referenceNo ? `(Ref: ${data.referenceNo})` : ""}
 *Status:* ✅ ${data.status || "Recorded & Verified"}
@@ -407,17 +410,34 @@ Official Accounts Department`;
                   {isIncome ? "Received From / Student / Payer:" : "Paid To / Beneficiary:"}
                 </span>
               </div>
-              <div className="text-sm font-black text-slate-900">
-                {data.partyName}
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-sm font-black text-slate-900">
+                  {data.partyName}
+                </span>
+                {data.studentRollNo && (
+                  <Badge variant="outline" className="font-mono font-bold text-[10px] bg-indigo-50 border-indigo-200 text-indigo-800">
+                    Roll: {data.studentRollNo}
+                  </Badge>
+                )}
               </div>
+              {data.guardianName && (
+                <div className="text-slate-600 font-semibold text-[11px]">
+                  Father / Guardian: <span className="text-slate-900 font-bold">{data.guardianName}</span>
+                </div>
+              )}
               {data.partyRoleOrCourse && (
                 <div className="text-indigo-700 font-bold text-[11px]">
-                  Course / Role: {data.partyRoleOrCourse}
+                  Course / Program: {data.partyRoleOrCourse}
                 </div>
               )}
               {data.partyContact && (
                 <div className="text-slate-500 text-[11px]">
                   Contact: {data.partyContact}
+                </div>
+              )}
+              {data.studentAddress && (
+                <div className="text-slate-500 text-[11px]">
+                  Address / City: {data.studentAddress}
                 </div>
               )}
             </div>

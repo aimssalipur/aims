@@ -838,7 +838,24 @@ export default function AdminUsersPage() {
                           {(u.roles?.includes("admin") || u.role === "admin") && "Management & Operations"}
                           {(u.roles?.includes("accountant") || u.role === "accountant") && !u.roles?.includes("admin") && "Finance & Ledger Operations"}
                           {(u.roles?.includes("instructor") || u.role === "instructor") && !u.roles?.includes("admin") && !u.roles?.includes("accountant") && (u.course_of_interest || "Medical Department")}
-                          {(u.roles?.includes("student") || u.role === "student") && !u.roles?.includes("instructor") && !u.roles?.includes("accountant") && !u.roles?.includes("admin") && (u.course_of_interest || "—")}
+                          {(u.roles?.includes("student") || u.role === "student") && !u.roles?.includes("instructor") && !u.roles?.includes("accountant") && !u.roles?.includes("admin") && (
+                            u.enrollments && u.enrollments.length > 0 ? (
+                              <div className="flex flex-col gap-0.5">
+                                <span className="text-emerald-700 font-bold text-xs flex items-center gap-1">
+                                  <BookOpen className="h-3 w-3 text-emerald-600 shrink-0" />
+                                  {u.enrollments.length} Course{u.enrollments.length > 1 ? "s" : ""} Enrolled
+                                </span>
+                                <span className="text-[11px] text-slate-500 truncate max-w-[200px]" title={u.enrollments.map((e: any) => e.course?.title).filter(Boolean).join(", ")}>
+                                  {u.enrollments.map((e: any) => e.course?.title).filter(Boolean).join(", ")}
+                                </span>
+                              </div>
+                            ) : (
+                              <span className="text-amber-600 font-semibold text-xs flex items-center gap-1">
+                                <span className="h-1.5 w-1.5 rounded-full bg-amber-500 shrink-0" />
+                                Not enrolled yet
+                              </span>
+                            )
+                          )}
                         </div>
                       </TableCell>
                       <TableCell>
@@ -880,6 +897,18 @@ export default function AdminUsersPage() {
                                   Approve
                                 </>
                               )}
+                            </Button>
+                          )}
+                          {(u.roles?.includes("student") || u.role === "student") && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-8 text-xs font-bold text-aims-navy border-blue-200 hover:bg-blue-50 gap-1 rounded-lg px-2.5"
+                              onClick={() => openEnrollModal(u)}
+                              title="Assign / Enroll Courses for this Student"
+                            >
+                              <BookOpen className="h-3.5 w-3.5 text-blue-600" />
+                              Assign Course
                             </Button>
                           )}
                           <DropdownMenu>
@@ -976,6 +1005,17 @@ export default function AdminUsersPage() {
                       <p className="text-[10px] sm:text-[11px] text-slate-500 font-medium truncate">
                         {u.email}
                       </p>
+                      {(u.roles?.includes("student") || u.role === "student") && (
+                        <p className="text-[10px] font-semibold truncate pt-0.5">
+                          {u.enrollments && u.enrollments.length > 0 ? (
+                            <span className="text-emerald-700">
+                              📚 {u.enrollments.length} Course{u.enrollments.length > 1 ? "s" : ""}: {u.enrollments.map((e: any) => e.course?.title).filter(Boolean).join(", ")}
+                            </span>
+                          ) : (
+                            <span className="text-amber-600">⚠️ No courses enrolled</span>
+                          )}
+                        </p>
+                      )}
                     </div>
                   </div>
                   <div className="pt-2 border-t border-slate-100 flex items-center justify-between">
@@ -1003,6 +1043,18 @@ export default function AdminUsersPage() {
                           ) : (
                             "Approve"
                           )}
+                        </Button>
+                      )}
+                      {(u.roles?.includes("student") || u.role === "student") && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-7 sm:h-8 text-[11px] sm:text-xs font-bold text-aims-navy border-blue-200 hover:bg-blue-50 gap-1 rounded-lg px-2 sm:px-2.5"
+                          onClick={() => openEnrollModal(u)}
+                          title="Assign Course"
+                        >
+                          <BookOpen className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-blue-600" />
+                          Assign
                         </Button>
                       )}
                       <DropdownMenu>

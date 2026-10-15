@@ -15,12 +15,6 @@ import {
   Share2,
   Copy,
   CheckCircle2,
-  Download,
-  Building2,
-  Landmark,
-  ShieldCheck,
-  QrCode,
-  X,
   FileCheck,
 } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
@@ -445,23 +439,17 @@ Official Accounts Department`;
             <div className="space-y-1.5 sm:border-l sm:border-slate-200 sm:pl-4">
               <div className="flex items-center gap-1.5">
                 <span className="text-slate-400 uppercase text-[9px] font-bold tracking-wider">
-                  Payment Mode & Reference:
+                  Payment Details:
                 </span>
               </div>
               <div className="flex items-center gap-2">
                 <Badge variant="outline" className="font-extrabold text-[10px] bg-white border-slate-300 text-slate-800">
                   {data.paymentMethod}
                 </Badge>
-                <span className="text-[11px] font-mono text-slate-600">
-                  {data.referenceNo ? `Ref: ${data.referenceNo}` : "Direct Payment"}
-                </span>
               </div>
               <div className="text-slate-600 text-[11px]">
                 <span className="font-semibold text-slate-500">Category:</span>{" "}
                 <span className="font-bold text-slate-900">{data.category}</span>
-              </div>
-              <div className="text-slate-500 text-[11px]">
-                <span className="font-semibold">Recorded By:</span> {data.recordedBy || "AIMS Accounts Dept"}
               </div>
             </div>
           </div>
@@ -471,28 +459,14 @@ Official Accounts Department`;
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="bg-slate-900 text-white uppercase text-[10px] font-extrabold tracking-wider">
-                  <th className="py-2.5 px-3 sm:px-4 w-12 text-center">#</th>
-                  <th className="py-2.5 px-3 sm:px-4">Particulars / Description</th>
-                  <th className="py-2.5 px-3 sm:px-4">Category</th>
-                  <th className="py-2.5 px-3 sm:px-4 text-center">Payment Mode</th>
+                  <th className="py-2.5 px-3 sm:px-4">Description</th>
                   <th className="py-2.5 px-3 sm:px-4 text-right">Amount (INR)</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 bg-white font-medium text-slate-700">
                 <tr>
-                  <td className="py-3 px-3 sm:px-4 text-center font-bold text-slate-400">01</td>
                   <td className="py-3 px-3 sm:px-4">
                     <div className="font-bold text-slate-900">{data.description}</div>
-                    <div className="text-[10px] text-slate-400 mt-0.5">
-                      Transaction Type: {data.type.toUpperCase()}
-                      {data.referenceNo && ` · Reference ID: ${data.referenceNo}`}
-                    </div>
-                  </td>
-                  <td className="py-3 px-3 sm:px-4">
-                    <span className="font-semibold text-slate-800">{data.category}</span>
-                  </td>
-                  <td className="py-3 px-3 sm:px-4 text-center">
-                    <span className="font-medium text-slate-600">{data.paymentMethod}</span>
                   </td>
                   <td className="py-3 px-3 sm:px-4 text-right font-extrabold text-slate-900 text-sm whitespace-nowrap">
                     {formattedCurrency(data.amount)}
@@ -502,10 +476,7 @@ Official Accounts Department`;
                 {/* Additional breakdown if provided */}
                 {data.breakdownItems?.map((item, idx) => (
                   <tr key={idx} className="bg-slate-50/50">
-                    <td className="py-2 px-3 sm:px-4 text-center text-slate-400 font-bold">{idx + 2}</td>
                     <td className="py-2 px-3 sm:px-4 text-slate-600">{item.label}</td>
-                    <td className="py-2 px-3 sm:px-4 text-slate-400">-</td>
-                    <td className="py-2 px-3 sm:px-4 text-center text-slate-400">-</td>
                     <td className="py-2 px-3 sm:px-4 text-right font-semibold text-slate-700">
                       {formattedCurrency(item.amount)}
                     </td>
@@ -514,8 +485,8 @@ Official Accounts Department`;
               </tbody>
               <tfoot>
                 <tr className="bg-slate-100/80 font-black text-slate-900 border-t-2 border-slate-300 text-xs sm:text-sm">
-                  <td colSpan={4} className="py-3 px-3 sm:px-4 text-right uppercase tracking-wider">
-                    Total Amount Received / Disbursed:
+                  <td className="py-3 px-3 sm:px-4 text-right uppercase tracking-wider">
+                    Total:
                   </td>
                   <td className="py-3 px-3 sm:px-4 text-right text-base sm:text-lg font-black text-indigo-900 whitespace-nowrap">
                     {formattedCurrency(data.amount)}
@@ -541,59 +512,11 @@ Official Accounts Department`;
             </Badge>
           </div>
 
-          {/* Verification, Seal & Signatures */}
-          <div className="relative z-10 mt-8 pt-6 border-t border-slate-200 grid grid-cols-3 gap-4 items-end text-xs">
-            {/* Security QR / Verification Token */}
-            <div className="space-y-1">
-              <div className="flex items-center gap-2">
-                <div className="h-10 w-10 sm:h-12 sm:w-12 rounded-lg border border-slate-300 p-1 bg-white flex items-center justify-center">
-                  <QrCode className="h-8 w-8 text-slate-800" />
-                </div>
-                <div>
-                  <div className="text-[10px] font-extrabold text-slate-800 uppercase tracking-tight">
-                    Digital Verification
-                  </div>
-                  <div className="text-[9px] font-mono text-slate-400">
-                    AIMS-SEC-{data.receiptNo.slice(-6)}
-                  </div>
-                </div>
-              </div>
-              <p className="text-[9px] text-slate-400 leading-tight">
-                Scan or verify via AIMS Salipur Accounts portal.
-              </p>
-            </div>
-
-            {/* Official Stamp graphic */}
-            <div className="flex flex-col items-center justify-center text-center">
-              <div className="h-16 w-16 sm:h-20 sm:w-20 rounded-full border-2 border-indigo-900/40 p-1 flex items-center justify-center text-indigo-900/60 font-black text-[9px] uppercase tracking-tighter rotate-[-12deg] select-none">
-                <div className="h-full w-full rounded-full border border-dashed border-indigo-900/40 flex flex-col items-center justify-center leading-none">
-                  <span>AIMS</span>
-                  <span className="text-[7px]">SALIPUR</span>
-                  <span className="text-[6px]">ACCOUNTS</span>
-                </div>
-              </div>
-              <span className="text-[9px] text-slate-400 font-semibold mt-1">Official Academy Seal</span>
-            </div>
-
-            {/* Authorized Signatory */}
-            <div className="text-right space-y-1">
-              <div className="h-10 border-b border-slate-400 w-32 sm:w-40 ml-auto flex items-end justify-center pb-1">
-                <span className="font-serif italic text-xs text-indigo-950 font-bold opacity-80">
-                  {data.verifiedBy || "AIMS Accounts"}
-                </span>
-              </div>
-              <div className="text-[10px] font-extrabold text-slate-900 uppercase">
-                Authorized Signatory
-              </div>
-              <div className="text-[9px] text-slate-400">Accounts & Finance Officer</div>
-            </div>
-          </div>
-
-          {/* Bottom Disclaimer */}
+          {/* Bottom Note */}
           <div className="relative z-10 mt-6 pt-3 border-t border-slate-100 text-center text-[9px] text-slate-400 font-medium">
-            This is an authentic, computer-generated official voucher issued by the Accounts Department of Achyutananda Institute of Medical Science (AIMS), Salipur.
+            This is a computer-generated official receipt issued by the Accounts Department of Achyutananda Institute of Medical Science (AIMS), Salipur.
             <br />
-            No physical signature is required for electronic validation. For inquiries: +91 94372 00000 | accounts@aims.edu | aimsacademy.vercel.app
+            For inquiries: +91 94372 00000 · aimsacademy.vercel.app
           </div>
         </div>
 

@@ -23,7 +23,10 @@ import {
   X,
   Loader2,
   RotateCw,
+  Upload,
+  ImageIcon,
 } from "lucide-react";
+import Image from "next/image";
 import { formatDate, initials } from "@/lib/utils";
 import { useState, useEffect } from "react";
 import { useToast } from "@/components/ui/use-toast";
@@ -35,6 +38,7 @@ export default function InstructorAnnouncementsPage() {
   const [draft, setDraft] = useState({
     title: "",
     content: "",
+    image_url: "",
     is_pinned: false,
   });
   const [preview, setPreview] = useState(false);
@@ -42,6 +46,7 @@ export default function InstructorAnnouncementsPage() {
   const [loading, setLoading] = useState(true);
   const [publishing, setPublishing] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [uploadingImage, setUploadingImage] = useState(false);
 
   const fetchAnnouncements = async () => {
     try {
@@ -70,6 +75,42 @@ export default function InstructorAnnouncementsPage() {
     });
   }, []);
 
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploadingImage(true);
+    const formData = new FormData();
+    formData.append("file", file);
+
+    try {
+      const res = await fetch("/api/upload", {
+        method: "POST",
+        body: formData,
+      });
+      const data = await res.json();
+      if (!res.ok || data.error) {
+        throw new Error(data.error || "Upload failed");
+      }
+      if (data?.url) {
+        setDraft((prev) => ({ ...prev, image_url: data.url }));
+        toast({
+          title: "Image Uploaded! 📸",
+          description: "Image attached to this announcement.",
+          variant: "success",
+        });
+      }
+    } catch (err: any) {
+      toast({
+        title: "Upload Failed",
+        description: err.message || "Could not upload image.",
+        variant: "destructive",
+      });
+    } finally {
+      setUploadingImage(false);
+    }
+  };
+
   const publish = async () => {
     if (!draft.title.trim() || !draft.content.trim()) {
       toast({
@@ -88,6 +129,7 @@ export default function InstructorAnnouncementsPage() {
         body: JSON.stringify({
           title: draft.title.trim(),
           content: draft.content.trim(),
+          image_url: draft.image_url.trim() || undefined,
           is_pinned: draft.is_pinned,
         }),
       });
@@ -105,7 +147,7 @@ export default function InstructorAnnouncementsPage() {
           description: `"${draft.title.slice(0, 30)}..." has been published.`,
           variant: "success",
         });
-        setDraft({ title: "", content: "", is_pinned: false });
+        setDraft({ title: "", content: "", image_url: "", is_pinned: false });
         setPreview(false);
         fetchAnnouncements();
         triggerDataRefresh();
@@ -231,6 +273,16 @@ export default function InstructorAnnouncementsPage() {
                         Start typing to see a preview...
                       </p>
                     )}
+                    {draft.image_url && (
+                      <div className="relative w-full h-40 mt-3 rounded-lg overflow-hidden border border-slate-200">
+                        <Image
+                          src={draft.image_url}
+                          alt="Preview"
+                          fill
+                          className="object-cover"
+                        />
+                      </div>
+                    )}
                   </div>
                 ) : (
                   <Textarea
@@ -256,10 +308,68 @@ export default function InstructorAnnouncementsPage() {
                 </label>
               </div>
 
+              {/* Image attachment */}
+              <div className="space-y-2">
+                <Label className="text-xs uppercase tracking-wider text-slate-500 font-bold">
+                  Attach Image <span className="text-slate-400 normal-case font-normal">(optional)</span>
+                </Label>
+                {draft.image_url ? (
+                  <div className="relative rounded-xl overflow-hidden border border-slate-200 group">
+                    <div className="relative w-full h-44">
+                      <Image
+                        src={draft.image_url}
+                        alt="Announcement image preview"
+                        fill
+                        className="object-cover"
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setDraft({ ...draft, image_url: "" })}
+                      className="absolute top-2 right-2 h-8 w-8 rounded-lg bg-black/60 hover:bg-black/80 text-white flex items-center justify-center transition-colors"
+                      title="Remove image"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
+                ) : (
+                  <div className="relative flex items-center gap-3 p-4 rounded-xl border-2 border-dashed border-slate-200 hover:border-aims-green/40 bg-slate-50/50 cursor-pointer transition-colors">
+                    <div className="h-12 w-12 shrink-0 rounded-xl bg-slate-100 flex items-center justify-center">
+                      {uploadingImage ? (
+                        <Loader2 className="h-6 w-6 text-aims-green animate-spin" />
+                      ) : (
+                        <Upload className="h-6 w-6 text-slate-400" />
+                      )}
+                    </div>
+                    <div className="flex-1">
+                      <p className="font-bold text-sm text-slate-900 mb-0.5">
+                        {uploadingImage ? "Uploading image..." : "Click to attach an image"}
+                      </p>
+                      <p className="text-xs text-slate-500">PNG, JPG, WEBP up to 5MB</p>
+                    </div>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleImageUpload}
+                      disabled={uploadingImage}
+                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                    />
+                  </div>
+                )}
+                {!draft.image_url && (
+                  <Input
+                    placeholder="Or paste image URL directly..."
+                    className="h-9 text-xs"
+                    value={draft.image_url}
+                    onChange={(e) => setDraft({ ...draft, image_url: e.target.value })}
+                  />
+                )}
+              </div>
+
               <div className="flex items-center gap-2 pt-2 border-t border-slate-100">
                 <button
                   type="button"
-                  onClick={() => setDraft({ title: "", content: "", is_pinned: false })}
+                  onClick={() => setDraft({ title: "", content: "", image_url: "", is_pinned: false })}
                   className="flex items-center gap-1.5 px-3 h-9 rounded-xl text-xs font-bold text-slate-500 hover:text-red-600 hover:bg-red-50 transition-colors"
                 >
                   <X className="h-3.5 w-3.5" />
@@ -269,7 +379,7 @@ export default function InstructorAnnouncementsPage() {
                 <Button
                   variant="primary"
                   size="sm"
-                  disabled={publishing}
+                  disabled={publishing || uploadingImage}
                   onClick={publish}
                   className="gap-1.5 h-10 px-5 rounded-xl bg-aims-green hover:bg-aims-green/90 shadow-lg shadow-aims-green/20 font-bold"
                 >
@@ -369,6 +479,17 @@ export default function InstructorAnnouncementsPage() {
                       <p className="text-slate-600 leading-relaxed text-xs sm:text-sm whitespace-pre-wrap">
                         {ann.content}
                       </p>
+
+                      {ann.image_url && (
+                        <div className="relative w-full h-48 rounded-lg overflow-hidden border border-slate-100">
+                          <Image
+                            src={ann.image_url}
+                            alt={ann.title}
+                            fill
+                            className="object-cover"
+                          />
+                        </div>
+                      )}
 
                       <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-400">
                         <span>Posted by: <strong className="text-slate-600">{ann.creator?.full_name || "Faculty / Admin"}</strong></span>

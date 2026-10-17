@@ -30,7 +30,11 @@ import {
   Loader2,
   RotateCw,
   Pin,
+  Upload,
+  X,
+  ImageIcon,
 } from "lucide-react";
+import Image from "next/image";
 import { formatDate } from "@/lib/utils";
 import { useToast } from "@/components/ui/use-toast";
 import { subscribeToDataRefresh, triggerDataRefresh } from "@/lib/refresh-event";
@@ -42,10 +46,12 @@ export default function AdminAnnouncementsPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [uploadingImage, setUploadingImage] = useState(false);
 
   const [form, setForm] = useState({
     title: "",
     content: "",
+    image_url: "",
     is_pinned: false,
   });
 
@@ -76,6 +82,42 @@ export default function AdminAnnouncementsPage() {
     });
   }, []);
 
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploadingImage(true);
+    const formData = new FormData();
+    formData.append("file", file);
+
+    try {
+      const res = await fetch("/api/upload", {
+        method: "POST",
+        body: formData,
+      });
+      const data = await res.json();
+      if (!res.ok || data.error) {
+        throw new Error(data.error || "Upload failed");
+      }
+      if (data?.url) {
+        setForm((prev) => ({ ...prev, image_url: data.url }));
+        toast({
+          title: "Image Uploaded! 📸",
+          description: "Image attached to this announcement.",
+          variant: "success",
+        });
+      }
+    } catch (err: any) {
+      toast({
+        title: "Upload Failed",
+        description: err.message || "Could not upload image.",
+        variant: "destructive",
+      });
+    } finally {
+      setUploadingImage(false);
+    }
+  };
+
   const handleCreateAnnouncement = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.title.trim() || !form.content.trim()) {
@@ -95,6 +137,7 @@ export default function AdminAnnouncementsPage() {
         body: JSON.stringify({
           title: form.title.trim(),
           content: form.content.trim(),
+          image_url: form.image_url.trim() || undefined,
           is_pinned: form.is_pinned,
         }),
       });
@@ -115,6 +158,7 @@ export default function AdminAnnouncementsPage() {
         setForm({
           title: "",
           content: "",
+          image_url: "",
           is_pinned: false,
         });
         fetchAnnouncements();
@@ -263,10 +307,68 @@ export default function AdminAnnouncementsPage() {
                   </label>
                 </div>
 
+                {/* Image attachment */}
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-bold text-slate-700 uppercase tracking-wider">
+                    Attach Image <span className="text-slate-400 font-normal normal-case">(optional)</span>
+                  </Label>
+                  {form.image_url ? (
+                    <div className="relative rounded-xl overflow-hidden border border-slate-200 group">
+                      <div className="relative w-full h-48">
+                        <Image
+                          src={form.image_url}
+                          alt="Announcement image preview"
+                          fill
+                          className="object-cover"
+                        />
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setForm({ ...form, image_url: "" })}
+                        className="absolute top-2 right-2 h-8 w-8 rounded-lg bg-black/60 hover:bg-black/80 text-white flex items-center justify-center transition-colors"
+                        title="Remove image"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="relative flex items-center gap-3 p-4 rounded-xl border-2 border-dashed border-slate-200 hover:border-amber-500/40 bg-slate-50/50 cursor-pointer transition-colors">
+                      <div className="h-12 w-12 shrink-0 rounded-xl bg-slate-100 flex items-center justify-center">
+                        {uploadingImage ? (
+                          <Loader2 className="h-6 w-6 text-amber-600 animate-spin" />
+                        ) : (
+                          <Upload className="h-6 w-6 text-slate-400" />
+                        )}
+                      </div>
+                      <div className="flex-1">
+                        <p className="font-bold text-sm text-slate-900 mb-0.5">
+                          {uploadingImage ? "Uploading image..." : "Click to attach an image"}
+                        </p>
+                        <p className="text-xs text-slate-500">PNG, JPG, WEBP up to 5MB</p>
+                      </div>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleImageUpload}
+                        disabled={uploadingImage}
+                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                      />
+                    </div>
+                  )}
+                  {!form.image_url && (
+                    <Input
+                      placeholder="Or paste image URL directly..."
+                      className="h-9 text-xs"
+                      value={form.image_url}
+                      onChange={(e) => setForm({ ...form, image_url: e.target.value })}
+                    />
+                  )}
+                </div>
+
                 <Button
                   type="submit"
                   variant="primary"
-                  disabled={isSubmitting}
+                  disabled={isSubmitting || uploadingImage}
                   className="w-full h-11 rounded-xl gap-2 font-bold bg-amber-600 hover:bg-amber-700 text-white shadow-lg shadow-amber-600/20"
                 >
                   {isSubmitting ? (
@@ -361,6 +463,16 @@ export default function AdminAnnouncementsPage() {
                     <p className="text-slate-600 text-xs sm:text-sm leading-relaxed whitespace-pre-line">
                       {item.content}
                     </p>
+                    {item.image_url && (
+                      <div className="relative w-full h-48 mt-3 rounded-lg overflow-hidden border border-slate-100">
+                        <Image
+                          src={item.image_url}
+                          alt={item.title}
+                          fill
+                          className="object-cover"
+                        />
+                      </div>
+                    )}
                     <div className="pt-2 mt-2 border-t border-slate-50 text-[11px] text-slate-400">
                       Author: <strong className="text-slate-600">{item.creator?.full_name || "Admin"}</strong>
                     </div>

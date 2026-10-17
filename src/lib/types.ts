@@ -83,6 +83,7 @@ export interface Announcement {
   id: string;
   title: string;
   content: string;
+  image_url?: string | null;
   created_by: string;
   created_at: string;
   author?: Profile;

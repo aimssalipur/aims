@@ -10,7 +10,7 @@ export async function GET() {
     const supabase = createAdminClient();
     const { data, error } = await supabase
       .from("announcements")
-      .select("id, title, content, created_at, created_by, author:profiles!created_by(id, full_name, email, role, avatar_url)")
+      .select("id, title, content, image_url, created_at, created_by, author:profiles!created_by(id, full_name, email, role, avatar_url)")
       .order("created_at", { ascending: false });
 
     if (error) {
@@ -42,7 +42,7 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json();
-    const { title, content } = body;
+    const { title, content, image_url } = body;
 
     if (!title || !content || !String(title).trim() || !String(content).trim()) {
       return NextResponse.json({ error: "Title and content are required." }, { status: 400 });
@@ -54,6 +54,7 @@ export async function POST(request: Request) {
       .insert({
         title: String(title).trim(),
         content: String(content).trim(),
+        image_url: image_url ? String(image_url).trim() : null,
         created_by: authContext.user.id,
       })
       .select("*, author:profiles!created_by(id, full_name, email, role, avatar_url)")

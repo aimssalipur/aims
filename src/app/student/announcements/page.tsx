@@ -28,6 +28,7 @@ import {
   Eye,
   Check,
   Loader2,
+  ImageIcon,
 } from "lucide-react";
 import {
   Dialog,
@@ -39,6 +40,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { formatDate } from "@/lib/utils";
 import { useToast } from "@/components/ui/use-toast";
+import Image from "next/image";
 
 const announceTypeIcon: Record<string, any> = {
   Admission: GraduationCap,
@@ -65,6 +67,7 @@ export default function StudentAnnouncementsPage() {
   const [visibleCount, setVisibleCount] = useState(6);
   const [announcements, setAnnouncements] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [downloadingImageId, setDownloadingImageId] = useState<string | null>(null);
 
   useEffect(() => {
     async function load() {
@@ -142,6 +145,40 @@ export default function StudentAnnouncementsPage() {
       description: "Official announcement text saved to your downloads.",
       variant: "success",
     });
+  };
+
+  const handleDownloadImage = async (ann: any) => {
+    if (!ann.image_url) return;
+    setDownloadingImageId(ann.id);
+    try {
+      const res = await fetch(ann.image_url);
+      if (!res.ok) throw new Error("Failed to fetch image");
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      const ext = ann.image_url.split(".").pop()?.split("?")[0] || "jpg";
+      a.download = `${ann.title.slice(0, 30).replace(/[^a-zA-Z0-9]/g, "_")}.${ext}`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      toast({
+        title: "Image Downloaded 🖼️",
+        description: "Announcement image saved to your downloads.",
+        variant: "success",
+      });
+    } catch {
+      // Fallback: open the image in a new tab so the user can save manually
+      window.open(ann.image_url, "_blank");
+      toast({
+        title: "Opening Image",
+        description: "Image opened in a new tab. Long-press or right-click to save.",
+        variant: "default",
+      });
+    } finally {
+      setDownloadingImageId(null);
+    }
   };
 
   return (
@@ -330,6 +367,16 @@ export default function StudentAnnouncementsPage() {
                       <p className="text-slate-600 leading-relaxed text-[15px] mb-4">
                         {ann.content}
                       </p>
+                      {ann.image_url && (
+                        <div className="relative w-full h-56 mb-4 rounded-2xl overflow-hidden border border-slate-100">
+                          <Image
+                            src={ann.image_url}
+                            alt={ann.title}
+                            fill
+                            className="object-cover"
+                          />
+                        </div>
+                      )}
                       <div className="flex flex-wrap gap-2 pt-4 border-t border-slate-100">
                         <button
                           type="button"
@@ -347,6 +394,21 @@ export default function StudentAnnouncementsPage() {
                           <Download className="h-3.5 w-3.5" />
                           Download Notice
                         </button>
+                        {ann.image_url && (
+                          <button
+                            type="button"
+                            onClick={() => handleDownloadImage(ann)}
+                            disabled={downloadingImageId === ann.id}
+                            className="inline-flex items-center gap-2 px-4 h-9 rounded-xl border border-slate-200 hover:border-slate-300 hover:bg-slate-50 font-bold text-sm text-slate-600 transition-colors cursor-pointer disabled:opacity-60"
+                          >
+                            {downloadingImageId === ann.id ? (
+                              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                            ) : (
+                              <ImageIcon className="h-3.5 w-3.5" />
+                            )}
+                            Download Image
+                          </button>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -397,15 +459,43 @@ export default function StudentAnnouncementsPage() {
           <div className="py-4 text-slate-700 leading-relaxed text-sm whitespace-pre-line border-y border-slate-100 my-2">
             {activeDialogAnn?.content}
           </div>
+          {activeDialogAnn?.image_url && (
+            <div className="relative w-full h-64 rounded-xl overflow-hidden border border-slate-100 my-2">
+              <Image
+                src={activeDialogAnn.image_url}
+                alt={activeDialogAnn?.title || "Announcement image"}
+                fill
+                className="object-cover"
+              />
+            </div>
+          )}
           <div className="flex items-center justify-between gap-3 pt-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => handleDownloadPDF(activeDialogAnn)}
-              className="gap-1.5"
-            >
-              <Download className="h-4 w-4" /> Download Notice
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handleDownloadPDF(activeDialogAnn)}
+                className="gap-1.5"
+              >
+                <Download className="h-4 w-4" /> Download Notice
+              </Button>
+              {activeDialogAnn?.image_url && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleDownloadImage(activeDialogAnn)}
+                  disabled={downloadingImageId === activeDialogAnn?.id}
+                  className="gap-1.5"
+                >
+                  {downloadingImageId === activeDialogAnn?.id ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <ImageIcon className="h-4 w-4" />
+                  )}
+                  Download Image
+                </Button>
+              )}
+            </div>
             <Button
               variant="primary"
               size="sm"

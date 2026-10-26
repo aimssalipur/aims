@@ -255,7 +255,7 @@ Description : ${data.description}
 Status      : ${data.status || "Verified & Recorded"}
 ===========================================
 Issued by AIMS Salipur Accounting Department
-aimsacademy.vercel.app | +91 94372 00000`;
+aimsacademy.vercel.app | 0671-2505956 / +91 84804 05956`;
 
     navigator.clipboard.writeText(text);
     toast({
@@ -371,7 +371,7 @@ Official Accounts Department`;
                 <p className="text-[10px] sm:text-[11px] text-slate-500 font-medium leading-tight mt-1">
                   At/Po: Salipur, Dist: Cuttack, Odisha - 754202 
                   <br />
-                  Phone: +91 94372 00000 / +91 91240 00000 · Email: aimssalipur@gmail.com
+                  Phone: 0671-2505956 / +91 84804 05956 · Email: aimssalipur@gmail.com
                 </p>
               </div>
             </div>
@@ -516,7 +516,7 @@ Official Accounts Department`;
           <div className="relative z-10 mt-6 pt-3 border-t border-slate-100 text-center text-[9px] text-slate-400 font-medium">
             This is a computer-generated official receipt issued by the Accounts Department of Achyutananda Institute of Medical Science (AIMS), Salipur.
             <br />
-            For inquiries: +91 94372 00000 · aimsacademy.vercel.app
+            For inquiries: 0671-2505956 / +91 84804 05956 · aimsacademy.vercel.app
           </div>
         </div>
 

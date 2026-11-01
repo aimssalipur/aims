@@ -10,6 +10,9 @@ import {
   CalendarDays,
   GraduationCap,
   RotateCw,
+  PanelLeftClose,
+  PanelLeftOpen,
+  Video,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,6 +21,8 @@ import { cn } from "@/lib/utils";
 import type { UserRole } from "@/lib/types";
 import { useToast } from "@/components/ui/use-toast";
 import { triggerDataRefresh } from "@/lib/refresh-event";
+import { useSidebarStore } from "@/lib/sidebar-store";
+import { useActiveLiveClass } from "@/lib/use-active-live-class";
 
 interface DashboardTopbarProps {
   role: UserRole;
@@ -27,11 +32,37 @@ interface DashboardTopbarProps {
 export function DashboardTopbar({ role, userName }: DashboardTopbarProps) {
   const router = useRouter();
   const { toast } = useToast();
+  const { isOpen, toggleSidebar, setIsOpen } = useSidebarStore();
+  const { activeClass } = useActiveLiveClass(role);
   const [searchQuery, setSearchQuery] = useState("");
   const [greetingText, setGreetingText] = useState("Welcome");
   const [todayText, setTodayText] = useState("");
   const [isRefreshing, setIsRefreshing] = useState(false);
   const first = userName.split(" ")[0];
+
+  // Sync saved sidebar state on mount
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem("aims_dashboard_sidebar_open");
+      if (saved !== null) {
+        setIsOpen(saved === "true");
+      }
+    } catch {}
+  }, [setIsOpen]);
+
+  // Keyboard shortcut Ctrl+B / Cmd+B to toggle sidebar
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement;
+      if (target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA")) return;
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "b") {
+        e.preventDefault();
+        toggleSidebar();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [toggleSidebar]);
 
   const handleRefreshData = () => {
     if (isRefreshing) return;
@@ -102,8 +133,24 @@ export function DashboardTopbar({ role, userName }: DashboardTopbarProps) {
   return (
     <div className="hidden lg:block sticky top-0 z-20 bg-white/80 backdrop-blur-xl border-b border-slate-100/80">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 px-4 sm:px-6 xl:px-8 py-4 sm:py-5">
-        {/* Left: Greeting */}
+        {/* Left: Sidebar Toggle + Greeting */}
         <div className="flex items-start sm:items-center gap-3">
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            onClick={toggleSidebar}
+            className="h-11 w-11 rounded-xl text-slate-600 hover:text-aims-navy hover:bg-slate-100 transition-colors shrink-0"
+            title={isOpen ? "Close Sidebar (Ctrl+B)" : "Open Sidebar (Ctrl+B)"}
+            aria-label="Toggle navigation sidebar"
+          >
+            {isOpen ? (
+              <PanelLeftClose className="h-5 w-5 text-slate-700" />
+            ) : (
+              <PanelLeftOpen className="h-5 w-5 text-slate-700" />
+            )}
+          </Button>
+
           <div className="hidden sm:flex h-12 w-12 shrink-0 rounded-2xl bg-gradient-to-br from-aims-navy/10 to-aims-green/10 items-center justify-center">
             <GraduationCap className="h-6 w-6 text-aims-navy" strokeWidth={2} />
           </div>
@@ -129,6 +176,37 @@ export function DashboardTopbar({ role, userName }: DashboardTopbarProps) {
             </div>
           </div>
         </div>
+
+        {/* Center: Realtime Active Live Class Alert */}
+        {activeClass && (
+          <Link
+            href={
+              role === "instructor" || role === "admin"
+                ? `/instructor/live/${activeClass.id}`
+                : `/student/live/${activeClass.id}`
+            }
+            className="flex items-center gap-3 px-3.5 py-2 rounded-2xl bg-gradient-to-r from-red-600 via-rose-600 to-red-600 hover:from-red-500 hover:to-rose-500 text-white shadow-lg shadow-red-500/20 hover:shadow-red-500/30 transition-all border border-red-400/30 group shrink-0"
+            title={`Enter Ongoing Live Class: ${activeClass.title}`}
+          >
+            <span className="flex h-2.5 w-2.5 relative shrink-0">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-85"></span>
+              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-white"></span>
+            </span>
+            <div className="flex flex-col text-left max-w-[180px] lg:max-w-[240px] xl:max-w-[320px] truncate">
+              <span className="text-[9px] font-black uppercase tracking-wider text-rose-100 flex items-center gap-1.5">
+                <span className="bg-white/20 px-1.5 py-0.5 rounded text-[8px] font-extrabold">LIVE NOW</span>
+                <span className="truncate opacity-85">{activeClass.course_title}</span>
+              </span>
+              <span className="text-xs font-black text-white truncate leading-tight mt-0.5">
+                {activeClass.title}
+              </span>
+            </div>
+            <span className="bg-white text-red-600 group-hover:bg-amber-300 group-hover:text-slate-950 text-xs font-black px-2.5 py-1 rounded-xl ml-1 flex items-center gap-1.5 shrink-0 shadow-sm transition-colors">
+              <Video className="h-3.5 w-3.5" />
+              <span>Enter Class →</span>
+            </span>
+          </Link>
+        )}
 
         {/* Right: Search + actions */}
         <div className="flex items-center gap-3">

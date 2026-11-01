@@ -49,9 +49,13 @@ import {
   RotateCw,
   Landmark,
   FileCheck2,
+  PanelLeftClose,
+  PanelLeftOpen,
 } from "lucide-react";
 import { useState } from "react";
 import { triggerDataRefresh } from "@/lib/refresh-event";
+import { useSidebarStore } from "@/lib/sidebar-store";
+import { useActiveLiveClass } from "@/lib/use-active-live-class";
 
 interface NavItem {
   href: string;
@@ -144,6 +148,8 @@ export function DashboardSidebar({ role, user }: DashboardSidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
   const { toast } = useToast();
+  const { isOpen, toggleSidebar } = useSidebarStore();
+  const { activeClass } = useActiveLiveClass(role);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const theme = roleTheme[role];
@@ -204,18 +210,31 @@ export function DashboardSidebar({ role, user }: DashboardSidebarProps) {
           </div>
         ) : (
           <>
-            <div className="flex items-center gap-2 mb-5">
-              <div className="bg-white/95 backdrop-blur rounded-xl p-1.5 shadow-xl ring-2 ring-white/20">
-                <Logo showText={false} size="sm" />
+            <div className="flex items-center justify-between mb-5">
+              <div className="flex items-center gap-2">
+                <div className="bg-white/95 backdrop-blur rounded-xl p-1.5 shadow-xl ring-2 ring-white/20">
+                  <Logo showText={false} size="sm" />
+                </div>
+                <div>
+                  <h2 className="font-extrabold text-white text-base leading-tight">
+                    AIMS
+                  </h2>
+                  <p className="text-[10px] uppercase tracking-wider text-white/60 font-semibold">
+                    {theme.welcome}
+                  </p>
+                </div>
               </div>
-              <div>
-                <h2 className="font-extrabold text-white text-base leading-tight">
-                  AIMS
-                </h2>
-                <p className="text-[10px] uppercase tracking-wider text-white/60 font-semibold">
-                  {theme.welcome}
-                </p>
-              </div>
+
+              {/* Close sidebar toggle button */}
+              <button
+                type="button"
+                onClick={toggleSidebar}
+                className="h-8 w-8 rounded-xl bg-white/10 hover:bg-white/20 text-white/80 hover:text-white flex items-center justify-center transition-all cursor-pointer"
+                title="Collapse Sidebar (Ctrl+B)"
+                aria-label="Collapse Navigation Sidebar"
+              >
+                <PanelLeftClose className="h-4 w-4" />
+              </button>
             </div>
             <span
               className={cn(
@@ -322,17 +341,29 @@ export function DashboardSidebar({ role, user }: DashboardSidebarProps) {
               <span>Main Site</span>
             </Link>
             <Link
-              href={role === "instructor" ? "/instructor/courses" : role === "admin" ? "/admin" : "/student/courses"}
+              href={
+                activeClass
+                  ? role === "instructor" || role === "admin"
+                    ? `/instructor/live/${activeClass.id}`
+                    : `/student/live/${activeClass.id}`
+                  : role === "instructor"
+                    ? "/instructor/courses"
+                    : role === "admin"
+                      ? "/admin"
+                      : "/student/courses"
+              }
               onClick={() => mobile && setSheetOpen(false)}
               className={cn(
                 "flex items-center justify-center gap-1.5 py-2 px-2.5 rounded-xl font-bold text-xs transition-all duration-200",
-                mobile
-                  ? "bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200/60"
-                  : "bg-emerald-500/20 text-emerald-200 hover:bg-emerald-500/30 border border-emerald-400/20"
+                activeClass
+                  ? "bg-red-600 text-white hover:bg-red-500 shadow-md animate-pulse border border-red-400/50"
+                  : mobile
+                    ? "bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200/60"
+                    : "bg-emerald-500/20 text-emerald-200 hover:bg-emerald-500/30 border border-emerald-400/20"
               )}
             >
               <Video className="h-3.5 w-3.5 shrink-0" />
-              <span>Live Class</span>
+              <span>{activeClass ? "🔴 Live Now" : "Live Class"}</span>
             </Link>
           </div>
         </div>
@@ -507,17 +538,20 @@ export function DashboardSidebar({ role, user }: DashboardSidebarProps) {
 
   return (
     <>
-      {/* Desktop sidebar */}
+      {/* Desktop sidebar with smooth collapse / expand animation */}
       <aside
         className={cn(
-          "hidden lg:flex lg:flex-col w-72 xl:w-80 min-h-screen shrink-0 bg-gradient-to-b sticky top-0 z-30",
-          theme.gradient
+          "hidden lg:flex lg:flex-col min-h-screen shrink-0 bg-gradient-to-b sticky top-0 z-30 transition-[width,opacity] duration-300 ease-in-out overflow-hidden",
+          theme.gradient,
+          isOpen
+            ? "w-72 xl:w-80 opacity-100"
+            : "w-0 opacity-0 pointer-events-none"
         )}
       >
         {/* Decorative blobs */}
         <div className="absolute top-20 -right-20 w-48 h-48 bg-white/10 rounded-full blur-3xl pointer-events-none" />
         <div className="absolute bottom-40 -left-16 w-40 h-40 bg-white/10 rounded-full blur-3xl pointer-events-none" />
-        <div className="relative flex flex-col flex-1 min-h-screen">
+        <div className="relative flex flex-col flex-1 min-h-screen w-72 xl:w-80 min-w-[18rem] xl:min-w-[20rem]">
           <NavContent />
         </div>
       </aside>
@@ -566,6 +600,29 @@ export function DashboardSidebar({ role, user }: DashboardSidebarProps) {
             </Link>
           </div>
         </div>
+
+        {/* Mobile Ongoing Live Class Alert Bar */}
+        {activeClass && (
+          <Link
+            href={
+              role === "instructor" || role === "admin"
+                ? `/instructor/live/${activeClass.id}`
+                : `/student/live/${activeClass.id}`
+            }
+            className="flex items-center justify-between px-3 py-1.5 bg-gradient-to-r from-red-600 via-rose-600 to-red-600 text-white text-xs font-bold shadow-md"
+          >
+            <div className="flex items-center gap-2 truncate">
+              <span className="flex h-2 w-2 relative shrink-0">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-90"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-white"></span>
+              </span>
+              <span className="truncate">🔴 LIVE CLASS: {activeClass.title}</span>
+            </div>
+            <span className="bg-white text-red-600 text-[10px] font-black px-2 py-0.5 rounded-md shrink-0 ml-2 shadow-xs">
+              Join Now →
+            </span>
+          </Link>
+        )}
       </div>
     </>
   );

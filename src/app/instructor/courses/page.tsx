@@ -50,7 +50,8 @@ import {
 import { useState, useEffect } from "react";
 import { useToast } from "@/components/ui/use-toast";
 import Link from "next/link";
-import { subscribeToDataRefresh } from "@/lib/refresh-event";
+import { subscribeToDataRefresh, triggerDataRefresh } from "@/lib/refresh-event";
+import { extractYouTubeId } from "@/lib/youtube";
 
 export default function InstructorCoursesPage() {
   const { toast } = useToast();
@@ -358,7 +359,8 @@ export default function InstructorCoursesPage() {
   const [liveClassForm, setLiveClassForm] = useState({
     title: "",
     scheduled_start: "",
-    scheduled_end: ""
+    scheduled_end: "",
+    youtube_url: "",
   });
   const [scheduling, setScheduling] = useState(false);
   const [liveClasses, setLiveClasses] = useState<any[]>([]);
@@ -465,7 +467,7 @@ export default function InstructorCoursesPage() {
           description: "Students are now notified and can join at the scheduled time.",
           variant: "success"
         });
-        setLiveClassForm({ title: "", scheduled_start: "", scheduled_end: "" });
+        setLiveClassForm({ title: "", scheduled_start: "", scheduled_end: "", youtube_url: "" });
         setShowScheduleForm(false);
         fetchLiveClasses(selectedCourse.id);
       }
@@ -477,6 +479,44 @@ export default function InstructorCoursesPage() {
       });
     } finally {
       setScheduling(false);
+    }
+  };
+
+  const [deletingLiveClassId, setDeletingLiveClassId] = useState<string | null>(null);
+
+  const handleDeleteLiveClass = async (classId: string, classTitle: string) => {
+    if (!confirm(`Are you sure you want to delete the live class "${classTitle}"? This cannot be undone.`)) return;
+
+    setDeletingLiveClassId(classId);
+    try {
+      const res = await fetch(`/api/courses/${selectedCourse.id}/live-classes?id=${classId}`, {
+        method: "DELETE"
+      });
+      if (res.ok) {
+        toast({
+          title: "Live Class Deleted",
+          description: `"${classTitle}" has been removed.`,
+          variant: "success"
+        });
+        fetchLiveClasses(selectedCourse.id);
+        triggerDataRefresh();
+      } else {
+        const data = await res.json().catch(() => ({}));
+        toast({
+          title: "Delete Failed",
+          description: data.error || "Could not delete this live class.",
+          variant: "destructive"
+        });
+      }
+    } catch (err) {
+      console.error(err);
+      toast({
+        title: "Network Error",
+        description: "Failed to connect to server.",
+        variant: "destructive"
+      });
+    } finally {
+      setDeletingLiveClassId(null);
     }
   };
 
@@ -931,7 +971,7 @@ export default function InstructorCoursesPage() {
             </DialogTitle>
             <DialogDescription className="text-slate-400">
               {showScheduleForm 
-                ? `Schedule a free and secure Jitsi live class for ${selectedCourse?.title}.`
+                ? `Schedule a secure OBS & YouTube Live class for ${selectedCourse?.title}.`
                 : `Manage and host live lectures for ${selectedCourse?.title}.`
               }
             </DialogDescription>
@@ -950,21 +990,49 @@ export default function InstructorCoursesPage() {
                 ) : (
                   <div className="grid gap-2">
                     {liveClasses.map((cls) => (
-                      <div key={cls.id} className="flex items-center justify-between p-3 rounded-xl bg-slate-950 border border-slate-800/80">
-                        <div className="min-w-0">
-                          <p className="text-xs font-bold text-white truncate">{cls.title}</p>
+                      <div key={cls.id} className="flex items-center justify-between p-3 rounded-xl bg-slate-950 border border-slate-800/80 gap-3">
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2">
+                            <p className="text-xs font-bold text-white truncate">{cls.title}</p>
+                            {cls.room_password && extractYouTubeId(cls.room_password) ? (
+                              <span className="text-[9px] bg-emerald-500/15 text-emerald-400 font-bold px-1.5 py-0.5 rounded border border-emerald-500/30 shrink-0">
+                                Stream Ready
+                              </span>
+                            ) : (
+                              <span className="text-[9px] bg-slate-800 text-slate-400 font-medium px-1.5 py-0.5 rounded border border-slate-700 shrink-0">
+                                OBS Pending
+                              </span>
+                            )}
+                          </div>
                           <p className="text-[10px] text-slate-500 mt-1">
                             {new Date(cls.scheduled_start).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })}
                           </p>
                         </div>
-                        <Button 
-                          asChild
-                          className="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold h-9 px-3 rounded-lg flex items-center gap-1.5"
-                        >
-                          <Link href={`/instructor/live/${cls.id}`}>
-                            <ExternalLink className="h-3.5 w-3.5" /> Start Host
-                          </Link>
-                        </Button>
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          <Button 
+                            asChild
+                            className="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold h-8.5 px-3 rounded-lg flex items-center gap-1.5"
+                          >
+                            <Link href={`/instructor/live/${cls.id}`}>
+                              <ExternalLink className="h-3.5 w-3.5" /> Start Host
+                            </Link>
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            disabled={deletingLiveClassId === cls.id}
+                            onClick={() => handleDeleteLiveClass(cls.id, cls.title)}
+                            className="h-8.5 w-8.5 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 transition-colors"
+                            title="Delete Live Class"
+                          >
+                            {deletingLiveClassId === cls.id ? (
+                              <Loader2 className="h-3.5 w-3.5 animate-spin text-rose-400" />
+                            ) : (
+                              <Trash2 className="h-3.5 w-3.5" />
+                            )}
+                          </Button>
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -997,6 +1065,7 @@ export default function InstructorCoursesPage() {
                       const oneHourLater = new Date(now.getTime() + 60 * 60 * 1000);
                       const endIso = `${oneHourLater.getFullYear()}-${pad(oneHourLater.getMonth() + 1)}-${pad(oneHourLater.getDate())}T${pad(oneHourLater.getHours())}:${pad(oneHourLater.getMinutes())}`;
                       setLiveClassForm({
+                        ...liveClassForm,
                         title: liveClassForm.title || `Live Session - ${now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`,
                         scheduled_start: startIso,
                         scheduled_end: endIso,
@@ -1049,6 +1118,21 @@ export default function InstructorCoursesPage() {
                     value={liveClassForm.scheduled_end}
                     onChange={(e) => setLiveClassForm({...liveClassForm, scheduled_end: e.target.value})}
                   />
+                </div>
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-slate-300 font-bold">YouTube Live Link or Video ID (Optional)</Label>
+                    <span className="text-[10px] text-emerald-400 font-bold">OBS Studio</span>
+                  </div>
+                  <Input 
+                    placeholder="e.g. https://youtu.be/... (or paste inside live console later)" 
+                    className="bg-slate-950 border-slate-800 text-white h-11"
+                    value={liveClassForm.youtube_url}
+                    onChange={(e) => setLiveClassForm({...liveClassForm, youtube_url: e.target.value})}
+                  />
+                  <p className="text-[11px] text-slate-500">
+                    Set up an <strong>Unlisted</strong> live stream on YouTube and broadcast via OBS. Only enrolled students will see it.
+                  </p>
                 </div>
               </div>
               <DialogFooter className="pt-2 flex-col sm:flex-row gap-2">

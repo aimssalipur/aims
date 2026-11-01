@@ -62,7 +62,7 @@ export async function POST(
 
   try {
     const body = await request.json();
-    const { title, scheduled_start, scheduled_end } = body;
+    const { title, scheduled_start, scheduled_end, youtube_url } = body;
 
     if (!title || !scheduled_start || !scheduled_end) {
       return NextResponse.json(
@@ -71,9 +71,10 @@ export async function POST(
       );
     }
 
-    // Generate cryptographically secure randomized Room Name and Password
+    // Generate unique stream room identifier
     const roomName = `aims-class-${crypto.randomUUID()}`;
-    const roomPassword = crypto.randomBytes(4).toString("hex").toUpperCase();
+    // Store YouTube URL or ID in room_password
+    const streamSource = youtube_url ? String(youtube_url).trim() : "";
 
     const { data: newClass, error: insertError } = await supabase
       .from("live_classes")
@@ -81,7 +82,7 @@ export async function POST(
         course_id: courseId,
         title: String(title).trim().slice(0, 200),
         room_name: roomName,
-        room_password: roomPassword,
+        room_password: streamSource,
         scheduled_start,
         scheduled_end,
       })
@@ -95,5 +96,45 @@ export async function POST(
     return NextResponse.json(newClass);
   } catch (err: any) {
     return NextResponse.json({ error: "Failed to process live class request." }, { status: 500 });
+  }
+}
+
+// 3. DELETE: Cancel/Delete a scheduled live class (Staff only)
+export async function DELETE(
+  request: Request,
+  { params }: { params: { courseId: string } }
+) {
+  const { courseId } = params;
+  const { context, errorResponse } = await requireRole(["admin", "instructor"]);
+  if (errorResponse) return errorResponse;
+
+  const { supabase } = context;
+
+  try {
+    const { searchParams } = new URL(request.url);
+    const id = searchParams.get("id");
+
+    if (!id) {
+      return NextResponse.json(
+        { error: "Missing query parameter: id" },
+        { status: 400 }
+      );
+    }
+
+    const { error: deleteError } = await supabase
+      .from("live_classes")
+      .delete()
+      .eq("id", id)
+      .eq("course_id", courseId);
+
+    if (deleteError) {
+      console.error("[api/courses/[courseId]/live-classes] DELETE error:", deleteError);
+      return NextResponse.json({ error: "Failed to delete live class." }, { status: 500 });
+    }
+
+    return NextResponse.json({ success: true });
+  } catch (err: any) {
+    console.error("[api/courses/[courseId]/live-classes] Unexpected error on DELETE:", err);
+    return NextResponse.json({ error: "Failed to process live class deletion." }, { status: 500 });
   }
 }

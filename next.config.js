@@ -52,7 +52,7 @@ const nextConfig = {
           },
           {
             key: 'Permissions-Policy',
-            value: 'camera=(self "https://meet.jit.si" "https://*.jit.si" "https://8x8.vc"), microphone=(self "https://meet.jit.si" "https://*.jit.si" "https://8x8.vc"), display-capture=(self "https://meet.jit.si" "https://*.jit.si" "https://8x8.vc"), geolocation=()',
+            value: 'camera=(self "https://meet.jit.si" "https://*.jit.si" "https://8x8.vc"), microphone=(self "https://meet.jit.si" "https://*.jit.si" "https://8x8.vc"), display-capture=(self "https://meet.jit.si" "https://*.jit.si" "https://8x8.vc"), fullscreen=*, geolocation=()',
           },
         ],
       },

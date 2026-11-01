@@ -122,7 +122,7 @@ export default function PrivacyPolicyPage() {
                 Sharing and Disclosing Data
               </h2>
               <p className="text-sm text-slate-600 leading-relaxed">
-                <b>We do not sell, rent, or lease your personal information.</b> We only share minimal metadata with trusted infrastructure subprocessors (e.g., Supabase database hosting, Jitsi video APIs) required to deliver educational services.
+                <b>We do not sell, rent, or lease your personal information.</b> We only share minimal metadata with trusted infrastructure subprocessors (e.g., Supabase database hosting, secure video streaming APIs) required to deliver educational services.
               </p>
             </div>
 

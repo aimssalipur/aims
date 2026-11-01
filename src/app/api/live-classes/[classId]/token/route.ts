@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
+import { extractYouTubeId } from "@/lib/youtube";
 
 export async function GET(
   request: Request,
@@ -27,7 +28,7 @@ export async function GET(
   // 2. Fetch user role
   const { data: profile } = await supabase
     .from("profiles")
-    .select("role, full_name, email, avatar_url")
+    .select("role, full_name, email, whatsapp, avatar_url")
     .eq("id", user.id)
     .single();
 
@@ -54,15 +55,25 @@ export async function GET(
     }
   }
 
-  // 4. Return secure credentials for Jitsi
+  const youtubeUrl = liveClass.room_password || "";
+  const youtubeId = extractYouTubeId(youtubeUrl);
+
+  // 4. Return secure credentials & live stream info
   return NextResponse.json({
     classId: liveClass.id,
+    courseId: liveClass.course_id,
+    courseTitle: liveClass.courses?.title || "",
     title: liveClass.title,
     roomName: liveClass.room_name,
     roomPassword: liveClass.room_password,
+    youtubeUrl,
+    youtubeId,
+    scheduledStart: liveClass.scheduled_start,
+    scheduledEnd: liveClass.scheduled_end,
     user: {
       name: profile.full_name,
       email: profile.email,
+      phone: profile.whatsapp || "",
       avatar: profile.avatar_url,
       role: profile.role,
     },

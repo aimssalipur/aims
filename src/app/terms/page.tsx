@@ -99,7 +99,7 @@ export default function TermsOfServicePage() {
                 Classroom Conduct & Streaming Ethics
               </h2>
               <p className="text-sm text-slate-600 leading-relaxed">
-                Live classrooms operate under strict authentication checks. Students must join Jitsi lectures using their authenticated profile name.
+                Live classrooms operate under strict authentication checks. Students must join live lectures using their authenticated AIMS student credentials. Dynamic anti-leak watermarks carrying student identity details are embedded into each stream.
               </p>
               
               <div className="p-5 rounded-2xl border border-red-200/50 bg-red-50/40 text-red-900 flex gap-4">

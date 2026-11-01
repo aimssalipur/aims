@@ -1,11 +1,14 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { ProtectedVideoPlayer } from "@/components/ui/protected-video-player";
+import { createClient } from "@/lib/supabase/client";
+import { extractYouTubeId } from "@/lib/youtube";
 import { 
   PlayCircle, 
   Video, 
@@ -18,7 +21,9 @@ import {
   Loader2,
   Lock,
   Volume2,
-  FileText
+  FileText,
+  ChevronDown,
+  ChevronUp
 } from "lucide-react";
 
 export default function StudentCourseDetailPage({
@@ -28,10 +33,12 @@ export default function StudentCourseDetailPage({
 }) {
   const { courseId } = params;
   const router = useRouter();
+  const supabase = createClient();
   
   const [loading, setLoading] = useState(true);
   const [course, setCourse] = useState<any>(null);
   const [isRestricted, setIsRestricted] = useState(false);
+  const [studentProfile, setStudentProfile] = useState<{ name: string; email: string; phone?: string } | null>(null);
   
   // Database data
   const [youtubeResources, setYoutubeResources] = useState<any[]>([]);
@@ -39,6 +46,25 @@ export default function StudentCourseDetailPage({
   
   // Active playing video state
   const [selectedVideo, setSelectedVideo] = useState<any>(null);
+  
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => {
+      if (data?.user) {
+        supabase
+          .from("profiles")
+          .select("full_name, email, whatsapp")
+          .eq("id", data.user.id)
+          .single()
+          .then(({ data: prof }) => {
+            if (prof) {
+              setStudentProfile({ name: prof.full_name, email: prof.email, phone: prof.whatsapp || "" });
+            } else {
+              setStudentProfile({ name: data.user.email || "Student", email: data.user.email || "" });
+            }
+          });
+      }
+    });
+  }, [supabase]);
   
   useEffect(() => {
     const fetchData = async () => {
@@ -97,15 +123,7 @@ export default function StudentCourseDetailPage({
     return () => clearInterval(pollInterval);
   }, [courseId]);
 
-  // Extract YouTube ID helper
-  const getYoutubeId = (url: string) => {
-    if (!url) return "";
-    const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
-    const match = url.match(regExp);
-    return (match && match[2].length === 11) ? match[2] : "";
-  };
-
-  const activeVideoId = selectedVideo ? getYoutubeId(selectedVideo.youtube_url) : "";
+  const activeVideoId = selectedVideo ? extractYouTubeId(selectedVideo.youtube_url) : "";
 
   // Helper to determine if class is live now
   const getLiveClassStatus = (classObj: any) => {
@@ -130,6 +148,115 @@ export default function StudentCourseDetailPage({
     } else {
       return "UPCOMING";
     }
+  };
+
+  // Group live classes date-wise
+  const groupedLiveClasses = useMemo(() => {
+    if (!liveClasses || liveClasses.length === 0) return [];
+
+    // Sort newest to oldest so recent and upcoming classes are at the top
+    const sorted = [...liveClasses].sort((a, b) => {
+      return new Date(b.scheduled_start).getTime() - new Date(a.scheduled_start).getTime();
+    });
+
+    const groupsMap = new Map<string, {
+      dateKey: string;
+      dateLabel: string;
+      fullDayLabel: string;
+      isToday: boolean;
+      isYesterday: boolean;
+      hasLive: boolean;
+      classes: any[];
+    }>();
+
+    const now = new Date();
+    const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+    const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+    const yesterdayStr = `${yesterday.getFullYear()}-${String(yesterday.getMonth() + 1).padStart(2, "0")}-${String(yesterday.getDate()).padStart(2, "0")}`;
+
+    sorted.forEach((cls) => {
+      const classDate = new Date(cls.scheduled_start);
+      if (isNaN(classDate.getTime())) return;
+
+      const dateKey = `${classDate.getFullYear()}-${String(classDate.getMonth() + 1).padStart(2, "0")}-${String(classDate.getDate()).padStart(2, "0")}`;
+
+      const dateLabel = classDate.toLocaleDateString("en-IN", {
+        day: "numeric",
+        month: "short",
+        year: "numeric",
+      });
+
+      const fullDayLabel = classDate.toLocaleDateString("en-IN", {
+        weekday: "short",
+        day: "numeric",
+        month: "short",
+        year: "numeric",
+      });
+
+      const status = getLiveClassStatus(cls);
+      const isLive = status === "LIVE";
+
+      if (!groupsMap.has(dateKey)) {
+        groupsMap.set(dateKey, {
+          dateKey,
+          dateLabel,
+          fullDayLabel,
+          isToday: dateKey === todayStr,
+          isYesterday: dateKey === yesterdayStr,
+          hasLive: isLive,
+          classes: [cls],
+        });
+      } else {
+        const group = groupsMap.get(dateKey)!;
+        if (isLive) group.hasLive = true;
+        group.classes.push(cls);
+      }
+    });
+
+    return Array.from(groupsMap.values());
+  }, [liveClasses]);
+
+  // Dropdown / Accordion state for date groups
+  const [expandedDates, setExpandedDates] = useState<Record<string, boolean>>({});
+
+  // Auto-expand Today, Live, or the first group
+  useEffect(() => {
+    if (groupedLiveClasses.length === 0) return;
+
+    setExpandedDates((prev) => {
+      const next = { ...prev };
+      let anyExpanded = Object.values(next).some(Boolean);
+
+      groupedLiveClasses.forEach((group, index) => {
+        if (next[group.dateKey] === undefined) {
+          // Auto-expand if active live session, today, or top most recent date
+          if (group.hasLive || group.isToday || (!anyExpanded && index === 0)) {
+            next[group.dateKey] = true;
+            anyExpanded = true;
+          } else {
+            next[group.dateKey] = false;
+          }
+        }
+      });
+
+      return next;
+    });
+  }, [groupedLiveClasses]);
+
+  const toggleDateGroup = (dateKey: string) => {
+    setExpandedDates((prev) => ({
+      ...prev,
+      [dateKey]: !prev[dateKey],
+    }));
+  };
+
+  const toggleAllDates = () => {
+    const allExpanded = groupedLiveClasses.every((g) => expandedDates[g.dateKey]);
+    const next: Record<string, boolean> = {};
+    groupedLiveClasses.forEach((g) => {
+      next[g.dateKey] = !allExpanded;
+    });
+    setExpandedDates(next);
   };
 
   if (loading) {
@@ -271,44 +398,36 @@ export default function StudentCourseDetailPage({
         {/* Main lecture viewer - left column */}
         <div className="lg:col-span-2 space-y-6">
           {selectedVideo ? (
-            <Card className="border-slate-100 overflow-hidden shadow-xl rounded-2xl">
-              {/* YouTube secure wrapper */}
-              <div className="relative aspect-video bg-black w-full overflow-hidden">
-                <iframe
-                  src={`https://www.youtube.com/embed/${activeVideoId}?modestbranding=1&rel=0&disablekb=1&showinfo=0`}
-                  title={selectedVideo.title}
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                  allowFullScreen
-                  className="absolute inset-0 w-full h-full border-0"
-                />
-                {/* Transparent overlay protecting video from direct clicks / link extraction */}
-                <div 
-                  className="absolute inset-0 w-full h-full bg-transparent pointer-events-auto"
-                  onContextMenu={(e) => e.preventDefault()}
-                  style={{ pointerEvents: 'none' }} /* Allows full controls while block right click via listener */
-                />
-              </div>
-              <CardHeader className="p-5 md:p-6 pb-4">
-                <div className="flex items-start justify-between gap-4">
-                  <div className="space-y-1">
-                    <Badge variant="default" className="text-[10px] font-extrabold uppercase tracking-wider">
-                      Now Streaming
-                    </Badge>
-                    <CardTitle className="text-lg md:text-xl font-extrabold text-slate-900 pt-1 leading-tight">
-                      {selectedVideo.title}
-                    </CardTitle>
+            <div className="space-y-6">
+              {/* AIMS Protected Video Player (Shields against YouTube sharing, right click, and direct links) */}
+              <ProtectedVideoPlayer
+                videoId={activeVideoId}
+                title={selectedVideo.title}
+                watermark={studentProfile || undefined}
+              />
+              <Card className="border-slate-100 shadow-xl rounded-2xl">
+                <CardHeader className="p-5 md:p-6 pb-4">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="space-y-1">
+                      <Badge variant="default" className="text-[10px] font-extrabold uppercase tracking-wider">
+                        Now Streaming
+                      </Badge>
+                      <CardTitle className="text-lg md:text-xl font-extrabold text-slate-900 pt-1 leading-tight">
+                        {selectedVideo.title}
+                      </CardTitle>
+                    </div>
                   </div>
-                </div>
-              </CardHeader>
-              {selectedVideo.description && (
-                <CardContent className="p-6 pt-0 border-t border-slate-100 mt-2">
-                  <h4 className="text-xs font-extrabold text-slate-400 uppercase tracking-wider mb-2">Lecture Description</h4>
-                  <p className="text-slate-600 text-sm leading-relaxed">
-                    {selectedVideo.description}
-                  </p>
-                </CardContent>
-              )}
-            </Card>
+                </CardHeader>
+                {selectedVideo.description && (
+                  <CardContent className="p-6 pt-0 border-t border-slate-100 mt-2">
+                    <h4 className="text-xs font-extrabold text-slate-400 uppercase tracking-wider mb-2">Lecture Description</h4>
+                    <p className="text-slate-600 text-sm leading-relaxed">
+                      {selectedVideo.description}
+                    </p>
+                  </CardContent>
+                )}
+              </Card>
+            </div>
           ) : (
             <Card className="border-slate-100 p-12 text-center shadow-md bg-slate-50/50 rounded-2xl flex flex-col items-center justify-center min-h-[300px]">
               <PlayCircle className="h-14 w-14 text-slate-300 mb-3" />
@@ -319,76 +438,182 @@ export default function StudentCourseDetailPage({
             </Card>
           )}
 
-          {/* Secure Live Class List Section */}
+          {/* Secure Live Class List Section - Grouped Date-wise with Accordion Dropdown */}
           <Card className="border-slate-100 shadow-lg rounded-2xl overflow-hidden">
-            <CardHeader className="border-b border-slate-100 p-5 md:p-6 bg-slate-50/50">
-              <div className="flex items-center gap-2">
-                <Video className="h-5 w-5 text-emerald-600 animate-pulse" />
-                <CardTitle className="text-base font-extrabold text-slate-900">
-                  Scheduled Secure Live Classes
-                </CardTitle>
+            <CardHeader className="border-b border-slate-100 p-4 sm:p-5 bg-slate-50/50 flex flex-row items-center justify-between gap-3">
+              <div className="flex items-center gap-2.5">
+                <div className="h-8 w-8 rounded-xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center shrink-0">
+                  <Video className="h-4.5 w-4.5 animate-pulse" />
+                </div>
+                <div>
+                  <CardTitle className="text-sm sm:text-base font-extrabold text-slate-900 leading-tight">
+                    Scheduled Secure Live Classes
+                  </CardTitle>
+                  <p className="text-[11px] text-slate-500 font-medium">
+                    Organized date-wise • Tap any date to view sessions
+                  </p>
+                </div>
               </div>
+
+              {groupedLiveClasses.length > 1 && (
+                <button
+                  type="button"
+                  onClick={toggleAllDates}
+                  className="text-xs font-bold text-emerald-600 hover:text-emerald-700 bg-emerald-50 hover:bg-emerald-100 px-2.5 py-1 rounded-lg transition-colors shrink-0 cursor-pointer"
+                >
+                  {groupedLiveClasses.every((g) => expandedDates[g.dateKey])
+                    ? "Collapse All"
+                    : "Expand All"}
+                </button>
+              )}
             </CardHeader>
             <CardContent className="p-0">
-              {liveClasses.length === 0 ? (
+              {groupedLiveClasses.length === 0 ? (
                 <div className="p-8 text-center text-slate-500 font-semibold italic text-sm">
                   No live classes scheduled for this course.
                 </div>
               ) : (
                 <div className="divide-y divide-slate-100">
-                  {liveClasses.map((cls) => {
-                    const status = getLiveClassStatus(cls);
+                  {groupedLiveClasses.map((group) => {
+                    const isExpanded = !!expandedDates[group.dateKey];
                     return (
-                      <div key={cls.id} className="p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-slate-50/50 transition-colors">
-                        <div className="space-y-1.5">
-                          <div className="flex items-center gap-2">
-                            <span className="font-extrabold text-slate-900 text-sm">{cls.title}</span>
-                            {status === "LIVE" && (
-                              <Badge className="bg-emerald-500 text-white animate-pulse text-[9px] font-extrabold border-0">
-                                LIVE NOW
-                              </Badge>
-                            )}
-                            {status === "UPCOMING" && (
-                              <Badge variant="outline" className="text-slate-500 text-[9px] font-extrabold">
-                                UPCOMING
-                              </Badge>
-                            )}
-                            {status === "COMPLETED" && (
-                              <Badge className="bg-slate-100 text-slate-500 text-[9px] font-extrabold border-0">
-                                COMPLETED
-                              </Badge>
-                            )}
-                          </div>
-                          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-500 font-semibold">
-                            <span className="flex items-center gap-1">
-                              <Calendar className="h-3.5 w-3.5" />
-                              {new Date(cls.scheduled_start).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
-                            </span>
-                            <span className="flex items-center gap-1">
-                              <Clock className="h-3.5 w-3.5" />
-                              {new Date(cls.scheduled_start).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} - {new Date(cls.scheduled_end).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                            </span>
-                          </div>
-                        </div>
+                      <div key={group.dateKey} className="transition-all">
+                        {/* Dropdown / Accordion Trigger Header */}
+                        <button
+                          type="button"
+                          onClick={() => toggleDateGroup(group.dateKey)}
+                          className="w-full p-4 sm:p-4.5 flex items-center justify-between text-left hover:bg-slate-50/80 transition-colors cursor-pointer group"
+                        >
+                          <div className="flex items-center gap-3 min-w-0">
+                            <div
+                              className={`h-9 w-9 rounded-xl flex items-center justify-center shrink-0 transition-colors ${
+                                group.hasLive
+                                  ? "bg-red-50 text-red-600"
+                                  : group.isToday
+                                  ? "bg-emerald-50 text-emerald-700"
+                                  : "bg-slate-100 text-slate-600"
+                              }`}
+                            >
+                              <Calendar className="h-4 w-4" />
+                            </div>
 
-                        {status === "LIVE" ? (
-                          <Button asChild className="bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-xs h-9 px-4 rounded-xl shadow-md gap-1.5 animate-bounce">
-                            <Link href={`/student/live/${cls.id}`}>
-                              <Video className="h-3.5 w-3.5" /> Join Live Classroom
-                            </Link>
-                          </Button>
-                        ) : status === "UPCOMING" ? (
-                          <Button asChild className="bg-blue-600 hover:bg-blue-500 text-white font-extrabold text-xs h-9 px-4 rounded-xl shadow gap-1.5">
-                            <Link href={`/student/live/${cls.id}`}>
-                              <Video className="h-3.5 w-3.5" /> Enter Classroom Early
-                            </Link>
-                          </Button>
-                        ) : (
-                          <Button asChild variant="outline" className="border-slate-200 text-slate-600 hover:bg-slate-100 text-xs font-bold h-9 px-3 rounded-xl">
-                            <Link href={`/student/live/${cls.id}`}>
-                              Re-enter Class
-                            </Link>
-                          </Button>
+                            <div className="min-w-0">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <span className="font-extrabold text-slate-900 text-sm group-hover:text-emerald-700 transition-colors">
+                                  {group.fullDayLabel}
+                                </span>
+                                {group.isToday && (
+                                  <Badge className="bg-emerald-100 text-emerald-800 text-[9px] font-extrabold border-emerald-200">
+                                    TODAY
+                                  </Badge>
+                                )}
+                                {group.isYesterday && (
+                                  <Badge variant="outline" className="text-slate-500 text-[9px] font-bold">
+                                    YESTERDAY
+                                  </Badge>
+                                )}
+                                {group.hasLive && (
+                                  <Badge className="bg-red-600 text-white animate-pulse text-[9px] font-extrabold border-0 flex items-center gap-1">
+                                    <span className="h-1.5 w-1.5 rounded-full bg-white animate-ping" /> LIVE NOW
+                                  </Badge>
+                                )}
+                              </div>
+                              <span className="text-[11px] text-slate-400 font-semibold">
+                                {group.classes.length} {group.classes.length === 1 ? "session" : "sessions"}
+                              </span>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-2 shrink-0 ml-3">
+                            <span className="text-[11px] font-bold text-slate-400 hidden sm:inline">
+                              {isExpanded ? "Hide" : "View"}
+                            </span>
+                            <div className="h-7 w-7 rounded-lg bg-slate-100 flex items-center justify-center text-slate-500 group-hover:bg-slate-200 transition-colors">
+                              {isExpanded ? (
+                                <ChevronUp className="h-4 w-4" />
+                              ) : (
+                                <ChevronDown className="h-4 w-4" />
+                              )}
+                            </div>
+                          </div>
+                        </button>
+
+                        {/* Collapsible Content */}
+                        {isExpanded && (
+                          <div className="divide-y divide-slate-100 bg-slate-50/50 border-t border-slate-100 pl-4 sm:pl-16 pr-4 sm:pr-6 py-1">
+                            {group.classes.map((cls) => {
+                              const status = getLiveClassStatus(cls);
+                              return (
+                                <div
+                                  key={cls.id}
+                                  className="py-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+                                >
+                                  <div className="space-y-1 min-w-0">
+                                    <div className="flex items-center gap-2">
+                                      <span className="font-extrabold text-slate-900 text-sm truncate">
+                                        {cls.title}
+                                      </span>
+                                      {status === "LIVE" && (
+                                        <Badge className="bg-emerald-500 text-white animate-pulse text-[9px] font-extrabold border-0">
+                                          LIVE NOW
+                                        </Badge>
+                                      )}
+                                      {status === "UPCOMING" && (
+                                        <Badge variant="outline" className="text-slate-500 text-[9px] font-extrabold">
+                                          UPCOMING
+                                        </Badge>
+                                      )}
+                                      {status === "COMPLETED" && (
+                                        <Badge className="bg-slate-200 text-slate-600 text-[9px] font-extrabold border-0">
+                                          COMPLETED
+                                        </Badge>
+                                      )}
+                                    </div>
+                                    <div className="flex items-center gap-1.5 text-xs text-slate-500 font-semibold">
+                                      <Clock className="h-3.5 w-3.5 text-slate-400" />
+                                      <span>
+                                        {new Date(cls.scheduled_start).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                                        {" - "}
+                                        {new Date(cls.scheduled_end).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                                      </span>
+                                    </div>
+                                  </div>
+
+                                  <div className="shrink-0">
+                                    {status === "LIVE" ? (
+                                      <Button
+                                        asChild
+                                        className="bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-xs h-8.5 px-4 rounded-xl shadow-md gap-1.5 animate-bounce"
+                                      >
+                                        <Link href={`/student/live/${cls.id}`}>
+                                          <Video className="h-3.5 w-3.5" /> Join Live Classroom
+                                        </Link>
+                                      </Button>
+                                    ) : status === "UPCOMING" ? (
+                                      <Button
+                                        asChild
+                                        className="bg-blue-600 hover:bg-blue-500 text-white font-extrabold text-xs h-8.5 px-4 rounded-xl shadow gap-1.5"
+                                      >
+                                        <Link href={`/student/live/${cls.id}`}>
+                                          <Video className="h-3.5 w-3.5" /> Enter Classroom Early
+                                        </Link>
+                                      </Button>
+                                    ) : (
+                                      <Button
+                                        asChild
+                                        variant="outline"
+                                        className="border-slate-200 text-slate-600 hover:bg-white text-xs font-bold h-8 px-3 rounded-xl shadow-2xs"
+                                      >
+                                        <Link href={`/student/live/${cls.id}`}>
+                                          Re-enter Class
+                                        </Link>
+                                      </Button>
+                                    )}
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
                         )}
                       </div>
                     );

@@ -20,9 +20,9 @@ export const siteConfig = {
     longitude: 85.9961,
   },
   social: {
-    facebook: "https://www.facebook.com/profile.php?id=61592858652995",
-    instagram: "https://www.instagram.com/aimssalipur",
-    youtube: "https://www.youtube.com/@AIMS_Official",
+    facebook: "",
+    instagram: "https://www.instagram.com/aimssalipur/",
+    youtube: "https://youtube.com/@aimssalipur",
     whatsapp: "https://wa.me/919437959054",
   },
   openingHours: "Mon - Sat: 8:00 AM - 7:00 PM",

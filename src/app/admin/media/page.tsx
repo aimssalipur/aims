@@ -94,16 +94,16 @@ const IMAGE_PRESETS: Record<string, { label: string; url: string }[]> = {
   ],
   media: [
     {
-      label: "YouTube Studio Demo",
-      url: "https://images.unsplash.com/photo-1588776814546-1ffcf47267a5?w=1200&h=675&fit=crop",
+      label: "AIMS Nursing Exam Prep (VIJWDvnelrA)",
+      url: "https://img.youtube.com/vi/VIJWDvnelrA/maxresdefault.jpg",
     },
     {
-      label: "Campus Garden & Library",
-      url: "https://images.unsplash.com/photo-1541339907198-e08756dedf3f?w=800&h=800&fit=crop",
+      label: "AIMS Academy Sisua Salipur (1OuAlkKlDME)",
+      url: "https://img.youtube.com/vi/1OuAlkKlDME/hqdefault.jpg",
     },
     {
-      label: "Students Group Discussion",
-      url: "https://images.unsplash.com/photo-1523240795612-9a054b0db644?w=800&h=800&fit=crop",
+      label: "AIMS Nursing Coaching (tAg5qCrAwe0)",
+      url: "https://img.youtube.com/vi/tAg5qCrAwe0/hqdefault.jpg",
     },
   ],
 };

@@ -87,9 +87,9 @@ export default function AdminSettingsPage() {
     email: "aimssalipur@gmail.com",
     address: "Salipur, Cuttack District, Odisha, India - 754202",
     about: "AIMS Salipur is Odisha's premier coaching academy for Nursing Officer competitive recruitment and entrance examinations. We prepare candidates for exams like OSSSC, AIIMS NORCET, ESIC, MNS, RRB, and OJEE with result-oriented guidelines, mock tests, and interactive secure classrooms.",
-    facebookUrl: "https://www.facebook.com/profile.php?id=61592858652995",
-    instagramUrl: "https://www.instagram.com/aimssalipur?stkn=MTgxZXE3cmhxN3dlcg==",
-    youtubeUrl: "https://www.youtube.com/@AIMS_Official",
+    facebookUrl: "",
+    instagramUrl: "https://www.instagram.com/aimssalipur/",
+    youtubeUrl: "https://youtube.com/@aimssalipur",
     whatsappUrl: "https://wa.me/919437959054",
   });
 

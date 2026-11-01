@@ -22,7 +22,7 @@ import {
   CheckCircle2,
   CalendarDays,
   Instagram,
-  Facebook,
+  Youtube,
 } from "lucide-react";
 import { useGSAP } from "@/lib/use-gsap-animation";
 import { siteConfig } from "@/lib/site-config";
@@ -265,16 +265,16 @@ export function ContactSection() {
               {/* Social Channels Card */}
               <div className="grid grid-cols-2 gap-2.5 sm:gap-3">
                 <a
-                  href="https://www.facebook.com/profile.php?id=61592858652995"
+                  href="https://youtube.com/@aimssalipur"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="p-3 rounded-xl bg-blue-50 border border-blue-100 hover:bg-blue-100/70 transition-colors flex items-center gap-2.5 text-blue-700 font-bold text-xs group"
+                  className="p-3 rounded-xl bg-red-50 border border-red-100 hover:bg-red-100/70 transition-colors flex items-center gap-2.5 text-red-700 font-bold text-xs group"
                 >
-                  <Facebook className="h-4 w-4 shrink-0 text-blue-600 transition-transform group-hover:scale-110" />
-                  <span className="truncate">Facebook</span>
+                  <Youtube className="h-4 w-4 shrink-0 text-red-600 transition-transform group-hover:scale-110" />
+                  <span className="truncate">YouTube</span>
                 </a>
                 <a
-                  href="https://www.instagram.com/aimssalipur?stkn=MTgxZXE3cmhxN3dlcg=="
+                  href="https://www.instagram.com/aimssalipur/"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="p-3 rounded-xl bg-pink-50 border border-pink-100 hover:bg-pink-100/70 transition-colors flex items-center gap-2.5 text-pink-700 font-bold text-xs group"

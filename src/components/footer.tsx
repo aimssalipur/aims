@@ -6,7 +6,6 @@ import {
   MapPin,
   Youtube,
   Instagram,
-  Facebook,
   Heart,
   GraduationCap,
   BookOpen,
@@ -60,16 +59,7 @@ export function Footer() {
             {/* Social Icons with comfortable 40px+ touch targets */}
             <div className="flex items-center gap-2.5 sm:gap-3">
               <a
-                href="https://www.facebook.com/profile.php?id=61592858652995"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="h-10 w-10 rounded-xl bg-white/10 hover:bg-blue-600 active:scale-95 flex items-center justify-center transition-all duration-200"
-                aria-label="AIMS Salipur Facebook Page"
-              >
-                <Facebook className="h-5 w-5 text-white" />
-              </a>
-              <a
-                href="https://www.instagram.com/aimssalipur?stkn=MTgxZXE3cmhxN3dlcg=="
+                href="https://www.instagram.com/aimssalipur/"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="h-10 w-10 rounded-xl bg-white/10 hover:bg-gradient-to-tr hover:from-amber-500 hover:via-pink-500 hover:to-purple-600 active:scale-95 flex items-center justify-center transition-all duration-200"
@@ -78,7 +68,7 @@ export function Footer() {
                 <Instagram className="h-5 w-5 text-white" />
               </a>
               <a
-                href="https://www.youtube.com/@AIMS_Official"
+                href="https://youtube.com/@aimssalipur"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="h-10 w-10 rounded-xl bg-white/10 hover:bg-red-500 active:scale-95 flex items-center justify-center transition-all duration-200"

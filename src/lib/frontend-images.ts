@@ -46,15 +46,15 @@ export const DEFAULT_FRONTEND_IMAGES: Record<string, string> = {
 
   // Media Section
   youtube_thumb:
-    "https://images.unsplash.com/photo-1588776814546-1ffcf47267a5?w=1200&h=675&fit=crop",
+    "https://img.youtube.com/vi/VIJWDvnelrA/maxresdefault.jpg",
   instagram_1:
-    "https://images.unsplash.com/photo-1584515979956-d9f6e5d09982?w=800&h=800&fit=crop",
+    "https://img.youtube.com/vi/1OuAlkKlDME/hqdefault.jpg",
   instagram_2:
-    "https://images.unsplash.com/photo-1582750433449-648ed127bb54?w=600&h=600&fit=crop",
+    "https://img.youtube.com/vi/tAg5qCrAwe0/hqdefault.jpg",
   instagram_3:
-    "https://images.unsplash.com/photo-1576091160550-2173dba999ef?w=600&h=600&fit=crop",
+    "https://img.youtube.com/vi/72VCYc34MeA/hqdefault.jpg",
   instagram_4:
-    "https://images.unsplash.com/photo-1516549655169-df83a0774514?w=600&h=600&fit=crop",
+    "https://img.youtube.com/vi/bGFM7PuZpBU/hqdefault.jpg",
 };
 
 export const FRONTEND_IMAGE_CATALOG: FrontendImageItem[] = [

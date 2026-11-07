@@ -76,7 +76,7 @@ export default function LoginPage() {
       // Successfully authenticated. Now fetch user's profile to get their role and approval status.
       const { data: profile, error: profileError } = await supabase
         .from("profiles")
-        .select("role, approved")
+        .select("role, approved, is_active")
         .eq("id", data.user.id)
         .single();
 
@@ -88,6 +88,17 @@ export default function LoginPage() {
           variant: "destructive",
         });
         setIsLoading(false);
+        return;
+      }
+
+      if (profile && profile.is_active === false) {
+        toast({
+          title: "Account Inactive ⚠️",
+          description: "Your account is currently inactive. You can only view the public site. Please contact administration for assistance.",
+          variant: "destructive",
+        });
+        router.push("/?error=account_inactive");
+        router.refresh();
         return;
       }
 

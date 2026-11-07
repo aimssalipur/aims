@@ -80,7 +80,7 @@ export async function updateSession(request: NextRequest) {
       // 1. Check profiles table for canonical role
       const { data: profile } = await supabase
         .from("profiles")
-        .select("role, approved")
+        .select("role, approved, is_active")
         .eq("id", user.id)
         .single();
 
@@ -114,6 +114,14 @@ export async function updateSession(request: NextRequest) {
         const url = request.nextUrl.clone();
         url.pathname = "/login";
         url.searchParams.set("error", "pending_approval");
+        return NextResponse.redirect(url);
+      }
+
+      // Check if user is deactivated: inactive users cannot access internal portals or courses
+      if (profile && profile.is_active === false) {
+        const url = request.nextUrl.clone();
+        url.pathname = "/";
+        url.searchParams.set("error", "account_inactive");
         return NextResponse.redirect(url);
       }
     } catch (err) {
@@ -156,9 +164,15 @@ export async function updateSession(request: NextRequest) {
     try {
       const { data: profile } = await supabase
         .from("profiles")
-        .select("role")
+        .select("role, is_active")
         .eq("id", user.id)
         .single();
+      if (profile && profile.is_active === false) {
+        const url = request.nextUrl.clone();
+        url.pathname = "/";
+        url.searchParams.set("error", "account_inactive");
+        return NextResponse.redirect(url);
+      }
       if (profile?.role) {
         targetRole = profile.role;
       }

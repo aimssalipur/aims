@@ -6,6 +6,7 @@ import { PagePreloader } from "@/components/page-preloader"
 import { PwaInstallPrompt } from "@/components/pwa-install-prompt"
 import { JsonLd } from "@/components/seo/json-ld"
 import { MetaPixel } from "@/components/seo/meta-pixel"
+import { ActivityTracker } from "@/components/analytics/activity-tracker"
 
 import { siteConfig } from "@/lib/site-config"
 
@@ -149,6 +150,7 @@ fbq('track', 'PageView');
         />
       </head>
       <body className={`${inter.className} antialiased min-h-screen flex flex-col bg-white`}>
+        <ActivityTracker />
         <MetaPixel />
         <PagePreloader />
         {children}

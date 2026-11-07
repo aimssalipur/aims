@@ -127,7 +127,7 @@ export async function PUT(request: Request) {
 
   try {
     const body = await request.json();
-    const { id, roles, approved } = body;
+    const { id, roles, approved, is_active } = body;
 
     if (!id || typeof id !== "string") {
       return NextResponse.json(
@@ -137,6 +137,31 @@ export async function PUT(request: Request) {
     }
 
     const supabaseAdmin = createAdminClient();
+
+    // 0. Update active status if provided
+    if (is_active !== undefined) {
+      if (id === context.user.id && !is_active) {
+        return NextResponse.json(
+          { error: "Security restriction: You cannot deactivate your own active administrator account." },
+          { status: 400 }
+        );
+      }
+
+      const activeState = Boolean(is_active);
+      const { error: profileError } = await supabaseAdmin
+        .from("profiles")
+        .update({ is_active: activeState })
+        .eq("id", id);
+
+      if (profileError) {
+        return NextResponse.json({ error: profileError.message }, { status: 500 });
+      }
+
+      // Sync auth metadata is_active flag
+      await supabaseAdmin.auth.admin.updateUserById(id, {
+        user_metadata: { is_active: activeState },
+      });
+    }
 
     // 1. Update approved status if provided
     if (approved !== undefined) {
@@ -302,3 +327,5 @@ export async function DELETE(request: Request) {
     );
   }
 }
+
+export const PATCH = PUT;

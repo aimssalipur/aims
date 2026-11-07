@@ -96,6 +96,12 @@ export default function StaffExamQuestionsEditor() {
   const [editingQuestion, setEditingQuestion] = useState(false);
   const [uploadingEditImage, setUploadingEditImage] = useState(false);
 
+  // Bulk Import Questions Dialog
+  const [bulkOpen, setBulkOpen] = useState(false);
+  const [bulkText, setBulkText] = useState("");
+  const [bulkParsedQuestions, setBulkParsedQuestions] = useState<any[]>([]);
+  const [bulkImporting, setBulkImporting] = useState(false);
+
   const [editForm, setEditForm] = useState({
     id: "",
     question_text: "",
@@ -284,6 +290,138 @@ export default function StaffExamQuestionsEditor() {
       });
     } finally {
       setAddingQuestion(false);
+    }
+  };
+
+  // Parse Bulk Input (supports JSON or Q1. text format)
+  const handleBulkTextChange = (val: string) => {
+    setBulkText(val);
+    const trimmed = val.trim();
+    if (!trimmed) {
+      setBulkParsedQuestions([]);
+      return;
+    }
+
+    // Try parsing as JSON first
+    if (trimmed.startsWith("[") || trimmed.startsWith("{")) {
+      try {
+        const parsed = JSON.parse(trimmed);
+        const list = Array.isArray(parsed) ? parsed : parsed.questions || [];
+        if (Array.isArray(list) && list.length > 0) {
+          const formatted = list
+            .map((q: any) => ({
+              question_text: String(q.question_text || q.question || "").trim(),
+              option_a: String(q.option_a || q.A || q.a || "").trim(),
+              option_b: String(q.option_b || q.B || q.b || "").trim(),
+              option_c: String(q.option_c || q.C || q.c || "").trim(),
+              option_d: String(q.option_d || q.D || q.d || "").trim(),
+              correct_option:
+                String(q.correct_option || q.answer || "A")
+                  .trim()
+                  .toUpperCase()
+                  .charAt(0) || "A",
+              marks: Number(q.marks) || 1,
+              explanation: String(q.explanation || q.rationale || "").trim(),
+            }))
+            .filter((q) => q.question_text && q.option_a && q.option_b);
+          setBulkParsedQuestions(formatted);
+          return;
+        }
+      } catch (e) {
+        // Fall through to regex text parser
+      }
+    }
+
+    // Parse plain text format:
+    // Q1. ... A. ... B. ... C. ... D. ... Correct answer: ... Rationale: ...
+    const regex =
+      /(?:Q|Question\s+)?(\d+)[\.:]?\s*([\s\S]*?)\s*\n\s*A[\.:]\s*([\s\S]*?)\s*\n\s*B[\.:]\s*([\s\S]*?)\s*\n\s*C[\.:]\s*([\s\S]*?)\s*\n\s*D[\.:]\s*([\s\S]*?)\s*\n\s*(?:Correct\s+answer|Answer)[\.:\s]*([A-D])[\.:\s]*([\s\S]*?)(?:\n\s*Rationale[\.:\s]*([\s\S]*?))?(?=\s*\n\s*(?:Q\d+\.|Question\s+\d+|PART\s+\d+:|\Z))/gi;
+    const items: any[] = [];
+    let match;
+    while ((match = regex.exec(val)) !== null) {
+      const qText = match[2].trim().replace(/\s+/g, " ");
+      const optA = match[3].trim().replace(/\s+/g, " ");
+      const optB = match[4].trim().replace(/\s+/g, " ");
+      const optC = match[5].trim().replace(/\s+/g, " ");
+      const optD = match[6].trim().replace(/\s+/g, " ");
+      let ans = match[7].trim().toUpperCase();
+      if (!["A", "B", "C", "D"].includes(ans)) ans = "A";
+      const expl = (match[9] || match[8] || "").trim().replace(/\s+/g, " ");
+
+      if (qText && optA && optB) {
+        items.push({
+          question_text: qText,
+          option_a: optA,
+          option_b: optB,
+          option_c: optC,
+          option_d: optD,
+          correct_option: ans,
+          marks: 1,
+          explanation: expl,
+        });
+      }
+    }
+    setBulkParsedQuestions(items);
+  };
+
+  const handleBulkFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const content = event.target?.result as string;
+      if (content) {
+        handleBulkTextChange(content);
+      }
+    };
+    reader.readAsText(file);
+  };
+
+  const handleExecuteBulkImport = async () => {
+    if (bulkParsedQuestions.length === 0) {
+      toast({
+        title: "No questions detected",
+        description: "Please paste text/JSON or upload a question file first.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setBulkImporting(true);
+    try {
+      const res = await fetch(`/api/exams/${examId}/bulk-questions`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ questions: bulkParsedQuestions }),
+      });
+
+      const data = await res.json();
+      if (!res.ok || data.error) {
+        toast({
+          title: "Import Failed",
+          description: data.error || "Could not import questions.",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Bulk Import Complete! 🎉",
+          description: `Successfully added ${data.imported_count} questions to this exam!`,
+          variant: "success",
+        });
+        setBulkOpen(false);
+        setBulkText("");
+        setBulkParsedQuestions([]);
+        await fetchExamDetails();
+      }
+    } catch (err: any) {
+      toast({
+        title: "Error",
+        description: err?.message || "Failed to import questions.",
+        variant: "destructive",
+      });
+    } finally {
+      setBulkImporting(false);
     }
   };
 
@@ -614,8 +752,150 @@ export default function StaffExamQuestionsEditor() {
               </p>
             </div>
 
-            {/* Add Question Dialog */}
-            <Dialog open={addOpen} onOpenChange={setAddOpen}>
+            <div className="flex items-center gap-2">
+              {/* Bulk Import Questions Dialog */}
+              <Dialog open={bulkOpen} onOpenChange={setBulkOpen}>
+                <DialogTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className="h-10 px-3.5 rounded-xl border-slate-200 text-slate-700 hover:bg-slate-100 font-bold gap-2 text-xs shadow-xs"
+                  >
+                    <Upload className="h-4 w-4 text-emerald-600" />
+                    <span>Bulk Import</span>
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl p-5 sm:p-6">
+                  <DialogHeader>
+                    <DialogTitle className="text-xl font-bold flex items-center gap-2 text-slate-900">
+                      <Upload className="h-5 w-5 text-emerald-600" />
+                      <span>Bulk Import Questions</span>
+                    </DialogTitle>
+                    <DialogDescription>
+                      Paste questions text or upload a JSON/CSV file. Automatically parses statements, 4 options (A-D), correct answers, and clinical rationales.
+                    </DialogDescription>
+                  </DialogHeader>
+
+                  <div className="space-y-4 py-3">
+                    {/* Upload file drop / input */}
+                    <div className="p-3.5 rounded-xl border-2 border-dashed border-slate-200 hover:border-emerald-500 bg-slate-50 transition-colors flex flex-col sm:flex-row items-center justify-between gap-3">
+                      <div className="flex items-center gap-3">
+                        <div className="h-10 w-10 rounded-lg bg-white border border-slate-200 flex items-center justify-center text-emerald-600 shrink-0">
+                          <FileCheck2 className="h-5 w-5" />
+                        </div>
+                        <div>
+                          <div className="text-xs font-bold text-slate-800">Upload JSON or TXT file</div>
+                          <div className="text-[11px] text-slate-500">Supports exported question banks or raw text</div>
+                        </div>
+                      </div>
+                      <label className="cursor-pointer inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 text-white text-xs font-bold hover:bg-emerald-700 transition-colors shrink-0">
+                        <Upload className="h-3.5 w-3.5" />
+                        <span>Choose File</span>
+                        <input
+                          type="file"
+                          accept=".json,.txt,.csv"
+                          className="hidden"
+                          onChange={handleBulkFileUpload}
+                        />
+                      </label>
+                    </div>
+
+                    {/* Textarea for pasting */}
+                    <div className="space-y-1.5">
+                      <div className="flex items-center justify-between">
+                        <Label className="text-xs font-bold text-slate-700">Or Paste Questions / JSON Array:</Label>
+                        {bulkParsedQuestions.length > 0 && (
+                          <Badge className="bg-emerald-50 text-emerald-700 border-emerald-200 font-bold text-[11px]">
+                            {bulkParsedQuestions.length} Questions Detected
+                          </Badge>
+                        )}
+                      </div>
+                      <Textarea
+                        rows={8}
+                        value={bulkText}
+                        onChange={(e) => handleBulkTextChange(e.target.value)}
+                        placeholder={`Format 1 (JSON):\n[ { "question_text": "...", "option_a": "...", "option_b": "...", "option_c": "...", "option_d": "...", "correct_option": "B", "explanation": "..." } ]\n\nFormat 2 (Plain Text):\nQ1. Question statement...\nA. Option 1\nB. Option 2\nC. Option 3\nD. Option 4\nCorrect answer: B. Option 2\nRationale: Detailed explanation...`}
+                        className="font-mono text-xs leading-relaxed"
+                      />
+                    </div>
+
+                    {/* Preview of Parsed Questions */}
+                    {bulkParsedQuestions.length > 0 && (
+                      <div className="space-y-2">
+                        <div className="text-xs font-bold text-slate-800 flex items-center justify-between">
+                          <span>Preview (First 3 Questions):</span>
+                          <span className="text-[11px] text-slate-500 font-normal">
+                            All {bulkParsedQuestions.length} items verified
+                          </span>
+                        </div>
+                        <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+                          {bulkParsedQuestions.slice(0, 3).map((q, idx) => (
+                            <div
+                              key={idx}
+                              className="p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs space-y-1.5"
+                            >
+                              <div className="font-bold text-slate-900">
+                                #{idx + 1}. {q.question_text}
+                              </div>
+                              <div className="grid grid-cols-2 gap-1 text-[11px] text-slate-600">
+                                <div>A. {q.option_a}</div>
+                                <div>B. {q.option_b}</div>
+                                <div>C. {q.option_c}</div>
+                                <div>D. {q.option_d}</div>
+                              </div>
+                              <div className="flex items-center gap-2 pt-1 border-t border-slate-200/60 text-[11px]">
+                                <span className="font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">
+                                  Correct: Option {q.correct_option}
+                                </span>
+                                {q.explanation && (
+                                  <span className="text-slate-500 truncate max-w-sm">
+                                    Rationale: {q.explanation}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  <DialogFooter className="gap-2 sm:justify-between border-t border-slate-100 pt-3">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      onClick={() => {
+                        setBulkOpen(false);
+                        setBulkText("");
+                        setBulkParsedQuestions([]);
+                      }}
+                      className="h-10 text-xs font-semibold"
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      type="button"
+                      onClick={handleExecuteBulkImport}
+                      disabled={bulkImporting || bulkParsedQuestions.length === 0}
+                      className="h-10 px-5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs gap-2 shadow-md shadow-emerald-600/20"
+                    >
+                      {bulkImporting ? (
+                        <>
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          <span>Importing {bulkParsedQuestions.length} Questions...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Check className="h-4 w-4" />
+                          <span>Import {bulkParsedQuestions.length} Questions Now</span>
+                        </>
+                      )}
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+
+              {/* Add Question Dialog */}
+              <Dialog open={addOpen} onOpenChange={setAddOpen}>
               <DialogTrigger asChild>
                 <Button className="h-10 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold gap-2 text-xs shadow-md shadow-emerald-600/20">
                   <PlusCircle className="h-4 w-4" />
@@ -837,6 +1117,7 @@ export default function StaffExamQuestionsEditor() {
               </DialogContent>
             </Dialog>
           </div>
+        </div>
 
           {/* Edit Question Dialog */}
           <Dialog open={editOpen} onOpenChange={setEditOpen}>

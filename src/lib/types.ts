@@ -10,7 +10,13 @@ export interface Profile {
   avatar_url: string | null;
   created_at: string;
   active?: boolean;
+  is_active?: boolean;
+  approved?: boolean;
   course_of_interest?: string;
+  last_seen_at?: string;
+  time_spent_today_seconds?: number;
+  time_spent_month_seconds?: number;
+  total_time_spent_seconds?: number;
 }
 
 export interface BusinessTransaction {

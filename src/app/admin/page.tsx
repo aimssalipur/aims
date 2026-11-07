@@ -51,6 +51,7 @@ import {
 } from "recharts";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { initials } from "@/lib/utils";
+import { formatDuration, formatLastSeen } from "@/lib/activity-utils";
 
 const PIE_COLORS = ["#10B981", "#3B82F6", "#F59E0B", "#94A3B8"];
 
@@ -161,15 +162,25 @@ export default function AdminDashboardPage() {
   const [courses, setCourses] = useState<any[]>([]);
   const [enrollments, setEnrollments] = useState<any[]>([]);
   const [fees, setFees] = useState<any[]>([]);
+  const [activityAnalytics, setActivityAnalytics] = useState<{
+    currentlyOnline: number;
+    dau: number;
+    mau: number;
+    avgTimeSpentTodaySeconds: number;
+    totalTimeSpentMonthSeconds: number;
+    dailyTrend: Array<{ date: string; day: string; activeUsers: number; totalSeconds: number }>;
+    onlineUsers: Array<any>;
+  } | null>(null);
   const [loading, setLoading] = useState(true);
 
   const fetchData = async () => {
     try {
-      const [uRes, cRes, eRes, fRes] = await Promise.all([
+      const [uRes, cRes, eRes, fRes, aRes] = await Promise.all([
         fetch("/api/admin/users", { cache: "no-store" }),
         fetch("/api/courses", { cache: "no-store" }),
         fetch("/api/admin/enrollments", { cache: "no-store" }),
         fetch("/api/accountant/fees", { cache: "no-store" }),
+        fetch("/api/admin/analytics/activity", { cache: "no-store" }),
       ]);
       if (uRes.ok) {
         const u = await uRes.json();
@@ -186,6 +197,10 @@ export default function AdminDashboardPage() {
       if (fRes.ok) {
         const f = await fRes.json();
         if (Array.isArray(f)) setFees(f);
+      }
+      if (aRes.ok) {
+        const act = await aRes.json();
+        if (act && !act.error) setActivityAnalytics(act);
       }
     } catch (err) {
       console.error(err);
@@ -996,12 +1011,16 @@ export default function AdminDashboardPage() {
             </div>
 
             {/* Metric indicators */}
-            <div className="flex items-center justify-between pt-1 border-t border-slate-100 text-[11px]">
+            <div className="flex items-center justify-between pt-1 border-t border-slate-100 text-[11px] flex-wrap gap-2">
               <span className="font-semibold text-slate-500">
-                Peak: <span className="font-extrabold text-slate-900">{peakActiveDay.day} ({peakActiveDay.total} logins)</span>
+                DAU: <span className="font-extrabold text-slate-900">{activityAnalytics?.dau ?? 0}</span> · MAU: <span className="font-extrabold text-slate-900">{activityAnalytics?.mau ?? 0}</span>
               </span>
-              <span className="font-bold text-emerald-700 bg-emerald-50 border border-emerald-200/60 px-2 py-0.5 rounded-md">
-                Avg: {avgDailyLogins} / day
+              <span className="font-bold text-emerald-700 bg-emerald-50 border border-emerald-200/60 px-2 py-0.5 rounded-md flex items-center gap-1.5">
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
+                </span>
+                Online RN: {activityAnalytics?.currentlyOnline ?? 0}
               </span>
             </div>
           </CardHeader>
@@ -1100,6 +1119,44 @@ export default function AdminDashboardPage() {
                   <span className="h-2.5 w-2.5 rounded-sm bg-gradient-to-br from-amber-400 to-amber-600 shadow-sm" />
                   Admin
                 </span>
+              </div>
+            )}
+
+            {/* Live Online Users List */}
+            {activityAnalytics?.onlineUsers && activityAnalytics.onlineUsers.length > 0 && (
+              <div className="pt-2.5 border-t border-slate-100">
+                <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 flex items-center justify-between mb-1.5">
+                  <span className="flex items-center gap-1 text-emerald-700 font-extrabold">
+                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                    Online Right Now ({activityAnalytics.onlineUsers.length})
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => router.push("/admin/users")}
+                    className="text-[10px] text-blue-600 hover:underline font-bold"
+                  >
+                    View in Users →
+                  </button>
+                </div>
+                <div className="flex items-center gap-1.5 overflow-x-auto pb-1">
+                  {activityAnalytics.onlineUsers.slice(0, 6).map((ou) => (
+                    <div
+                      key={ou.id}
+                      className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-emerald-50/70 border border-emerald-100 text-[11px] shrink-0"
+                    >
+                      <Avatar className="h-4 w-4 ring-1 ring-emerald-300 shrink-0">
+                        <AvatarImage src={ou.avatar_url || ""} />
+                        <AvatarFallback className="text-[8px] bg-emerald-600 text-white font-black">
+                          {initials(ou.full_name)}
+                        </AvatarFallback>
+                      </Avatar>
+                      <span className="font-extrabold text-slate-800 max-w-[80px] truncate">{ou.full_name}</span>
+                      <span className="text-[10px] text-emerald-700 font-bold">
+                        {formatDuration(ou.time_spent_today_seconds)}
+                      </span>
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
           </CardContent>

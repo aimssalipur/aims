@@ -101,6 +101,17 @@ export async function requireRole(
     };
   }
 
+  // Deactivated users cannot access internal resources
+  if (context.profile?.is_active === false) {
+    return {
+      context: null,
+      errorResponse: NextResponse.json(
+        { error: "Forbidden: Your account has been deactivated. Please contact AIMS administration." },
+        { status: 403 }
+      ),
+    };
+  }
+
   const roleArray = Array.isArray(allowedRoles) ? allowedRoles : [allowedRoles];
 
   // Admin possesses universal access

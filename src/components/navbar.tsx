@@ -57,6 +57,7 @@ export function Navbar() {
     full_name?: string;
     role?: string;
     avatar_url?: string;
+    is_active?: boolean;
   } | null>(null);
 
   const pathname = usePathname();
@@ -70,8 +71,21 @@ export function Navbar() {
     };
     handleScroll();
     window.addEventListener("scroll", handleScroll);
+
+    // Notify user if redirected due to inactive account
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get("error") === "account_inactive") {
+        toast({
+          title: "Account Inactive ⚠️",
+          description: "Your account is currently inactive. You can only view the public site. Course access and portals are suspended.",
+          variant: "destructive",
+        });
+      }
+    }
+
     return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
+  }, [toast]);
 
   // Fetch and listen for active auth session
   useEffect(() => {
@@ -89,7 +103,7 @@ export function Navbar() {
           setUser(currentUser);
           const { data } = await supabase
             .from("profiles")
-            .select("full_name, role, avatar_url")
+            .select("full_name, role, avatar_url, is_active")
             .eq("id", currentUser.id)
             .single();
 
@@ -115,7 +129,7 @@ export function Navbar() {
         try {
           const { data } = await supabase
             .from("profiles")
-            .select("full_name, role, avatar_url")
+            .select("full_name, role, avatar_url, is_active")
             .eq("id", session.user.id)
             .single();
 
@@ -208,16 +222,22 @@ export function Navbar() {
             {user ? (
               <div className="flex items-center gap-2 sm:gap-2.5">
                 {/* Direct Dashboard Link Button */}
-                <Link href={dashboardHref} className="hidden sm:block">
-                  <Button
-                    variant="primary"
-                    size="sm"
-                    className="gap-1.5 h-9 sm:h-10 px-3.5 sm:px-4 rounded-xl font-bold text-xs sm:text-sm shadow-md shadow-aims-navy/20"
-                  >
-                    <LayoutDashboard className="h-4 w-4" />
-                    <span>Dashboard</span>
-                  </Button>
-                </Link>
+                {profile?.is_active === false ? (
+                  <Badge variant="destructive" className="hidden sm:inline-flex text-[11px] font-bold py-1 px-2.5 bg-rose-50 text-rose-700 border-rose-200">
+                    Account Inactive
+                  </Badge>
+                ) : (
+                  <Link href={dashboardHref} className="hidden sm:block">
+                    <Button
+                      variant="primary"
+                      size="sm"
+                      className="gap-1.5 h-9 sm:h-10 px-3.5 sm:px-4 rounded-xl font-bold text-xs sm:text-sm shadow-md shadow-aims-navy/20"
+                    >
+                      <LayoutDashboard className="h-4 w-4" />
+                      <span>Dashboard</span>
+                    </Button>
+                  </Link>
+                )}
 
                 {/* User Dropdown Menu */}
                 <DropdownMenu>
@@ -252,7 +272,7 @@ export function Navbar() {
                       <div className="text-xs text-slate-500 truncate mt-0.5">
                         {user.email}
                       </div>
-                      <div className="mt-1.5">
+                      <div className="mt-1.5 flex items-center gap-1.5 flex-wrap">
                         <Badge
                           variant={
                             userRole === "admin"
@@ -265,17 +285,38 @@ export function Navbar() {
                         >
                           {userRole}
                         </Badge>
+                        {profile?.is_active === false && (
+                          <Badge variant="destructive" className="text-[10px] font-bold px-2 py-0 bg-rose-100 text-rose-700 border-rose-200">
+                            Inactive
+                          </Badge>
+                        )}
                       </div>
                     </DropdownMenuLabel>
 
                     <DropdownMenuSeparator />
 
-                    <DropdownMenuItem asChild className="rounded-xl cursor-pointer">
-                      <Link href={dashboardHref} className="flex items-center gap-2.5 py-2">
-                        <LayoutDashboard className="h-4 w-4 text-aims-navy" />
-                        <span className="font-semibold text-xs">My Dashboard</span>
-                      </Link>
-                    </DropdownMenuItem>
+                    {profile?.is_active === false ? (
+                      <DropdownMenuItem
+                        onClick={() =>
+                          toast({
+                            title: "Account Inactive ⚠️",
+                            description: "Your account is currently inactive. You cannot access courses or internal dashboard.",
+                            variant: "destructive",
+                          })
+                        }
+                        className="rounded-xl cursor-pointer text-slate-400 flex items-center gap-2.5 py-2"
+                      >
+                        <LayoutDashboard className="h-4 w-4 text-slate-400" />
+                        <span className="font-semibold text-xs">My Dashboard (Inactive)</span>
+                      </DropdownMenuItem>
+                    ) : (
+                      <DropdownMenuItem asChild className="rounded-xl cursor-pointer">
+                        <Link href={dashboardHref} className="flex items-center gap-2.5 py-2">
+                          <LayoutDashboard className="h-4 w-4 text-aims-navy" />
+                          <span className="font-semibold text-xs">My Dashboard</span>
+                        </Link>
+                      </DropdownMenuItem>
+                    )}
 
                     <DropdownMenuItem asChild className="rounded-xl cursor-pointer">
                       <Link href={`${dashboardHref}/profile`} className="flex items-center gap-2.5 py-2">
@@ -359,13 +400,18 @@ export function Navbar() {
                         <div className="text-[11px] text-slate-500 truncate">
                           {user.email}
                         </div>
-                        <div className="mt-1">
+                        <div className="mt-1 flex items-center gap-1.5 flex-wrap">
                           <Badge
                             variant={userRole === "admin" ? "destructive" : "default"}
                             className="text-[9px] uppercase font-bold px-1.5 py-0"
                           >
                             {userRole}
                           </Badge>
+                          {profile?.is_active === false && (
+                            <Badge variant="destructive" className="text-[9px] font-bold px-1.5 py-0 bg-rose-100 text-rose-700 border-rose-200">
+                              Inactive
+                            </Badge>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -397,18 +443,24 @@ export function Navbar() {
                   <div className="p-4 sm:p-6 border-t border-slate-100 space-y-2.5 bg-slate-50/50">
                     {user ? (
                       <>
-                        <SheetClose asChild>
-                          <Link href={dashboardHref} className="block w-full">
-                            <Button
-                              variant="primary"
-                              size="lg"
-                              className="w-full h-11 gap-2 font-bold text-sm shadow-md shadow-aims-navy/20"
-                            >
-                              <LayoutDashboard className="h-4 w-4" />
-                              Go to Dashboard
-                            </Button>
-                          </Link>
-                        </SheetClose>
+                        {profile?.is_active === false ? (
+                          <div className="p-2.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-bold text-center">
+                            Account Inactive — Public Site Access Only
+                          </div>
+                        ) : (
+                          <SheetClose asChild>
+                            <Link href={dashboardHref} className="block w-full">
+                              <Button
+                                variant="primary"
+                                size="lg"
+                                className="w-full h-11 gap-2 font-bold text-sm shadow-md shadow-aims-navy/20"
+                              >
+                                <LayoutDashboard className="h-4 w-4" />
+                                Go to Dashboard
+                              </Button>
+                            </Link>
+                          </SheetClose>
+                        )}
                         <Button
                           variant="outline"
                           size="lg"

@@ -1082,66 +1082,67 @@ export default function AccountantFeesPage() {
               </div>
 
               {/* Desktop View: Ledger Table */}
-              <div className="hidden md:block overflow-x-auto">
-                <table className="w-full text-left text-xs sm:text-sm border-collapse min-w-[660px]">
+              <div className="hidden md:block w-full">
+                <table className="w-full text-left text-xs sm:text-sm border-collapse">
                   <thead>
                     <tr className="border-b border-slate-100 text-slate-400 uppercase text-[9px] sm:text-[10px] font-bold tracking-wider bg-slate-50/50">
-                      <th className="py-2.5 sm:py-4 px-3 sm:px-6">Date</th>
-                      <th className="py-2.5 sm:py-4 px-3 sm:px-6">Student</th>
-                      <th className="py-2.5 sm:py-4 px-3 sm:px-6">Course / Prog</th>
-                      <th className="py-2.5 sm:py-4 px-3 sm:px-6">Method / Reference</th>
-                      <th className="py-2.5 sm:py-4 px-3 sm:px-6 text-right">Amount</th>
-                      <th className="py-2.5 sm:py-4 px-3 sm:px-6 text-center">Status</th>
-                      <th className="py-2.5 sm:py-4 px-3 sm:px-6 text-center">Actions</th>
+                      <th className="py-2.5 px-2 sm:px-3 w-[75px] sm:w-[90px]">Date</th>
+                      <th className="py-2.5 px-2 sm:px-3">Student</th>
+                      <th className="py-2.5 px-2 sm:px-3 hidden lg:table-cell">Course / Prog</th>
+                      <th className="py-2.5 px-2 sm:px-3">Method / Ref</th>
+                      <th className="py-2.5 px-2 sm:px-3 text-right w-[85px] sm:w-[110px]">Amount</th>
+                      <th className="py-2.5 px-2 sm:px-3 text-center w-[85px] sm:w-[100px]">Status</th>
+                      <th className="py-2.5 px-2 sm:px-3 text-center w-[110px] sm:w-[140px]">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 font-semibold text-slate-600 bg-white">
                     {filteredFees.map((fee: any) => (
                       <tr key={fee.id} className="hover:bg-slate-50/50 transition-colors">
-                        <td className="py-2.5 sm:py-4 px-3 sm:px-6 font-medium text-slate-500 whitespace-nowrap">
-                          {new Date(fee.payment_date).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
+                        <td className="py-2.5 px-2 sm:px-3 font-medium text-slate-500 whitespace-nowrap text-[11px] sm:text-xs">
+                          {new Date(fee.payment_date).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}
                         </td>
-                        <td className="py-2.5 sm:py-4 px-3 sm:px-6">
-                          <div className="text-slate-900 font-bold text-xs sm:text-sm">{fee.student?.full_name || "N/A"}</div>
-                          <div className="text-slate-400 text-[10px] sm:text-xs font-medium">{fee.student?.email || ""}</div>
+                        <td className="py-2.5 px-2 sm:px-3">
+                          <div className="text-slate-900 font-bold text-xs sm:text-sm truncate max-w-[150px] sm:max-w-none">{fee.student?.full_name || "N/A"}</div>
+                          <div className="text-slate-400 text-[10px] sm:text-xs font-medium truncate max-w-[150px] sm:max-w-none">{fee.student?.email || ""}</div>
+                          <div className="text-slate-400 text-[10px] font-medium lg:hidden truncate max-w-[150px]">{fee.student?.course_of_interest || "AIMS Course"}</div>
                         </td>
-                        <td className="py-2.5 sm:py-4 px-3 sm:px-6 text-slate-500 font-normal">
+                        <td className="py-2.5 px-2 sm:px-3 text-slate-500 font-normal hidden lg:table-cell truncate max-w-[160px]">
                           {fee.student?.course_of_interest || "AIMS Professional Program"}
                         </td>
-                        <td className="py-2.5 sm:py-4 px-3 sm:px-6">
+                        <td className="py-2.5 px-2 sm:px-3">
                           <div className="flex flex-col gap-0.5">
-                            <span className="font-semibold">{fee.payment_method}</span>
-                            <span className="font-mono text-slate-400 text-[10px] sm:text-xs">{fee.transaction_id || "No Tx ID"}</span>
+                            <span className="font-semibold text-xs">{fee.payment_method}</span>
+                            <span className="font-mono text-slate-400 text-[10px] truncate max-w-[100px]">{fee.transaction_id || "No Tx ID"}</span>
                           </div>
                         </td>
-                        <td className="py-2.5 sm:py-4 px-3 sm:px-6 text-right font-extrabold text-slate-950 text-xs sm:text-base whitespace-nowrap">
+                        <td className="py-2.5 px-2 sm:px-3 text-right font-extrabold text-slate-950 text-xs sm:text-base whitespace-nowrap">
                           {formatCurrency(fee.amount_paid)}
                         </td>
-                        <td className="py-2.5 sm:py-4 px-3 sm:px-6 text-center">
+                        <td className="py-2.5 px-2 sm:px-3 text-center">
                           <div className="flex flex-col items-center justify-center gap-1">
                             {fee.status === "pending" && (
-                              <Badge className="bg-amber-100 text-amber-700 border-amber-200 gap-1 px-1.5 sm:px-2 py-0.5 text-[9px] sm:text-[10px] rounded-full">
-                                <Clock className="h-2.5 w-2.5 sm:h-3 sm:w-3" /> Pending
+                              <Badge className="bg-amber-100 text-amber-700 border-amber-200 gap-1 px-1.5 py-0.5 text-[9px] rounded-full">
+                                <Clock className="h-2.5 w-2.5" /> Pending
                               </Badge>
                             )}
                             {fee.status === "verified" && (
-                              <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200 gap-1 px-1.5 sm:px-2 py-0.5 text-[9px] sm:text-[10px] rounded-full">
-                                <CheckCircle2 className="h-2.5 w-2.5 sm:h-3 sm:w-3" /> Verified
+                              <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200 gap-1 px-1.5 py-0.5 text-[9px] rounded-full">
+                                <CheckCircle2 className="h-2.5 w-2.5" /> Verified
                               </Badge>
                             )}
                             {fee.status === "rejected" && (
-                              <Badge className="bg-rose-100 text-rose-700 border-rose-200 gap-1 px-1.5 sm:px-2 py-0.5 text-[9px] sm:text-[10px] rounded-full">
-                                <XCircle className="h-2.5 w-2.5 sm:h-3 sm:w-3" /> Rejected
+                              <Badge className="bg-rose-100 text-rose-700 border-rose-200 gap-1 px-1.5 py-0.5 text-[9px] rounded-full">
+                                <XCircle className="h-2.5 w-2.5" /> Rejected
                               </Badge>
                             )}
                             {fee.remarks && (
-                              <span className="text-[9px] sm:text-[10px] text-slate-400 max-w-[130px] truncate block" title={fee.remarks}>
+                              <span className="text-[9px] text-slate-400 max-w-[100px] truncate block" title={fee.remarks}>
                                 "{fee.remarks}"
                               </span>
                             )}
                           </div>
                         </td>
-                        <td className="py-2.5 sm:py-4 px-3 sm:px-6 text-center">
+                        <td className="py-2.5 px-2 sm:px-3 text-center">
                           {fee.status === "pending" ? (
                             <div className="flex items-center justify-center gap-1 sm:gap-1.5 flex-wrap">
                               <Button

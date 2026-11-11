@@ -32,6 +32,7 @@ import {
   Calendar,
   Loader2,
   RefreshCw,
+  GraduationCap,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -47,6 +48,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { CoursePosterBanner } from "@/components/ui/course-poster-banner";
 import { useState, useEffect } from "react";
 import { useToast } from "@/components/ui/use-toast";
 import Link from "next/link";
@@ -250,6 +252,7 @@ export default function InstructorCoursesPage() {
       setDialogOpen(false);
       setCourseForm({ title: "", description: "", thumbnail_url: "", instructor_id: "" });
       fetchCourses();
+      triggerDataRefresh();
     } catch (err: any) {
       toast({
         title: "Creation Failed",
@@ -310,6 +313,7 @@ export default function InstructorCoursesPage() {
 
       setEditDialogOpen(false);
       fetchCourses();
+      triggerDataRefresh();
     } catch (err: any) {
       toast({
         title: "Update Failed",
@@ -693,15 +697,24 @@ export default function InstructorCoursesPage() {
                       className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                     />
                   </div>
-                  <div className="pt-1">
+                  <div className="pt-1 flex items-center justify-between">
                     <Label className="text-[11px] text-slate-500 font-medium">Or paste image web link directly:</Label>
-                    <Input 
-                      placeholder="https://images.unsplash.com/..." 
-                      className="h-9 text-xs mt-1" 
-                      value={courseForm.thumbnail_url}
-                      onChange={(e) => setCourseForm((prev) => ({ ...prev, thumbnail_url: e.target.value }))}
-                    />
+                    {courseForm.thumbnail_url && (
+                      <button
+                        type="button"
+                        onClick={() => setCourseForm((prev) => ({ ...prev, thumbnail_url: "" }))}
+                        className="text-[11px] font-bold text-rose-600 hover:text-rose-700 underline cursor-pointer"
+                      >
+                        Remove (Use Course Name Banner)
+                      </button>
+                    )}
                   </div>
+                  <Input 
+                    placeholder="https://.../thumbnail.jpg" 
+                    className="h-9 text-xs mt-1" 
+                    value={courseForm.thumbnail_url}
+                    onChange={(e) => setCourseForm((prev) => ({ ...prev, thumbnail_url: e.target.value }))}
+                  />
                 </div>
               </div>
               <DialogFooter className="flex-col sm:flex-row gap-2 pt-2">
@@ -814,14 +827,23 @@ export default function InstructorCoursesPage() {
                   className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                 />
               </div>
-              <div className="pt-1">
+              <div className="pt-1 flex items-center justify-between">
                 <Label className="text-[11px] text-slate-500 font-medium">Or paste image web link directly:</Label>
-                <Input 
-                  className="h-9 text-xs mt-1" 
-                  value={editForm.thumbnail_url}
-                  onChange={(e) => setEditForm((prev) => ({ ...prev, thumbnail_url: e.target.value }))}
-                />
+                {editForm.thumbnail_url && (
+                  <button
+                    type="button"
+                    onClick={() => setEditForm((prev) => ({ ...prev, thumbnail_url: "" }))}
+                    className="text-[11px] font-bold text-rose-600 hover:text-rose-700 underline cursor-pointer"
+                  >
+                    Remove (Use Course Name Banner)
+                  </button>
+                )}
               </div>
+              <Input 
+                className="h-9 text-xs mt-1" 
+                value={editForm.thumbnail_url}
+                onChange={(e) => setEditForm((prev) => ({ ...prev, thumbnail_url: e.target.value }))}
+              />
             </div>
           </div>
           <DialogFooter className="flex-col sm:flex-row gap-2 pt-2">
@@ -865,15 +887,11 @@ export default function InstructorCoursesPage() {
               className="group overflow-hidden border-slate-100 hover:shadow-2xl transition-all duration-500 hover:-translate-y-1.5 flex flex-col"
             >
               <div className="relative overflow-hidden aspect-[16/10]">
-                <Image
-                  src={course.thumbnail_url || "https://images.unsplash.com/photo-1576765608535-5f04d1e3f289?w=800&h=600&fit=crop"}
-                  alt={course.title}
-                  fill
-                  sizes="(max-width: 768px) 100vw, 400px"
-                  className="object-cover transition-transform duration-700 group-hover:scale-110"
+                <CoursePosterBanner
+                  title={course.title}
+                  thumbnailUrl={course.thumbnail_url}
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-slate-900/70 via-transparent to-transparent" />
-                <div className="absolute top-3 left-3 sm:top-4 sm:left-4 flex gap-2">
+                <div className="absolute top-3 left-3 sm:top-4 sm:left-4 flex gap-2 z-10">
                   <Badge
                     variant={(course as any).badgeVariant || "default"}
                     className="text-[10px] sm:text-xs font-bold px-2 sm:px-3 py-0.5 sm:py-1 shadow-sm border-0"

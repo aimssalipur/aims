@@ -46,6 +46,7 @@ import {
   Tag,
   Landmark,
   Printer,
+  Pencil,
 } from "lucide-react";
 import Link from "next/link";
 import { useToast } from "@/components/ui/use-toast";
@@ -95,8 +96,24 @@ export default function AccountantTransactionsPage() {
   const [receiptOpen, setReceiptOpen] = useState(false);
 
   const [staffList, setStaffList] = useState<any[]>([]);
+  const [studentsList, setStudentsList] = useState<any[]>([]);
   const [customCategory, setCustomCategory] = useState("");
   const [isCustomCategory, setIsCustomCategory] = useState(false);
+
+  // Edit Transaction State
+  const [editOpen, setEditOpen] = useState(false);
+  const [editingTx, setEditingTx] = useState<any>(null);
+  const [editForm, setEditForm] = useState({
+    id: "",
+    type: "expense",
+    category: "Utility",
+    amount: "",
+    description: "",
+    reference_no: "",
+    date: new Date().toISOString().split("T")[0],
+    recipient_id: "",
+  });
+  const [updating, setUpdating] = useState(false);
 
   const [form, setForm] = useState({
     type: "expense",
@@ -262,15 +279,94 @@ export default function AccountantTransactionsPage() {
     }
   };
 
+  const fetchStudentsList = async () => {
+    try {
+      const response = await fetch("/api/accountant/students");
+      const data = await response.json();
+      if (Array.isArray(data)) {
+        setStudentsList(data);
+      }
+    } catch (err) {
+      console.error("Failed to fetch students list:", err);
+    }
+  };
+
+  const openEditModal = (tx: any) => {
+    setEditingTx(tx);
+    setEditForm({
+      id: tx.id,
+      type: tx.type || "expense",
+      category: tx.category || "General",
+      amount: String(tx.amount || ""),
+      description: tx.description || "",
+      reference_no: tx.reference_no || "",
+      date: tx.date ? new Date(tx.date).toISOString().split("T")[0] : new Date().toISOString().split("T")[0],
+      recipient_id: tx.recipient_id || "",
+    });
+    setEditOpen(true);
+  };
+
+  const handleSaveEdit = async () => {
+    if (updating || !editForm.id) return;
+    if (!editForm.amount || !editForm.description || !editForm.category) {
+      toast({
+        title: "Missing fields",
+        description: "Please specify amount, category, and description.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setUpdating(true);
+    try {
+      const response = await fetch("/api/accountant/transactions", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(editForm),
+      });
+
+      let data: any = {};
+      try {
+        data = await response.json();
+      } catch {}
+
+      if (!response.ok || data.error) {
+        toast({
+          title: "Update failed",
+          description: getFriendlyErrorMessage(data.error || "Unable to update transaction."),
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Transaction updated ✅",
+          description: "Transaction details updated successfully.",
+          variant: "success",
+        });
+        setEditOpen(false);
+        fetchTransactions();
+      }
+    } catch (err: any) {
+      toast({
+        title: "Error updating",
+        description: getFriendlyErrorMessage(err),
+        variant: "destructive",
+      });
+    } finally {
+      setUpdating(false);
+    }
+  };
+
   useEffect(() => {
     fetchTransactions();
     fetchStaffList();
+    fetchStudentsList();
   }, [typeFilter, categoryFilter, debouncedSearch]);
 
   useEffect(() => {
     return subscribeToDataRefresh(() => {
       fetchTransactions();
       fetchStaffList();
+      fetchStudentsList();
     });
   }, []);
 
@@ -278,7 +374,7 @@ export default function AccountantTransactionsPage() {
     if (isRefreshing) return;
     setIsRefreshing(true);
     try {
-      await Promise.all([fetchTransactions(), fetchStaffList()]);
+      await Promise.all([fetchTransactions(), fetchStaffList(), fetchStudentsList()]);
       toast({
         title: "Transactions Updated ✅",
         description: "Latest ledger records loaded.",
@@ -635,6 +731,57 @@ export default function AccountantTransactionsPage() {
                   </div>
                 )}
 
+                {form.type === "income" && (form.category === "Course Fee" || form.category === "Admission Fee" || form.category.toLowerCase().includes("fee")) && (
+                  <div className="space-y-2 p-3 sm:p-3.5 rounded-2xl bg-emerald-50/70 border border-emerald-100 animate-in fade-in duration-200">
+                    <div className="flex items-center justify-between">
+                      <Label className="font-bold text-emerald-950 flex items-center gap-1.5 text-xs sm:text-sm">
+                        <UserCheck className="h-4 w-4 text-emerald-600" />
+                        Attributed Student (Optional)
+                      </Label>
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full">
+                        Syncs to Student Fees
+                      </span>
+                    </div>
+                    <Select
+                      value={form.recipient_id}
+                      onValueChange={(val) => {
+                        const selected = studentsList.find((s) => s.id === val);
+                        setForm((prev) => {
+                          const autoDesc = selected
+                            ? `Fee payment from ${selected.full_name} (${selected.course_of_interest || "AIMS Student"})`
+                            : prev.description;
+                          return {
+                            ...prev,
+                            recipient_id: val,
+                            description:
+                              !prev.description || prev.description.startsWith("Fee payment from")
+                                ? autoDesc
+                                : prev.description,
+                          };
+                        });
+                      }}
+                    >
+                      <SelectTrigger className="h-10 sm:h-11 rounded-xl bg-white border-emerald-200 focus:ring-emerald-500 font-semibold text-slate-800 text-xs sm:text-sm">
+                        <SelectValue placeholder="Select student to sync to Student Fees..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {studentsList.length === 0 ? (
+                          <div className="p-3 text-center text-xs text-slate-400">Loading students...</div>
+                        ) : (
+                          studentsList.map((stud) => (
+                            <SelectItem key={stud.id} value={stud.id}>
+                              <div className="flex items-center gap-2 py-0.5">
+                                <span className="font-bold text-slate-900">{stud.full_name}</span>
+                                <span className="text-slate-400 text-xs hidden sm:inline">({stud.email})</span>
+                              </div>
+                            </SelectItem>
+                          ))
+                        )}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+
                 {/* Amount & Date - responsive grid */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {/* Amount input */}
@@ -770,76 +917,88 @@ export default function AccountantTransactionsPage() {
           ) : txs.length === 0 ? (
             <div className="p-8 sm:p-12 text-center text-slate-400 font-semibold text-xs sm:text-sm">No operational entries logged matching criteria.</div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs sm:text-sm border-collapse min-w-[620px]">
+            <div className="w-full">
+              <table className="w-full text-left text-xs sm:text-sm border-collapse">
                 <thead>
                   <tr className="border-b border-slate-100 text-slate-400 uppercase text-[9px] sm:text-[10px] font-bold tracking-wider bg-slate-50/50">
-                    <th className="py-2.5 sm:py-4 px-3 sm:px-6">Date</th>
-                    <th className="py-2.5 sm:py-4 px-3 sm:px-6">Description</th>
-                    <th className="py-2.5 sm:py-4 px-3 sm:px-6">Category</th>
-                    <th className="py-2.5 sm:py-4 px-3 sm:px-6">Reference / Ref</th>
-                    <th className="py-2.5 sm:py-4 px-3 sm:px-6">Recorded By</th>
-                    <th className="py-2.5 sm:py-4 px-3 sm:px-6 text-right">Amount</th>
-                    <th className="py-2.5 sm:py-4 px-3 sm:px-6 text-center">Actions</th>
+                    <th className="py-2.5 sm:py-3.5 px-2 sm:px-4 w-[75px] sm:w-[95px]">Date</th>
+                    <th className="py-2.5 sm:py-3.5 px-2 sm:px-4">Description</th>
+                    <th className="py-2.5 sm:py-3.5 px-2 sm:px-4 hidden sm:table-cell w-[100px] lg:w-[130px]">Category</th>
+                    <th className="py-2.5 sm:py-3.5 px-2 sm:px-4 hidden md:table-cell w-[90px] lg:w-[110px]">Reference</th>
+                    <th className="py-2.5 sm:py-3.5 px-2 sm:px-4 text-right w-[85px] sm:w-[110px]">Amount</th>
+                    <th className="py-2.5 sm:py-3.5 px-2 sm:px-4 text-center w-[95px] sm:w-[115px]">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 font-semibold text-slate-600 bg-white">
                   {txs.map((tx: any) => (
                     <tr key={tx.id} className="hover:bg-slate-50/50 transition-colors">
-                      <td className="py-2.5 sm:py-4 px-3 sm:px-6 font-medium text-slate-500 whitespace-nowrap">
-                        {new Date(tx.date).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
+                      <td className="py-2.5 sm:py-3.5 px-2 sm:px-4 font-medium text-slate-500 text-[11px] sm:text-xs">
+                        {new Date(tx.date).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}
                       </td>
-                      <td className="py-2.5 sm:py-4 px-3 sm:px-6 max-w-xs">
-                        <div className="flex flex-col gap-1">
-                          <span className="text-slate-900 font-bold truncate">{tx.description}</span>
+                      <td className="py-2.5 sm:py-3.5 px-2 sm:px-4">
+                        <div className="flex flex-col gap-0.5">
+                          <span className="text-slate-900 font-bold text-xs sm:text-sm line-clamp-1">{tx.description}</span>
+                          <div className="flex items-center gap-1.5 flex-wrap sm:hidden">
+                            <Badge variant="outline" className="capitalize border-slate-200 py-0 px-1.5 text-[9px]">
+                              {tx.category}
+                            </Badge>
+                            {tx.reference_no && (
+                              <span className="text-[9px] font-mono text-slate-400 truncate max-w-[100px]">
+                                {tx.reference_no}
+                              </span>
+                            )}
+                          </div>
                           {tx.recipient_profile && (
-                            <div className="flex items-center gap-1.5 flex-wrap">
-                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-800 text-[11px] font-bold border border-indigo-100">
-                                <UserCheck className="h-3 w-3 text-indigo-600 shrink-0" />
-                                <span>Paid to: {tx.recipient_profile.full_name}</span>
-                                <span className="text-[9px] uppercase px-1 py-0.2 rounded bg-indigo-200/70 text-indigo-900">
-                                  {tx.recipient_profile.role}
-                                </span>
+                            <div className="flex items-center gap-1 flex-wrap">
+                              <span className="inline-flex items-center gap-1 px-1.5 py-0.2 rounded bg-indigo-50 text-indigo-800 text-[10px] font-bold border border-indigo-100">
+                                <UserCheck className="h-2.5 w-2.5 text-indigo-600 shrink-0" />
+                                <span className="truncate max-w-[120px] sm:max-w-none">{tx.recipient_profile.full_name}</span>
                               </span>
                             </div>
                           )}
                         </div>
                       </td>
-                      <td className="py-2.5 sm:py-4 px-3 sm:px-6">
-                        <Badge variant="outline" className="capitalize border-slate-200 py-0.5 sm:py-1 px-2 sm:px-2.5 text-[10px] sm:text-xs">
+                      <td className="py-2.5 sm:py-3.5 px-2 sm:px-4 hidden sm:table-cell">
+                        <Badge variant="outline" className="capitalize border-slate-200 py-0.5 px-2 text-[10px] sm:text-xs truncate max-w-[120px] inline-block">
                           {tx.category}
                         </Badge>
                       </td>
-                      <td className="py-2.5 sm:py-4 px-3 sm:px-6 text-slate-400 font-mono text-[10px] sm:text-xs whitespace-nowrap">{tx.reference_no || "N/A"}</td>
-                      <td className="py-2.5 sm:py-4 px-3 sm:px-6 text-slate-500 font-normal whitespace-nowrap">
-                        {tx.recorded_by_profile?.full_name || "System Log"}
-                      </td>
-                      <td className={`py-2.5 sm:py-4 px-3 sm:px-6 text-right font-extrabold text-xs sm:text-base whitespace-nowrap ${tx.type === "income" ? "text-emerald-600" : "text-rose-600"}`}>
+                      <td className="py-2.5 sm:py-3.5 px-2 sm:px-4 text-slate-400 font-mono text-[10px] sm:text-xs truncate hidden md:table-cell">{tx.reference_no || "—"}</td>
+                      <td className={`py-2.5 sm:py-3.5 px-2 sm:px-4 text-right font-extrabold text-xs sm:text-sm whitespace-nowrap ${tx.type === "income" ? "text-emerald-600" : "text-rose-600"}`}>
                         {tx.type === "income" ? "+" : "-"}{formatCurrency(tx.amount)}
                       </td>
-                      <td className="py-2.5 sm:py-4 px-3 sm:px-6 text-center">
-                        <div className="flex items-center justify-center gap-1">
+                      <td className="py-2.5 sm:py-3.5 px-2 sm:px-4 text-center">
+                        <div className="flex items-center justify-center gap-0.5 sm:gap-1">
                           <Button
                             variant="ghost"
                             size="icon"
                             onClick={() => handleOpenReceipt(tx)}
-                            className="h-7 w-7 sm:h-8 sm:w-8 text-indigo-600 hover:bg-indigo-50 hover:text-indigo-700 rounded-lg"
+                            className="h-7 w-7 text-indigo-600 hover:bg-indigo-50 hover:text-indigo-700 rounded-lg shrink-0"
                             title="Print / Share Official Receipt"
                           >
-                            <Printer className="h-3.5 w-3.5 sm:h-4 w-4" />
+                            <Printer className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => openEditModal(tx)}
+                            className="h-7 w-7 text-amber-600 hover:bg-amber-50 hover:text-amber-700 rounded-lg shrink-0"
+                            title="Edit transaction"
+                          >
+                            <Pencil className="h-3.5 w-3.5" />
                           </Button>
                           <Button
                             variant="ghost"
                             size="icon"
                             disabled={deletingId === tx.id}
                             onClick={() => handleDelete(tx.id)}
-                            className="h-7 w-7 sm:h-8 sm:w-8 text-rose-500 hover:bg-rose-50 hover:text-rose-600 rounded-lg disabled:opacity-50"
+                            className="h-7 w-7 text-rose-500 hover:bg-rose-50 hover:text-rose-600 rounded-lg disabled:opacity-50 shrink-0"
                             title="Delete entry"
                           >
                             {deletingId === tx.id ? (
-                              <Loader2 className="h-3.5 w-3.5 sm:h-4 w-4 animate-spin text-rose-500" />
+                              <Loader2 className="h-3.5 w-3.5 animate-spin text-rose-500" />
                             ) : (
-                              <Trash2 className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                              <Trash2 className="h-3.5 w-3.5" />
                             )}
                           </Button>
                         </div>
@@ -852,6 +1011,117 @@ export default function AccountantTransactionsPage() {
           )}
         </div>
       </Card>
+
+      {/* Edit Transaction Modal */}
+      <Dialog open={editOpen} onOpenChange={setEditOpen}>
+        <DialogContent className="max-w-md w-[95vw] rounded-2xl p-4 sm:p-6 bg-white max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-base sm:text-lg font-black text-slate-900 flex items-center gap-2">
+              <Pencil className="h-5 w-5 text-indigo-600" />
+              Edit Transaction
+            </DialogTitle>
+            <DialogDescription className="text-xs sm:text-sm text-slate-500">
+              Update details of this financial entry in the AIMS ledger.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 pt-2">
+            {/* Type selector */}
+            <div className="grid grid-cols-2 gap-2 p-1 bg-slate-100 rounded-xl">
+              <button
+                type="button"
+                onClick={() => setEditForm((prev) => ({ ...prev, type: "income" }))}
+                className={cn(
+                  "py-2 text-xs sm:text-sm font-bold rounded-lg transition-all",
+                  editForm.type === "income" ? "bg-white text-emerald-700 shadow-xs font-black" : "text-slate-500"
+                )}
+              >
+                + Income
+              </button>
+              <button
+                type="button"
+                onClick={() => setEditForm((prev) => ({ ...prev, type: "expense" }))}
+                className={cn(
+                  "py-2 text-xs sm:text-sm font-bold rounded-lg transition-all",
+                  editForm.type === "expense" ? "bg-white text-rose-700 shadow-xs font-black" : "text-slate-500"
+                )}
+              >
+                - Expense
+              </button>
+            </div>
+
+            {/* Category */}
+            <div className="space-y-1.5">
+              <Label className="font-semibold text-xs sm:text-sm">Category</Label>
+              <Input
+                value={editForm.category}
+                onChange={(e) => setEditForm((prev) => ({ ...prev, category: e.target.value }))}
+                placeholder="Category"
+                className="h-10 rounded-xl text-xs sm:text-sm font-semibold"
+              />
+            </div>
+
+            {/* Amount & Date */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label className="font-semibold text-xs sm:text-sm">Amount (₹)</Label>
+                <Input
+                  type="number"
+                  value={editForm.amount}
+                  onChange={(e) => setEditForm((prev) => ({ ...prev, amount: e.target.value }))}
+                  className="h-10 rounded-xl font-bold text-xs sm:text-sm"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="font-semibold text-xs sm:text-sm">Date</Label>
+                <Input
+                  type="date"
+                  value={editForm.date}
+                  onChange={(e) => setEditForm((prev) => ({ ...prev, date: e.target.value }))}
+                  className="h-10 rounded-xl font-semibold text-xs sm:text-sm"
+                />
+              </div>
+            </div>
+
+            {/* Reference */}
+            <div className="space-y-1.5">
+              <Label className="font-semibold text-xs sm:text-sm">Reference No. (Optional)</Label>
+              <Input
+                value={editForm.reference_no}
+                onChange={(e) => setEditForm((prev) => ({ ...prev, reference_no: e.target.value }))}
+                placeholder="UPI / Cheque / Ref"
+                className="h-10 rounded-xl font-mono text-xs sm:text-sm"
+              />
+            </div>
+
+            {/* Description */}
+            <div className="space-y-1.5">
+              <Label className="font-semibold text-xs sm:text-sm">Description</Label>
+              <Input
+                value={editForm.description}
+                onChange={(e) => setEditForm((prev) => ({ ...prev, description: e.target.value }))}
+                placeholder="Description of transaction"
+                className="h-10 rounded-xl text-xs sm:text-sm font-medium"
+              />
+            </div>
+          </div>
+
+          <DialogFooter className="pt-3 gap-2">
+            <Button variant="outline" onClick={() => setEditOpen(false)} className="rounded-xl">
+              Cancel
+            </Button>
+            <Button
+              onClick={handleSaveEdit}
+              disabled={updating}
+              className="bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold"
+            >
+              {updating ? <Loader2 className="h-4 w-4 animate-spin mr-1.5" /> : null}
+              Save Changes
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Official Receipt / Voucher Modal */}
       <ReceiptModal
         open={receiptOpen}

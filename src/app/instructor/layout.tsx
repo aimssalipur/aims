@@ -45,6 +45,9 @@ export default async function InstructorLayout({
   const isAdmin = roles.includes("admin") || profile?.role === "admin" || user?.email === "aimssalipur@gmail.com";
   if (isAdmin) {
     roles = ["student", "instructor", "accountant", "admin"];
+  } else {
+    // Regular staff/instructor: never inherit finance or admin roles
+    roles = ["instructor"];
   }
 
   // Reject unauthorized users (only instructor and admin allowed)

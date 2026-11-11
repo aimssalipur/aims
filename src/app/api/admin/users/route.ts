@@ -204,8 +204,11 @@ export async function PUT(request: Request) {
       }
     }
 
-    // 2. Update roles if provided
-    if (roles !== undefined) {
+    // 2. Update role or roles if provided
+    let targetRoles: string[] | undefined = undefined;
+    if (typeof body.role === "string" && VALID_ROLES.has(body.role)) {
+      targetRoles = [body.role];
+    } else if (roles !== undefined) {
       if (!Array.isArray(roles) || roles.length === 0) {
         return NextResponse.json(
           { error: "roles must be a non-empty array" },
@@ -222,6 +225,12 @@ export async function PUT(request: Request) {
           );
         }
       }
+      targetRoles = roles;
+    }
+
+    if (targetRoles !== undefined) {
+      // The active primary role is the first specified role
+      const activeRole = targetRoles[0];
 
       // 1. Delete current roles in user_roles
       const { error: deleteError } = await supabaseAdmin
@@ -234,7 +243,7 @@ export async function PUT(request: Request) {
       }
 
       // 2. Insert new roles
-      const rolesToInsert = roles.map((role: string) => ({
+      const rolesToInsert = targetRoles.map((role: string) => ({
         user_id: id,
         role,
       }));
@@ -247,8 +256,7 @@ export async function PUT(request: Request) {
         return NextResponse.json({ error: insertError.message }, { status: 500 });
       }
 
-      // 3. Set the default/active role in profiles to the first selected role
-      const activeRole = roles[0];
+      // 3. Set the default/active role in profiles to the chosen role
       const { error: profileError } = await supabaseAdmin
         .from("profiles")
         .update({ role: activeRole })

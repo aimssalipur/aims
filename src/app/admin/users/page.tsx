@@ -440,6 +440,46 @@ export default function AdminUsersPage() {
     }
   };
 
+  const handleSetPrimaryRole = async (userId: string, targetRole: string) => {
+    if (roleUpdatingId) return;
+
+    setRoleUpdatingId(userId);
+    try {
+      const response = await fetch("/api/admin/users", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: userId, role: targetRole }),
+      });
+      let data: any = {};
+      try {
+        data = await response.json();
+      } catch {}
+
+      if (!response.ok || data.error) {
+        toast({
+          title: "Failed to update role",
+          description: getFriendlyErrorMessage(data.error || "Unable to update role."),
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Role updated ✅",
+          description: `User role changed to ${targetRole.toUpperCase()} successfully.`,
+          variant: "success",
+        });
+        fetchUsers();
+      }
+    } catch (err: any) {
+      toast({
+        title: "Error updating role",
+        description: getFriendlyErrorMessage(err),
+        variant: "destructive",
+      });
+    } finally {
+      setRoleUpdatingId(null);
+    }
+  };
+
   const handleToggleRole = async (userId: string, targetRole: string, currentRoles: string[]) => {
     if (roleUpdatingId) return;
 
@@ -1470,21 +1510,36 @@ export default function AdminUsersPage() {
                               <DropdownMenuSeparator />
                             </>
                           )}
-                          <DropdownMenuItem className="gap-2" onClick={() => handleToggleRole(u.id, "admin", u.roles)}>
-                            <Shield className="h-4 w-4 text-purple-600" />
-                            {u.roles?.includes("admin") ? "✓ Admin (Click to Remove)" : "Add Admin Role"}
-                          </DropdownMenuItem>
-                          <DropdownMenuItem className="gap-2" onClick={() => handleToggleRole(u.id, "instructor", u.roles)}>
-                            <GraduationCap className="h-4 w-4 text-aims-green" />
-                            {u.roles?.includes("instructor") ? "✓ Instructor (Click to Remove)" : "Add Instructor Role"}
-                          </DropdownMenuItem>
-                          <DropdownMenuItem className="gap-2" onClick={() => handleToggleRole(u.id, "accountant", u.roles)}>
-                            <DollarSign className="h-4 w-4 text-indigo-600" />
-                            {u.roles?.includes("accountant") ? "✓ Accountant (Click to Remove)" : "Add Accountant Role"}
-                          </DropdownMenuItem>
-                          <DropdownMenuItem className="gap-2" onClick={() => handleToggleRole(u.id, "student", u.roles)}>
+                          <div className="px-2 py-1 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                            Set Primary Role
+                          </div>
+                          <DropdownMenuItem
+                            className={cn("gap-2 cursor-pointer font-medium", u.role === "student" && "bg-blue-50/80 font-bold text-aims-navy")}
+                            onClick={() => handleSetPrimaryRole(u.id, "student")}
+                          >
                             <UserCircle className="h-4 w-4 text-aims-navy" />
-                            {u.roles?.includes("student") ? "✓ Student (Click to Remove)" : "Add Student Role"}
+                            <span>Student {u.role === "student" ? "✓" : ""}</span>
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            className={cn("gap-2 cursor-pointer font-medium", u.role === "instructor" && "bg-emerald-50/80 font-bold text-aims-green")}
+                            onClick={() => handleSetPrimaryRole(u.id, "instructor")}
+                          >
+                            <GraduationCap className="h-4 w-4 text-aims-green" />
+                            <span>Faculty / Instructor {u.role === "instructor" ? "✓" : ""}</span>
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            className={cn("gap-2 cursor-pointer font-medium", u.role === "accountant" && "bg-indigo-50/80 font-bold text-indigo-700")}
+                            onClick={() => handleSetPrimaryRole(u.id, "accountant")}
+                          >
+                            <DollarSign className="h-4 w-4 text-indigo-600" />
+                            <span>Accountant / Finance {u.role === "accountant" ? "✓" : ""}</span>
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            className={cn("gap-2 cursor-pointer font-medium", u.role === "admin" && "bg-purple-50/80 font-bold text-purple-700")}
+                            onClick={() => handleSetPrimaryRole(u.id, "admin")}
+                          >
+                            <Shield className="h-4 w-4 text-purple-600" />
+                            <span>Administrator {u.role === "admin" ? "✓" : ""}</span>
                           </DropdownMenuItem>
                           <DropdownMenuSeparator />
                           <DropdownMenuItem className="gap-2 font-semibold text-aims-navy focus:bg-blue-50 cursor-pointer" onClick={() => openEnrollModal(u)}>

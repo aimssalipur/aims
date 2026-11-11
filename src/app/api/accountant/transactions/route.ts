@@ -117,6 +117,42 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: error.message || "Failed to create transaction record." }, { status: 500 });
     }
 
+    // Sync to fees_payments if this is an income fee payment linked to a student
+    const studentTargetId = body.student_id || recipient_id;
+    if (type === "income" && studentTargetId) {
+      try {
+        const { data: studentProfile } = await supabase
+          .from("profiles")
+          .select("id, full_name, role")
+          .eq("id", studentTargetId)
+          .single();
+
+        if (studentProfile && (studentProfile.role === "student" || sanitizedCategory.toLowerCase().includes("fee"))) {
+          let method = "Cash";
+          if (reference_no) {
+            const refLower = String(reference_no).toLowerCase();
+            if (refLower.includes("upi")) method = "UPI";
+            else if (refLower.includes("chq") || refLower.includes("cheque")) method = "Bank Transfer";
+            else if (refLower.includes("card")) method = "Card";
+            else method = "Bank Transfer";
+          }
+
+          await supabase.from("fees_payments").insert({
+            student_id: studentProfile.id,
+            amount_paid: parsedAmount,
+            payment_method: method,
+            transaction_id: reference_no || data.id,
+            remarks: sanitizedDescription || `${sanitizedCategory} recorded in accounts transactions`,
+            status: "verified",
+            verified_by: context.user.id,
+            payment_date: date || new Date().toISOString(),
+          });
+        }
+      } catch (syncErr) {
+        console.error("[api/accountant/transactions] Sync to fees_payments warning:", syncErr);
+      }
+    }
+
     return NextResponse.json(data);
   } catch (err: any) {
     console.error("[api/accountant/transactions] POST exception:", err);

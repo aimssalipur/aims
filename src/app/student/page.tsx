@@ -39,6 +39,7 @@ import {
 } from "lucide-react";
 import { cn, formatDate, formatProgress, initials } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
+import { CoursePosterBanner } from "@/components/ui/course-poster-banner";
 
 export default function StudentDashboard() {
   const router = useRouter();
@@ -335,14 +336,11 @@ export default function StudentDashboard() {
               >
                 <div className="flex flex-col sm:flex-row">
                   <div className="relative sm:w-48 md:w-56 shrink-0 aspect-[16/10] sm:aspect-auto overflow-hidden sm:border-r border-slate-100">
-                    <Image
-                      src={course.thumbnail_url}
-                      alt={course.title}
-                      fill
+                    <CoursePosterBanner
+                      title={course.title}
+                      thumbnailUrl={course.thumbnail_url}
                       sizes="(max-width: 640px) 100vw, 220px"
-                      className="object-cover transition-transform duration-700 group-hover:scale-110"
                     />
-                    <div className="absolute inset-0 bg-gradient-to-t from-slate-900/60 via-transparent to-transparent sm:bg-gradient-to-r sm:from-slate-900/40 sm:to-transparent" />
                     <Link
                       href={`/student/courses/${course.id}`}
                       className="absolute inset-0 m-auto h-11 w-11 rounded-full bg-white/90 backdrop-blur flex items-center justify-center shadow-xl opacity-0 group-hover:opacity-100 transition-all scale-90 group-hover:scale-100 cursor-pointer"

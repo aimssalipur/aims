@@ -115,9 +115,7 @@ export async function POST(request: Request) {
       }
     }
 
-    const finalThumbnail =
-      thumbnail_url?.trim() ||
-      "https://images.unsplash.com/photo-1576765608535-5f04d1e3f289?w=800&h=600&fit=crop";
+    const finalThumbnail = (thumbnail_url && !thumbnail_url.includes("unsplash.com") ? thumbnail_url.trim() : "") || "";
 
     const { data: newCourse, error: insertError } = await supabase
       .from("courses")

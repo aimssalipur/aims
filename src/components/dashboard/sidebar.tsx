@@ -417,10 +417,17 @@ export function DashboardSidebar({ role, user }: DashboardSidebarProps) {
 
           {/* Active Panel Switcher Grid */}
           {(() => {
-            const isAdmin = role === "admin" || (user.roles && user.roles.includes("admin"));
-            const effectiveRoles: UserRole[] = isAdmin
+            const isAdmin = user?.email === "aimssalipur@gmail.com" || role === "admin" || (user.roles && user.roles.includes("admin"));
+            
+            // Students and staff must never see finance and admin options
+            let effectiveRoles: UserRole[] = isAdmin
               ? ["student", "instructor", "accountant", "admin"]
-              : user.roles || [role];
+              : (user.roles || [role]).filter((r) => r !== "admin" && r !== "accountant");
+
+            if (!isAdmin) {
+              if (role === "student") effectiveRoles = ["student"];
+              if (role === "instructor") effectiveRoles = ["instructor"];
+            }
 
             if (effectiveRoles.length <= 1) return null;
 

@@ -18,21 +18,14 @@ export const DEFAULT_FRONTEND_IMAGES: Record<string, string> = {
   hero_badge_avatar:
     "https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=80&h=80&fit=crop",
 
-  // Courses
-  course_1:
-    "https://images.unsplash.com/photo-1576091160550-2173dba999ef?w=800&auto=format&fit=crop&q=60",
-  course_2:
-    "https://images.unsplash.com/photo-1584515979956-d9f6e5d09982?w=800&auto=format&fit=crop&q=60",
-  course_3:
-    "https://images.unsplash.com/photo-1582750433449-648ed127bb54?w=800&auto=format&fit=crop&q=60",
-  course_4:
-    "https://images.unsplash.com/photo-1516549655169-df83a0774514?w=800&auto=format&fit=crop&q=60",
-  course_5:
-    "https://images.unsplash.com/photo-1505751172876-fa1923c5c528?w=800&auto=format&fit=crop&q=60",
-  course_6:
-    "https://images.unsplash.com/photo-1532938911079-1b06ac7ceec7?w=800&auto=format&fit=crop&q=60",
-  course_7:
-    "https://images.unsplash.com/photo-1581056771107-24ca5f033842?w=800&auto=format&fit=crop&q=60",
+  // Courses (Default empty - official AIMS branded gradient graphics rendered instead of dummy photos)
+  course_1: "",
+  course_2: "",
+  course_3: "",
+  course_4: "",
+  course_5: "",
+  course_6: "",
+  course_7: "",
 
   // Student Testimonials
   testimonial_1:
@@ -226,7 +219,14 @@ export function getSavedFrontendImages(): Record<string, string> {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return DEFAULT_FRONTEND_IMAGES;
     const parsed = JSON.parse(raw);
-    return { ...DEFAULT_FRONTEND_IMAGES, ...parsed };
+    const merged = { ...DEFAULT_FRONTEND_IMAGES, ...parsed };
+    // Clear out any obsolete unsplash dummy images for courses
+    for (const key of Object.keys(merged)) {
+      if (key.startsWith("course_") && merged[key]?.includes("unsplash.com")) {
+        merged[key] = "";
+      }
+    }
+    return merged;
   } catch {
     return DEFAULT_FRONTEND_IMAGES;
   }

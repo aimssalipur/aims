@@ -33,6 +33,7 @@ import {
   Loader2,
 } from "lucide-react";
 import { cn, initials } from "@/lib/utils";
+import { CoursePosterBanner } from "@/components/ui/course-poster-banner";
 import Link from "next/link";
 
 export default function InstructorDashboard() {
@@ -336,10 +337,10 @@ export default function InstructorDashboard() {
                     <CardContent className="p-0">
                       <div className="flex flex-col sm:flex-row">
                         <div className="relative sm:w-48 shrink-0 aspect-[16/10] sm:aspect-auto overflow-hidden bg-slate-100">
-                          <img
-                            src={course.thumbnail_url || "https://images.unsplash.com/photo-1576765608535-5f04d1e3f289?w=800&h=600&fit=crop"}
-                            alt={course.title}
-                            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                          <CoursePosterBanner
+                            title={course.title}
+                            thumbnailUrl={course.thumbnail_url}
+                            sizes="200px"
                           />
                         </div>
                         <div className="flex-1 p-4 sm:p-5 space-y-3">

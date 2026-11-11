@@ -20,7 +20,7 @@ export async function GET(request: Request) {
   let query = supabase
     .from("fees_payments")
     .select("*, student:profiles!student_id(full_name, email, whatsapp, course_of_interest), verifier:profiles!verified_by(full_name), course:courses!course_id(id, title)")
-    .order("created_at", { ascending: false });
+    .order("payment_date", { ascending: false });
 
   if (status && status !== "all" && ALLOWED_PAYMENT_STATUSES.has(status)) {
     query = query.eq("status", status);

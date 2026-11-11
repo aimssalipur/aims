@@ -776,18 +776,17 @@ export default function AccountantCapitalPage() {
                 </p>
               </div>
             ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs sm:text-sm border-collapse min-w-[780px]">
+              <div className="w-full">
+                <table className="w-full text-left text-xs sm:text-sm border-collapse">
                   <thead>
                     <tr className="border-b border-slate-100 text-slate-400 uppercase text-[9px] sm:text-[10px] font-bold tracking-wider bg-slate-50/60">
-                      <th className="py-3 px-4 sm:px-6">Type & Source</th>
-                      <th className="py-3 px-4 sm:px-6">Principal Borrowed</th>
-                      <th className="py-3 px-4 sm:px-6">Interest & Terms</th>
-                      <th className="py-3 px-4 sm:px-6">Monthly EMI</th>
-                      <th className="py-3 px-4 sm:px-6">Total Payable</th>
-                      <th className="py-3 px-4 sm:px-6">Repaid / Balance</th>
-                      <th className="py-3 px-4 sm:px-6">Status</th>
-                      <th className="py-3 px-4 sm:px-6 text-center">Actions</th>
+                      <th className="py-2.5 sm:py-3 px-2 sm:px-4">Type & Source</th>
+                      <th className="py-2.5 sm:py-3 px-2 sm:px-4">Principal</th>
+                      <th className="py-2.5 sm:py-3 px-2 sm:px-4 hidden md:table-cell">Terms</th>
+                      <th className="py-2.5 sm:py-3 px-2 sm:px-4 hidden sm:table-cell">Monthly EMI</th>
+                      <th className="py-2.5 sm:py-3 px-2 sm:px-4">Repaid / Bal</th>
+                      <th className="py-2.5 sm:py-3 px-2 sm:px-4 text-center">Status</th>
+                      <th className="py-2.5 sm:py-3 px-2 sm:px-4 text-center">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 font-semibold text-slate-600 bg-white">
@@ -797,9 +796,9 @@ export default function AccountantCapitalPage() {
 
                       return (
                         <tr key={r.id} className="hover:bg-slate-50/50 transition-colors">
-                          <td className="py-3.5 px-4 sm:px-6">
+                          <td className="py-2.5 sm:py-3 px-2 sm:px-4">
                             <div className="flex flex-col">
-                              <span className="text-slate-900 font-bold flex items-center gap-1.5">
+                              <span className="text-slate-900 font-bold flex items-center gap-1.5 text-xs sm:text-sm">
                                 {isBank ? (
                                   <Building2 className="h-3.5 w-3.5 text-indigo-600 shrink-0" />
                                 ) : (
@@ -807,46 +806,39 @@ export default function AccountantCapitalPage() {
                                 )}
                                 {r.lender_name}
                               </span>
-                              <div className="flex items-center gap-1.5 mt-0.5 text-[11px] text-slate-400 font-medium">
+                              <div className="flex items-center gap-1.5 mt-0.5 text-[10px] sm:text-[11px] text-slate-400 font-medium">
                                 <span>{isBank ? "Bank Loan" : `Lender via ${r.payment_method}`}</span>
-                                {r.account_number && <span>· A/c: {r.account_number}</span>}
-                                {r.lender_contact && <span>· Ph: {r.lender_contact}</span>}
+                                {r.account_number && <span className="hidden sm:inline">· A/c: {r.account_number}</span>}
                               </div>
                             </div>
                           </td>
-                          <td className="py-3.5 px-4 sm:px-6 font-extrabold text-slate-900 text-sm whitespace-nowrap">
+                          <td className="py-2.5 sm:py-3 px-2 sm:px-4 font-extrabold text-slate-900 text-xs sm:text-sm whitespace-nowrap">
                             {formatCurrency(r.principal_amount)}
                           </td>
-                          <td className="py-3.5 px-4 sm:px-6 whitespace-nowrap">
+                          <td className="py-2.5 sm:py-3 px-2 sm:px-4 whitespace-nowrap hidden md:table-cell">
                             <div className="flex flex-col">
-                              <span className="text-slate-800 font-bold">
+                              <span className="text-slate-800 font-bold text-xs">
                                 {r.interest_rate_percent}% p.a.
                               </span>
-                              <span className="text-[11px] text-slate-400 font-medium">
+                              <span className="text-[10px] text-slate-400 font-medium">
                                 {Math.round(r.tenure_months / 12 * 10) / 10} yrs ({r.tenure_months} mo)
                               </span>
                             </div>
                           </td>
-                          <td className="py-3.5 px-4 sm:px-6 whitespace-nowrap">
+                          <td className="py-2.5 sm:py-3 px-2 sm:px-4 whitespace-nowrap hidden sm:table-cell">
                             {r.monthly_emi > 0 ? (
                               <div className="flex flex-col">
-                                <span className="font-extrabold text-indigo-600">
+                                <span className="font-extrabold text-indigo-600 text-xs">
                                   {formatCurrency(r.monthly_emi)}/mo
-                                </span>
-                                <span className="text-[10px] text-slate-400 font-medium">
-                                  Int: {formatCurrency(r.total_interest)}
                                 </span>
                               </div>
                             ) : (
-                              <span className="text-slate-400 font-normal">Interest-free</span>
+                              <span className="text-slate-400 font-normal text-xs">0% Int</span>
                             )}
                           </td>
-                          <td className="py-3.5 px-4 sm:px-6 font-bold text-slate-900 whitespace-nowrap">
-                            {formatCurrency(r.total_payable)}
-                          </td>
-                          <td className="py-3.5 px-4 sm:px-6 whitespace-nowrap">
-                            <div className="flex flex-col gap-1 min-w-[120px]">
-                              <div className="flex items-center justify-between text-[11px]">
+                          <td className="py-2.5 sm:py-3 px-2 sm:px-4 whitespace-nowrap">
+                            <div className="flex flex-col gap-1 min-w-[90px] sm:min-w-[120px]">
+                              <div className="flex items-center justify-between text-[10px] sm:text-[11px]">
                                 <span className="text-emerald-600 font-bold">{formatCurrency(r.amount_repaid)}</span>
                                 <span className="text-rose-600 font-bold">{formatCurrency(r.remaining_balance)}</span>
                               </div>
@@ -858,14 +850,14 @@ export default function AccountantCapitalPage() {
                               </div>
                             </div>
                           </td>
-                          <td className="py-3.5 px-4 sm:px-6 whitespace-nowrap">
+                          <td className="py-2.5 sm:py-3 px-2 sm:px-4 whitespace-nowrap text-center">
                             {r.status === "settled" ? (
-                              <Badge className="bg-emerald-50 text-emerald-700 border-emerald-200 font-bold text-[10px]">
-                                <CheckCircle2 className="h-3 w-3 mr-1 text-emerald-600" /> Settled
+                              <Badge className="bg-emerald-50 text-emerald-700 border-emerald-200 font-bold text-[9px] sm:text-[10px] px-1.5 py-0">
+                                Settled
                               </Badge>
                             ) : (
-                              <Badge className="bg-amber-50 text-amber-700 border-amber-200 font-bold text-[10px]">
-                                <Clock className="h-3 w-3 mr-1 text-amber-600" /> Active
+                              <Badge className="bg-amber-50 text-amber-700 border-amber-200 font-bold text-[9px] sm:text-[10px] px-1.5 py-0">
+                                Active
                               </Badge>
                             )}
                           </td>

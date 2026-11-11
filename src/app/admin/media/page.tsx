@@ -25,6 +25,8 @@ import {
   resetAllFrontendImages,
   FrontendImageItem,
 } from "@/lib/frontend-images";
+import { CoursePosterBanner } from "@/components/ui/course-poster-banner";
+import { triggerDataRefresh } from "@/lib/refresh-event";
 import {
   Image as ImageIcon,
   Upload,
@@ -38,6 +40,7 @@ import {
   Youtube,
   Instagram,
   Eye,
+  Loader2,
 } from "lucide-react";
 
 // Curated high-res medical and healthcare presets for quick selection
@@ -56,24 +59,7 @@ const IMAGE_PRESETS: Record<string, { label: string; url: string }[]> = {
       url: "https://images.unsplash.com/photo-1582750433449-648ed127bb54?w=1200&h=800&fit=crop",
     },
   ],
-  courses: [
-    {
-      label: "Nurse with Stethoscope",
-      url: "https://images.unsplash.com/photo-1576091160550-2173dba999ef?w=800&auto=format&fit=crop&q=60",
-    },
-    {
-      label: "Intensive Care Station",
-      url: "https://images.unsplash.com/photo-1584515979956-d9f6e5d09982?w=800&auto=format&fit=crop&q=60",
-    },
-    {
-      label: "Medical Lecture Hall",
-      url: "https://images.unsplash.com/photo-1532938911079-1b06ac7ceec7?w=800&auto=format&fit=crop&q=60",
-    },
-    {
-      label: "Operation Theater Demo",
-      url: "https://images.unsplash.com/photo-1551076805-e1869033e561?w=800&auto=format&fit=crop&q=60",
-    },
-  ],
+  courses: [],
   testimonials: [
     {
       label: "Female Student (Smiling)",
@@ -113,9 +99,22 @@ export default function AdminMediaPage() {
   const [images, setImages] = useState<Record<string, string>>(DEFAULT_FRONTEND_IMAGES);
   const [dirtyKeys, setDirtyKeys] = useState<Set<string>>(new Set());
   const [activeTab, setActiveTab] = useState("hero");
+  const [uploadingId, setUploadingId] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    setImages(getSavedFrontendImages());
+    const local = getSavedFrontendImages();
+    setImages(local);
+
+    // Fetch live course thumbnails from database so admin media matches Supabase truth
+    fetch("/api/admin/media")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data?.courseImages && Object.keys(data.courseImages).length > 0) {
+          setImages((prev) => ({ ...prev, ...data.courseImages }));
+        }
+      })
+      .catch((err) => console.error("Error loading server course thumbnails:", err));
   }, []);
 
   // Update single image URL
@@ -134,8 +133,8 @@ export default function AdminMediaPage() {
     });
   };
 
-  // Upload image from user's computer
-  const handleFileUpload = (id: string, file: File) => {
+  // Upload image to Cloud / Supabase storage
+  const handleFileUpload = async (id: string, file: File) => {
     if (!file.type.startsWith("image/")) {
       toast({
         title: "Invalid File",
@@ -145,66 +144,98 @@ export default function AdminMediaPage() {
       return;
     }
 
-    // Convert file to base64 compressed data URL
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const result = e.target?.result as string;
-      if (!result) return;
+    setUploadingId(id);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
 
-      // Compress large images via client-side canvas
-      const img = new window.Image();
-      img.onload = () => {
-        const canvas = document.createElement("canvas");
-        const maxDim = 1200;
-        let width = img.width;
-        let height = img.height;
+      const res = await fetch("/api/upload", {
+        method: "POST",
+        body: formData,
+      });
 
-        if (width > height && width > maxDim) {
-          height = Math.round((height * maxDim) / width);
-          width = maxDim;
-        } else if (height > maxDim) {
-          width = Math.round((width * maxDim) / height);
-          height = maxDim;
-        }
+      const data = await res.json();
+      if (!res.ok || data.error) {
+        throw new Error(data.error || "Upload failed");
+      }
 
-        canvas.width = width;
-        canvas.height = height;
-        const ctx = canvas.getContext("2d");
-        if (ctx) {
-          ctx.drawImage(img, 0, 0, width, height);
-          const compressed = canvas.toDataURL("image/jpeg", 0.85);
-          handleUrlChange(id, compressed);
-          toast({
-            title: "Photo Uploaded! 📸",
-            description: "Your local image was compressed and ready to save.",
-            variant: "success",
-          });
-        }
-      };
-      img.src = result;
-    };
-    reader.readAsDataURL(file);
+      if (data?.url) {
+        handleUrlChange(id, data.url);
+        toast({
+          title: "Photo Uploaded! 📸",
+          description: "Image uploaded to cloud storage. Click 'Save All Changes' to apply everywhere.",
+          variant: "success",
+        });
+      }
+    } catch (err: any) {
+      toast({
+        title: "Upload Note",
+        description: err.message || "Could not upload image. You can also paste a direct image URL.",
+        variant: "destructive",
+      });
+    } finally {
+      setUploadingId(null);
+    }
   };
 
-  // Save all changes
-  const handleSaveAll = () => {
-    saveFrontendImages(images);
-    setDirtyKeys(new Set());
-    toast({
-      title: "Frontend Images Updated",
-      description: "All changes are now live on the public landing page.",
-      variant: "success",
-    });
+  // Save all changes to localStorage AND synchronize courses to Supabase Database
+  const handleSaveAll = async () => {
+    setSaving(true);
+    try {
+      // 1. Save locally for instant reactivity
+      saveFrontendImages(images);
+
+      // 2. Synchronize course covers to database so students & instructors see it everywhere
+      const res = await fetch("/api/admin/media", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ images }),
+      });
+
+      const data = await res.json();
+      if (!res.ok || data.error) {
+        throw new Error(data.error || "Failed to sync with database");
+      }
+
+      setDirtyKeys(new Set());
+      triggerDataRefresh();
+
+      toast({
+        title: "Saved Everywhere! 🚀",
+        description: "Images and course posters are now updated across the entire platform.",
+        variant: "success",
+      });
+    } catch (err: any) {
+      toast({
+        title: "Saved Locally",
+        description: err.message || "Saved in browser, but database sync had an issue.",
+        variant: "destructive",
+      });
+    } finally {
+      setSaving(false);
+    }
   };
 
   // Reset all to defaults
-  const handleResetAll = () => {
+  const handleResetAll = async () => {
     resetAllFrontendImages();
     setImages(DEFAULT_FRONTEND_IMAGES);
     setDirtyKeys(new Set());
+
+    try {
+      await fetch("/api/admin/media", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ images: DEFAULT_FRONTEND_IMAGES }),
+      });
+      triggerDataRefresh();
+    } catch (e) {
+      console.warn("Reset error:", e);
+    }
+
     toast({
       title: "All Images Reset",
-      description: "Every frontend section is back to default photos.",
+      description: "Every frontend section and course poster is back to defaults.",
     });
   };
 
@@ -251,12 +282,13 @@ export default function AdminMediaPage() {
           <Button
             variant="primary"
             size="sm"
+            disabled={saving}
             onClick={handleSaveAll}
             className="h-10 gap-2 font-bold text-xs shadow-md shadow-aims-navy/20 bg-aims-navy hover:bg-aims-navy-light"
           >
-            <Save className="h-4 w-4" />
-            <span>Save Live Changes</span>
-            {dirtyKeys.size > 0 && (
+            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+            <span>{saving ? "Saving Everywhere..." : "Save Live Changes"}</span>
+            {!saving && dirtyKeys.size > 0 && (
               <Badge className="bg-amber-400 text-slate-900 font-bold px-1.5 py-0 text-[10px] ml-1">
                 {dirtyKeys.size} Unsaved
               </Badge>
@@ -301,6 +333,7 @@ export default function AdminMediaPage() {
                   item={item}
                   currentUrl={images[item.id] || item.defaultUrl}
                   isDirty={dirtyKeys.has(item.id)}
+                  isUploading={uploadingId === item.id}
                   onUrlChange={(url) => handleUrlChange(item.id, url)}
                   onReset={() => handleResetSingle(item.id)}
                   onFileUpload={(file) => handleFileUpload(item.id, file)}
@@ -319,6 +352,7 @@ interface ImageEditorCardProps {
   item: FrontendImageItem;
   currentUrl: string;
   isDirty: boolean;
+  isUploading?: boolean;
   onUrlChange: (url: string) => void;
   onReset: () => void;
   onFileUpload: (file: File) => void;
@@ -329,6 +363,7 @@ function ImageEditorCard({
   item,
   currentUrl,
   isDirty,
+  isUploading = false,
   onUrlChange,
   onReset,
   onFileUpload,
@@ -377,30 +412,48 @@ function ImageEditorCard({
               maxHeight: "220px",
             }}
           >
-            <img
-              src={currentUrl}
-              alt={item.label}
-              className="w-full h-full object-cover"
-              onError={(e) => {
-                (e.target as HTMLImageElement).src = item.defaultUrl;
-              }}
-            />
+            {item.section === "courses" && (!currentUrl || currentUrl.includes("unsplash.com")) ? (
+              <CoursePosterBanner
+                title={item.label}
+                thumbnailUrl=""
+              />
+            ) : (
+              <img
+                src={currentUrl || item.defaultUrl}
+                alt={item.label}
+                className="w-full h-full object-cover"
+                onError={(e) => {
+                  (e.target as HTMLImageElement).src = item.defaultUrl;
+                }}
+              />
+            )}
           </div>
 
           <div className="absolute top-2 right-2 flex items-center gap-1.5">
             <button
               type="button"
+              disabled={isUploading}
               onClick={() => fileInputRef.current?.click()}
-              className="h-8 px-2.5 rounded-lg bg-black/60 hover:bg-black/80 backdrop-blur text-white text-xs font-bold flex items-center gap-1.5 shadow transition-all cursor-pointer"
+              className="h-8 px-2.5 rounded-lg bg-black/60 hover:bg-black/80 backdrop-blur text-white text-xs font-bold flex items-center gap-1.5 shadow transition-all cursor-pointer disabled:opacity-60"
             >
-              <Upload className="h-3.5 w-3.5" />
-              <span>Upload Photo</span>
+              {isUploading ? (
+                <>
+                  <Loader2 className="h-3.5 w-3.5 animate-spin text-emerald-400" />
+                  <span>Uploading to Cloud...</span>
+                </>
+              ) : (
+                <>
+                  <Upload className="h-3.5 w-3.5" />
+                  <span>Upload Photo</span>
+                </>
+              )}
             </button>
             <input
               ref={fileInputRef}
               type="file"
               accept="image/*"
               className="hidden"
+              disabled={isUploading}
               onChange={(e) => {
                 const file = e.target.files?.[0];
                 if (file) onFileUpload(file);

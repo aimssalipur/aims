@@ -45,6 +45,9 @@ export default async function StudentLayout({
   const isAdmin = roles.includes("admin") || profile?.role === "admin" || user?.email === "aimssalipur@gmail.com";
   if (isAdmin) {
     roles = ["student", "instructor", "accountant", "admin"];
+  } else {
+    // Regular student: never inherit staff, finance or admin roles
+    roles = ["student"];
   }
 
   // Check student approval (admins and staff are never blocked)

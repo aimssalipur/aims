@@ -79,7 +79,10 @@ export async function PATCH(
 
     if (body.title !== undefined) updateData.title = String(body.title).trim();
     if (body.description !== undefined) updateData.description = String(body.description).trim();
-    if (body.thumbnail_url !== undefined) updateData.thumbnail_url = String(body.thumbnail_url).trim();
+    if (body.thumbnail_url !== undefined) {
+      const thumb = String(body.thumbnail_url).trim();
+      updateData.thumbnail_url = thumb.includes("unsplash.com") ? "" : thumb;
+    }
     if (body.instructor_id !== undefined) updateData.instructor_id = String(body.instructor_id).trim();
     if (body.youtube_playlist !== undefined) updateData.youtube_playlist = body.youtube_playlist ? String(body.youtube_playlist).trim() : null;
 

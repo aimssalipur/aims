@@ -30,8 +30,10 @@ import {
   BarChart3,
   Star,
   RotateCw,
+  GraduationCap,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { CoursePosterBanner } from "@/components/ui/course-poster-banner";
 import { cn, initials, formatProgress } from "@/lib/utils";
 import { subscribeToDataRefresh } from "@/lib/refresh-event";
 import { useToast } from "@/components/ui/use-toast";
@@ -211,15 +213,11 @@ export default function StudentCoursesPage() {
                 className="group overflow-hidden border-slate-100 hover:shadow-2xl transition-all duration-500 hover:-translate-y-1.5 flex flex-col"
               >
                 <div className="relative overflow-hidden aspect-[16/10]">
-                  <Image
-                    src={course.thumbnail_url}
-                    alt={course.title}
-                    fill
-                    sizes="(max-width: 768px) 100vw, 400px"
-                    className="object-cover transition-transform duration-700 group-hover:scale-110"
+                  <CoursePosterBanner
+                    title={course.title}
+                    thumbnailUrl={course.thumbnail_url}
                   />
-                  <div className="absolute inset-0 bg-gradient-to-t from-slate-900/80 via-slate-900/20 to-transparent" />
-                  <div className="absolute top-3 left-3 sm:top-4 sm:left-4 flex flex-wrap gap-1.5 sm:gap-2">
+                  <div className="absolute top-3 left-3 sm:top-4 sm:left-4 flex flex-wrap gap-1.5 sm:gap-2 z-10">
                     <Badge
                       variant={
                         course.category === "Recruitment"
@@ -342,13 +340,11 @@ export default function StudentCoursesPage() {
                   className="group overflow-hidden border-slate-100 hover:shadow-2xl transition-all duration-500 hover:-translate-y-1.5"
                 >
                   <div className="flex flex-col sm:flex-row">
-                    <div className="relative sm:w-40 aspect-[16/10] sm:aspect-auto overflow-hidden">
-                      <Image
-                        src={course.thumbnail_url}
-                        alt={course.title}
-                        fill
-                        sizes="160px"
-                        className="object-cover transition-transform duration-500 group-hover:scale-110"
+                    <div className="relative sm:w-48 aspect-[16/10] sm:aspect-auto shrink-0 overflow-hidden">
+                      <CoursePosterBanner
+                        title={course.title}
+                        thumbnailUrl={course.thumbnail_url}
+                        sizes="200px"
                       />
                     </div>
                     <div className="flex-1 p-5">
@@ -422,14 +418,11 @@ export default function StudentCoursesPage() {
                 className="group overflow-hidden border-amber-200/60 shadow-md hover:shadow-2xl transition-all duration-500 hover:-translate-y-1.5 flex flex-col"
               >
                 <div className="relative overflow-hidden aspect-[16/10]">
-                  <Image
-                    src={course.thumbnail_url}
-                    alt={course.title}
-                    fill
-                    sizes="(max-width: 768px) 100vw, 400px"
-                    className="object-cover transition-transform duration-700 group-hover:scale-110"
+                  <CoursePosterBanner
+                    title={course.title}
+                    thumbnailUrl={course.thumbnail_url}
                   />
-                  <div className="absolute top-3 right-3">
+                  <div className="absolute top-3 right-3 z-10">
                     <Badge className="bg-amber-500 text-white font-bold gap-1 shadow-md">
                       <Star className="h-3 w-3 fill-white" /> Starred
                     </Badge>

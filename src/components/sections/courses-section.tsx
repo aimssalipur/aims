@@ -16,10 +16,14 @@ import {
   Clock3,
   Users,
   PlayCircle,
+  GraduationCap,
+  Sparkles,
 } from "lucide-react";
 import { initials as getInitials } from "@/lib/utils";
 import { useGSAP } from "@/lib/use-gsap-animation";
 import { useFrontendImages } from "@/lib/frontend-images";
+import { CoursePosterBanner } from "@/components/ui/course-poster-banner";
+import { subscribeToDataRefresh } from "@/lib/refresh-event";
 import gsap from "gsap";
 
 const categoryMap: Record<string, { label: string; variant: any }> = {
@@ -65,8 +69,12 @@ export function CoursesSection() {
       }
     }
     loadCourses();
+    const unsubscribe = subscribeToDataRefresh(() => {
+      loadCourses();
+    });
     return () => {
       isMounted = false;
+      unsubscribe();
     };
   }, []);
 
@@ -136,27 +144,24 @@ export function CoursesSection() {
           {featuredCourses.map((course, i) => {
             const info = courseInfo[course.title] || { category: "Nursing", duration: "2 Yrs" };
             const cat = categoryMap[info.category] || { label: "Recruitment", variant: "default" };
-            const courseThumb = frontendImages[`course_${i + 1}`] || course.thumbnail_url;
+            const rawThumb = (course.thumbnail_url || frontendImages[`course_${i + 1}`] || "").trim();
+            const hasRealImage = rawThumb && !rawThumb.includes("unsplash.com");
 
             return (
               <Card
                 key={course.id}
                 className="course-card-item group overflow-hidden border-slate-100 hover:shadow-xl transition-all duration-300 hover:-translate-y-1 flex flex-col bg-white rounded-xl sm:rounded-2xl"
               >
-                {/* Thumbnail Image with Aspect Ratio */}
+                {/* Thumbnail / Branded Visual with Aspect Ratio */}
                 <div className="relative overflow-hidden aspect-[16/11]">
-                  <Image
-                    src={courseThumb}
-                    alt={`${course.title} - AIMS Salipur Nursing Coaching`}
-                    fill
+                  <CoursePosterBanner
+                    title={course.title}
+                    thumbnailUrl={rawThumb}
                     sizes="(max-width: 1024px) 50vw, 33vw"
-                    className="object-cover transition-transform duration-500 group-hover:scale-105"
-                    unoptimized={courseThumb.startsWith("data:")}
                   />
-                  <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-slate-900/20 to-transparent" />
 
                   {/* Category Badge */}
-                  <div className="absolute top-2 left-2 sm:top-3 sm:left-3">
+                  <div className="absolute top-2 left-2 sm:top-3 sm:left-3 z-20">
                     <Badge
                       variant={cat.variant}
                       className="text-[9px] sm:text-xs font-bold px-1.5 py-0.5 sm:px-2 sm:py-0.5 shadow"
@@ -166,7 +171,7 @@ export function CoursesSection() {
                   </div>
 
                   {/* Duration & Seats */}
-                  <div className="absolute bottom-1.5 left-2 right-2 sm:bottom-2.5 sm:left-3 sm:right-3 flex items-center justify-between text-white text-[10px] sm:text-xs font-semibold drop-shadow">
+                  <div className="absolute bottom-1.5 left-2 right-2 sm:bottom-2.5 sm:left-3 sm:right-3 flex items-center justify-between text-white text-[10px] sm:text-xs font-semibold drop-shadow z-20">
                     <div className="flex items-center gap-1">
                       <Clock3 className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
                       <span>{info.duration}</span>

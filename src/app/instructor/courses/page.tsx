@@ -83,6 +83,9 @@ export default function InstructorCoursesPage() {
   const [uploadingEditImage, setUploadingEditImage] = useState(false);
   const [instructors, setInstructors] = useState<any[]>([]);
   const [enrollmentCounts, setEnrollmentCounts] = useState<Record<string, number>>({});
+  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [loadingAuth, setLoadingAuth] = useState(true);
 
   // Fetch all courses from the database
   const fetchCourses = async () => {
@@ -107,10 +110,19 @@ export default function InstructorCoursesPage() {
 
   const fetchMeta = async () => {
     try {
-      const [usersRes, enrollRes] = await Promise.all([
+      const [usersRes, enrollRes, authRes] = await Promise.all([
         fetch("/api/admin/users", { cache: "no-store" }),
         fetch("/api/admin/enrollments", { cache: "no-store" }),
+        fetch("/api/auth/me", { cache: "no-store" }),
       ]);
+
+      if (authRes.ok) {
+        const authData = await authRes.json();
+        if (authData.authenticated) {
+          setCurrentUser(authData.user);
+          setIsAdmin(Boolean(authData.isAdmin));
+        }
+      }
 
       if (usersRes.ok) {
         const usersData = await usersRes.json();
@@ -140,6 +152,8 @@ export default function InstructorCoursesPage() {
       }
     } catch (e) {
       console.error("Error fetching metadata in courses page:", e);
+    } finally {
+      setLoadingAuth(false);
     }
   };
 
@@ -234,7 +248,7 @@ export default function InstructorCoursesPage() {
           title: courseForm.title,
           description: courseForm.description,
           thumbnail_url: courseForm.thumbnail_url,
-          instructor_id: courseForm.instructor_id || undefined,
+          instructor_id: courseForm.instructor_id || currentUser?.id || undefined,
         }),
       });
 
@@ -382,8 +396,13 @@ export default function InstructorCoursesPage() {
   const [loadingResources, setLoadingResources] = useState(false);
   const [addingResource, setAddingResource] = useState(false);
 
-  // All active AIMS nursing courses mapping
-  const myCourses = courses.map((c) => {
+  // Filter courses based on user role:
+  // Universal Admins see all courses; regular instructors only see courses assigned to them
+  const displayedCourses = isAdmin
+    ? courses
+    : courses.filter((c) => c.instructor_id === currentUser?.id);
+
+  const myCourses = displayedCourses.map((c) => {
     const enrolled = enrollmentCounts[c.id] || 0;
     return {
       ...c,
@@ -703,18 +722,33 @@ export default function InstructorCoursesPage() {
                       <button
                         type="button"
                         onClick={() => setCourseForm((prev) => ({ ...prev, thumbnail_url: "" }))}
-                        className="text-[11px] font-bold text-rose-600 hover:text-rose-700 underline cursor-pointer"
+                        className="text-[11px] font-bold text-rose-600 hover:text-rose-700 underline cursor-pointer flex items-center gap-1"
                       >
-                        Remove (Use Course Name Banner)
+                        <Trash2 className="h-3 w-3" />
+                        Delete Pic (Use Course Banner)
                       </button>
                     )}
                   </div>
-                  <Input 
-                    placeholder="https://.../thumbnail.jpg" 
-                    className="h-9 text-xs mt-1" 
-                    value={courseForm.thumbnail_url}
-                    onChange={(e) => setCourseForm((prev) => ({ ...prev, thumbnail_url: e.target.value }))}
-                  />
+                  <div className="flex gap-2 mt-1">
+                    <Input 
+                      placeholder="https://.../thumbnail.jpg" 
+                      className="h-9 text-xs" 
+                      value={courseForm.thumbnail_url}
+                      onChange={(e) => setCourseForm((prev) => ({ ...prev, thumbnail_url: e.target.value }))}
+                    />
+                    {courseForm.thumbnail_url && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setCourseForm((prev) => ({ ...prev, thumbnail_url: "" }))}
+                        title="Delete photo"
+                        className="h-9 px-2.5 shrink-0 text-rose-600 hover:text-rose-700 hover:bg-rose-50 border-rose-200"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    )}
+                  </div>
                 </div>
               </div>
               <DialogFooter className="flex-col sm:flex-row gap-2 pt-2">
@@ -833,17 +867,33 @@ export default function InstructorCoursesPage() {
                   <button
                     type="button"
                     onClick={() => setEditForm((prev) => ({ ...prev, thumbnail_url: "" }))}
-                    className="text-[11px] font-bold text-rose-600 hover:text-rose-700 underline cursor-pointer"
+                    className="text-[11px] font-bold text-rose-600 hover:text-rose-700 underline cursor-pointer flex items-center gap-1"
                   >
-                    Remove (Use Course Name Banner)
+                    <Trash2 className="h-3 w-3" />
+                    Delete Pic (Use Course Banner)
                   </button>
                 )}
               </div>
-              <Input 
-                className="h-9 text-xs mt-1" 
-                value={editForm.thumbnail_url}
-                onChange={(e) => setEditForm((prev) => ({ ...prev, thumbnail_url: e.target.value }))}
-              />
+              <div className="flex gap-2 mt-1">
+                <Input 
+                  className="h-9 text-xs" 
+                  value={editForm.thumbnail_url}
+                  placeholder="Paste image URL (or leave empty for official banner)..."
+                  onChange={(e) => setEditForm((prev) => ({ ...prev, thumbnail_url: e.target.value }))}
+                />
+                {editForm.thumbnail_url && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setEditForm((prev) => ({ ...prev, thumbnail_url: "" }))}
+                    title="Delete photo"
+                    className="h-9 px-2.5 shrink-0 text-rose-600 hover:text-rose-700 hover:bg-rose-50 border-rose-200"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </Button>
+                )}
+              </div>
             </div>
           </div>
           <DialogFooter className="flex-col sm:flex-row gap-2 pt-2">
@@ -869,7 +919,7 @@ export default function InstructorCoursesPage() {
         </DialogContent>
       </Dialog>
 
-      {loadingCourses && courses.length === 0 ? (
+      {(loadingCourses || loadingAuth) && courses.length === 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3.5 sm:gap-6">
           {[1, 2, 3].map((n) => (
             <div key={n} className="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm animate-pulse space-y-4">
@@ -878,6 +928,31 @@ export default function InstructorCoursesPage() {
               <div className="h-4 bg-slate-100 rounded w-1/2" />
             </div>
           ))}
+        </div>
+      ) : myCourses.length === 0 ? (
+        <div className="py-16 px-4 text-center bg-white rounded-3xl border border-dashed border-slate-200 shadow-sm space-y-4">
+          <div className="h-16 w-16 mx-auto rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center shadow-xs">
+            <GraduationCap className="h-8 w-8" />
+          </div>
+          <div className="max-w-md mx-auto space-y-1.5">
+            <h3 className="text-lg font-bold text-slate-900">No Courses Assigned Yet</h3>
+            <p className="text-xs sm:text-sm text-slate-500 leading-relaxed">
+              You are currently not designated as lead faculty to any courses. An institute administrator will assign you to your batches via the Admin Panel.
+            </p>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              fetchCourses();
+              fetchMeta();
+            }}
+            disabled={loadingCourses}
+            className="mt-2 text-xs font-bold"
+          >
+            <RefreshCw className={`h-3.5 w-3.5 mr-1.5 ${loadingCourses ? "animate-spin text-aims-green" : ""}`} />
+            Check for Course Assignments
+          </Button>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3.5 sm:gap-6">

@@ -45,15 +45,26 @@ export default function InstructorDashboard() {
   const [enrollments, setEnrollments] = useState<any[]>([]);
   const [announcements, setAnnouncements] = useState<any[]>([]);
   const [exams, setExams] = useState<any[]>([]);
+  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   const fetchDashboardData = async () => {
     try {
-      const [coursesRes, enrollRes, announceRes, examsRes] = await Promise.all([
+      const [coursesRes, enrollRes, announceRes, examsRes, authRes] = await Promise.all([
         fetch("/api/courses", { cache: "no-store" }),
         fetch("/api/admin/enrollments", { cache: "no-store" }),
         fetch("/api/announcements", { cache: "no-store" }),
         fetch("/api/exams", { cache: "no-store" }),
+        fetch("/api/auth/me", { cache: "no-store" }),
       ]);
+
+      if (authRes.ok) {
+        const authData = await authRes.json();
+        if (authData.authenticated) {
+          setCurrentUser(authData.user);
+          setIsAdmin(Boolean(authData.isAdmin));
+        }
+      }
 
       if (coursesRes.ok) {
         const cData = await coursesRes.json();
@@ -80,6 +91,8 @@ export default function InstructorDashboard() {
         const xData = await examsRes.json();
         if (xData.exams && Array.isArray(xData.exams)) {
           setExams(xData.exams);
+        } else if (Array.isArray(xData)) {
+          setExams(xData);
         }
       }
     } catch (err) {
@@ -112,19 +125,35 @@ export default function InstructorDashboard() {
     setTimeout(() => setIsRefreshing(false), 500);
   };
 
+  // Filter courses based on user role:
+  // Universal Admins see all courses; regular instructors only see courses assigned to them
+  const displayedCourses = isAdmin
+    ? courses
+    : courses.filter((c) => c.instructor_id === currentUser?.id);
+
+  const assignedCourseIds = new Set(displayedCourses.map((c) => c.id));
+
+  const displayedEnrollments = isAdmin
+    ? enrollments
+    : enrollments.filter((e) => assignedCourseIds.has(e.course_id));
+
+  const displayedExams = isAdmin
+    ? exams
+    : exams.filter((x) => x.course_id && assignedCourseIds.has(x.course_id));
+
   const enrollmentCountByCourse: Record<string, number> = {};
-  enrollments.forEach((e) => {
+  displayedEnrollments.forEach((e) => {
     if (e.course_id) {
       enrollmentCountByCourse[e.course_id] = (enrollmentCountByCourse[e.course_id] || 0) + 1;
     }
   });
 
-  const uniqueStudents = new Set(enrollments.map((e) => e.student_id).filter(Boolean));
+  const uniqueStudents = new Set(displayedEnrollments.map((e) => e.student_id).filter(Boolean));
 
   const stats = [
     {
       label: "Active Courses",
-      value: String(courses.length),
+      value: String(displayedCourses.length),
       sub: "Nursing Batches",
       icon: GraduationCap,
       gradient: "from-emerald-500 to-emerald-700",
@@ -133,7 +162,7 @@ export default function InstructorDashboard() {
     },
     {
       label: "Total Enrollments",
-      value: String(enrollments.length),
+      value: String(displayedEnrollments.length),
       sub: `${uniqueStudents.size} unique students`,
       icon: Users,
       gradient: "from-blue-500 to-blue-700",
@@ -142,8 +171,8 @@ export default function InstructorDashboard() {
     },
     {
       label: "MCQ Mock Exams",
-      value: String(exams.length),
-      sub: `${exams.filter((x) => x.is_published).length} Published`,
+      value: String(displayedExams.length),
+      sub: `${displayedExams.filter((x) => x.is_published).length} Published`,
       icon: FileQuestion,
       gradient: "from-purple-500 to-violet-700",
       bg: "bg-purple-50",
@@ -234,19 +263,19 @@ export default function InstructorDashboard() {
             </div>
             <div className="grid grid-cols-2 gap-3 pt-3 border-t border-white/15">
               <div>
-                <div className="text-xl sm:text-2xl font-extrabold">{courses.length}</div>
+                <div className="text-xl sm:text-2xl font-extrabold">{displayedCourses.length}</div>
                 <div className="text-[10px] font-bold uppercase text-white/70 tracking-wider">
                   Live Courses
                 </div>
               </div>
               <div>
-                <div className="text-xl sm:text-2xl font-extrabold">{enrollments.length}</div>
+                <div className="text-xl sm:text-2xl font-extrabold">{displayedEnrollments.length}</div>
                 <div className="text-[10px] font-bold uppercase text-white/70 tracking-wider">
                   Enrollments
                 </div>
               </div>
               <div>
-                <div className="text-xl sm:text-2xl font-extrabold">{exams.length}</div>
+                <div className="text-xl sm:text-2xl font-extrabold">{displayedExams.length}</div>
                 <div className="text-[10px] font-bold uppercase text-white/70 tracking-wider">
                   Online Tests
                 </div>
@@ -322,12 +351,13 @@ export default function InstructorDashboard() {
                 <Loader2 className="h-5 w-5 animate-spin text-aims-green" />
                 Loading courses...
               </div>
-            ) : courses.length === 0 ? (
-              <div className="p-8 text-center bg-slate-50 rounded-2xl border border-dashed border-slate-200 text-slate-400 font-semibold">
-                No active courses found. Create your first course in the courses section.
+            ) : displayedCourses.length === 0 ? (
+              <div className="p-8 text-center bg-slate-50 rounded-2xl border border-dashed border-slate-200 text-slate-400 font-semibold space-y-1">
+                <p>No courses currently assigned to you.</p>
+                <p className="text-xs text-slate-400">An institute administrator will designate your batches via the Admin Panel.</p>
               </div>
             ) : (
-              courses.slice(0, 6).map((course) => {
+              displayedCourses.slice(0, 6).map((course) => {
                 const enrolledCount = enrollmentCountByCourse[course.id] || 0;
                 return (
                   <Card

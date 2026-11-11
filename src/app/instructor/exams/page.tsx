@@ -59,6 +59,8 @@ export default function StaffExamsPage() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [courseFilter, setCourseFilter] = useState("all");
   const [searchTerm, setSearchTerm] = useState("");
+  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   // Create Dialog State
   const [createOpen, setCreateOpen] = useState(false);
@@ -76,10 +78,19 @@ export default function StaffExamsPage() {
 
   const fetchData = async () => {
     try {
-      const [examsRes, coursesRes] = await Promise.all([
+      const [examsRes, coursesRes, authRes] = await Promise.all([
         fetch("/api/exams", { cache: "no-store" }),
         fetch("/api/courses", { cache: "no-store" }),
+        fetch("/api/auth/me", { cache: "no-store" }),
       ]);
+
+      if (authRes.ok) {
+        const authData = await authRes.json();
+        if (authData.authenticated) {
+          setCurrentUser(authData.user);
+          setIsAdmin(Boolean(authData.isAdmin));
+        }
+      }
 
       if (examsRes.ok) {
         const examsData = await examsRes.json();
@@ -205,7 +216,19 @@ export default function StaffExamsPage() {
     }
   };
 
-  const filteredExams = exams.filter((exam) => {
+  // Filter courses & exams based on user role:
+  // Universal Admins see all courses & exams; regular instructors only see their assigned courses
+  const displayedCourses = isAdmin
+    ? courses
+    : courses.filter((c) => c.instructor_id === currentUser?.id);
+
+  const allowedCourseIds = new Set(displayedCourses.map((c) => c.id));
+
+  const displayedExams = isAdmin
+    ? exams
+    : exams.filter((x) => x.course_id && allowedCourseIds.has(x.course_id));
+
+  const filteredExams = displayedExams.filter((exam) => {
     const matchesCourse = courseFilter === "all" || exam.course_id === courseFilter;
     const term = searchTerm.toLowerCase();
     const matchesSearch =
@@ -227,7 +250,7 @@ export default function StaffExamsPage() {
             Online MCQ Exams 📝
           </h1>
           <p className="text-slate-500 text-sm mt-1 font-medium">
-            Create online multiple-choice tests per course, set right answers, and evaluate student performances.
+            {displayedExams.length} mock tests across {displayedCourses.length} assigned courses · evaluate student performances.
           </p>
         </div>
 
@@ -275,13 +298,18 @@ export default function StaffExamsPage() {
                         <SelectValue placeholder="Choose course..." />
                       </SelectTrigger>
                       <SelectContent>
-                        {courses.map((course) => (
+                        {displayedCourses.map((course) => (
                           <SelectItem key={course.id} value={course.id}>
                             {course.title}
                           </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
+                    {displayedCourses.length === 0 && (
+                      <p className="text-xs text-amber-600 font-semibold mt-1">
+                        No courses currently assigned to you. An administrator will assign your batches in the Admin Panel before you can attach mock exams.
+                      </p>
+                    )}
                   </div>
 
                   {/* Title */}
@@ -346,7 +374,7 @@ export default function StaffExamsPage() {
                   </Button>
                   <Button
                     type="submit"
-                    disabled={creating}
+                    disabled={creating || displayedCourses.length === 0}
                     className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold"
                   >
                     {creating ? (
@@ -385,8 +413,8 @@ export default function StaffExamsPage() {
                 <SelectValue placeholder="All Courses" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Courses</SelectItem>
-                {courses.map((c) => (
+                <SelectItem value="all">All Assigned Courses ({displayedCourses.length})</SelectItem>
+                {displayedCourses.map((c) => (
                   <SelectItem key={c.id} value={c.id}>
                     {c.title}
                   </SelectItem>
@@ -411,9 +439,11 @@ export default function StaffExamsPage() {
             </div>
             <h3 className="text-lg font-bold text-slate-800">No Exams Found</h3>
             <p className="text-slate-500 text-xs sm:text-sm max-w-md mx-auto">
-              {searchTerm || courseFilter !== "all"
+              {displayedCourses.length === 0
+                ? "You currently have 0 assigned courses. Once courses are assigned to you via the Admin Panel, you can create and publish mock exams for your students."
+                : searchTerm || courseFilter !== "all"
                 ? "No exams match your search filters."
-                : "No exams have been published yet. Click 'Create Exam' to set up your first online test."}
+                : "No exams have been published yet for your assigned courses. Click 'Create Exam' to set up your first online test."}
             </p>
             <Button
               onClick={() => setCreateOpen(true)}

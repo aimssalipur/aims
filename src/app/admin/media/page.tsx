@@ -41,6 +41,7 @@ import {
   Instagram,
   Eye,
   Loader2,
+  Trash2,
 } from "lucide-react";
 
 // Curated high-res medical and healthcare presets for quick selection
@@ -101,20 +102,26 @@ export default function AdminMediaPage() {
   const [activeTab, setActiveTab] = useState("hero");
   const [uploadingId, setUploadingId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [coursesList, setCoursesList] = useState<any[]>([]);
+  const [loadingCourses, setLoadingCourses] = useState(true);
 
   useEffect(() => {
     const local = getSavedFrontendImages();
     setImages(local);
 
-    // Fetch live course thumbnails from database so admin media matches Supabase truth
+    // Fetch live courses and thumbnails from database so admin media matches Supabase truth
     fetch("/api/admin/media")
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
+        if (data?.courses && Array.isArray(data.courses)) {
+          setCoursesList(data.courses);
+        }
         if (data?.courseImages && Object.keys(data.courseImages).length > 0) {
           setImages((prev) => ({ ...prev, ...data.courseImages }));
         }
       })
-      .catch((err) => console.error("Error loading server course thumbnails:", err));
+      .catch((err) => console.error("Error loading server course thumbnails:", err))
+      .finally(() => setLoadingCourses(false));
   }, []);
 
   // Update single image URL
@@ -239,8 +246,26 @@ export default function AdminMediaPage() {
     });
   };
 
-  const getSectionItems = (section: FrontendImageItem["section"]) =>
-    FRONTEND_IMAGE_CATALOG.filter((item) => item.section === section);
+  // Dynamic course items built live from database courses
+  const dynamicCourseItems: FrontendImageItem[] = coursesList.map((course) => ({
+    id: `course_${course.id}`,
+    section: "courses" as const,
+    label: course.title,
+    description: course.description
+      ? `${course.description.slice(0, 90)}...`
+      : `Card cover photo for ${course.title}`,
+    defaultUrl: "",
+    aspectRatio: "16/11",
+  }));
+
+  const getSectionItems = (section: FrontendImageItem["section"]) => {
+    if (section === "courses") {
+      return dynamicCourseItems.length > 0
+        ? dynamicCourseItems
+        : FRONTEND_IMAGE_CATALOG.filter((item) => item.section === "courses");
+    }
+    return FRONTEND_IMAGE_CATALOG.filter((item) => item.section === section);
+  };
 
   return (
     <div className="space-y-6 lg:space-y-8 max-w-[1250px] mx-auto pb-12">
@@ -430,6 +455,17 @@ function ImageEditorCard({
           </div>
 
           <div className="absolute top-2 right-2 flex items-center gap-1.5">
+            {currentUrl && currentUrl.trim() !== "" && (
+              <button
+                type="button"
+                onClick={() => onUrlChange("")}
+                className="h-8 px-2.5 rounded-lg bg-rose-600/90 hover:bg-rose-700 backdrop-blur text-white text-xs font-bold flex items-center gap-1.5 shadow transition-all cursor-pointer"
+                title="Delete picture and revert to branded course banner"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+                <span>Delete Pic</span>
+              </button>
+            )}
             <button
               type="button"
               disabled={isUploading}
@@ -464,24 +500,51 @@ function ImageEditorCard({
 
         {/* Image URL Input */}
         <div className="space-y-1.5">
-          <Label className="text-xs font-bold text-slate-700">Image URL or Web Link</Label>
+          <div className="flex items-center justify-between">
+            <Label className="text-xs font-bold text-slate-700">Image URL or Web Link</Label>
+            {currentUrl && currentUrl.trim() !== "" && (
+              <button
+                type="button"
+                onClick={() => onUrlChange("")}
+                className="text-[11px] font-bold text-rose-600 hover:text-rose-700 flex items-center gap-1 cursor-pointer transition-colors"
+                title="Remove photo"
+              >
+                <Trash2 className="h-3 w-3" />
+                <span>Remove Photo</span>
+              </button>
+            )}
+          </div>
           <div className="flex gap-2">
             <Input
               value={currentUrl}
               onChange={(e) => onUrlChange(e.target.value)}
-              placeholder="https://images.unsplash.com/..."
+              placeholder={item.section === "courses" ? "Upload photo above or paste direct image URL (leave empty for branded banner)..." : "https://..."}
               className="h-10 text-xs font-mono"
             />
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={onReset}
-              title="Reset to default photo"
-              className="h-10 px-3 shrink-0 text-slate-600 hover:text-slate-900"
-            >
-              <RefreshCw className="h-3.5 w-3.5" />
-            </Button>
+            {currentUrl && currentUrl.trim() !== "" ? (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => onUrlChange("")}
+                title="Delete photo (revert to course banner)"
+                className="h-10 px-3 shrink-0 text-rose-600 hover:text-rose-700 hover:bg-rose-50 border-rose-200 font-bold gap-1"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline text-xs">Delete</span>
+              </Button>
+            ) : (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={onReset}
+                title="Reset to default photo"
+                className="h-10 px-3 shrink-0 text-slate-600 hover:text-slate-900"
+              >
+                <RefreshCw className="h-3.5 w-3.5" />
+              </Button>
+            )}
           </div>
         </div>
 

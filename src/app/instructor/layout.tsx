@@ -42,7 +42,11 @@ export default async function InstructorLayout({
     }
   }
 
-  const isAdmin = roles.includes("admin") || profile?.role === "admin" || user?.email === "aimssalipur@gmail.com";
+  const isAdmin =
+    roles.includes("admin") ||
+    profile?.role === "admin" ||
+    user?.email === "aimssalipur@gmail.com" ||
+    user?.email === "sahilsahoo68@gmail.com";
   if (isAdmin) {
     roles = ["student", "instructor", "accountant", "admin"];
   } else {
@@ -50,8 +54,13 @@ export default async function InstructorLayout({
     roles = ["instructor"];
   }
 
+  // Deactivated users cannot access instructor portal
+  if (profile && profile.is_active === false) {
+    redirect("/login?error=account_inactive");
+  }
+
   // Reject unauthorized users (only instructor and admin allowed)
-  if (!isAdmin && !roles.includes("instructor") && profile?.role !== "instructor") {
+  if (!isAdmin && profile?.role !== "instructor") {
     redirect(`/${profile?.role || "student"}`);
   }
 

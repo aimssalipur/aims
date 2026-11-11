@@ -42,9 +42,18 @@ export default async function AdminLayout({
     }
   }
 
-  const isAdmin = roles.includes("admin") || profile?.role === "admin" || user?.email === "aimssalipur@gmail.com";
+  const isAdmin =
+    roles.includes("admin") ||
+    profile?.role === "admin" ||
+    user?.email === "aimssalipur@gmail.com" ||
+    user?.email === "sahilsahoo68@gmail.com";
   if (isAdmin) {
     roles = ["student", "instructor", "accountant", "admin"];
+  }
+
+  // Deactivated users cannot access admin portal
+  if (profile && profile.is_active === false) {
+    redirect("/login?error=account_inactive");
   }
 
   // Reject non-admin users

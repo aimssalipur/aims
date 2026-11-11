@@ -119,8 +119,9 @@ export async function updateSession(request: NextRequest) {
 
       // Check if user is deactivated: inactive users cannot access internal portals or courses
       if (profile && profile.is_active === false) {
+        await supabase.auth.signOut();
         const url = request.nextUrl.clone();
-        url.pathname = "/";
+        url.pathname = "/login";
         url.searchParams.set("error", "account_inactive");
         return NextResponse.redirect(url);
       }
@@ -128,30 +129,36 @@ export async function updateSession(request: NextRequest) {
       if (roles.length === 0) roles.push("student");
     }
 
-    // Role route validation: strictly forbid entering other roles
+    const isUniversalAdmin =
+      roles.includes("admin") ||
+      primaryRole === "admin" ||
+      user.email === "aimssalipur@gmail.com" ||
+      user.email === "sahilsahoo68@gmail.com";
+
+    // Role route validation: strictly forbid entering unauthorized roles
     // 1. Admin routes: only admin role allowed
-    if (isAdminPath && !roles.includes("admin")) {
+    if (isAdminPath && !isUniversalAdmin) {
       const url = request.nextUrl.clone();
       url.pathname = `/${primaryRole}`;
       return NextResponse.redirect(url);
     }
 
     // 2. Instructor routes: instructor or admin allowed
-    if (isInstructorPath && !roles.includes("instructor") && !roles.includes("admin")) {
+    if (isInstructorPath && !isUniversalAdmin && primaryRole !== "instructor") {
       const url = request.nextUrl.clone();
       url.pathname = `/${primaryRole}`;
       return NextResponse.redirect(url);
     }
 
     // 3. Accountant routes: accountant or admin allowed
-    if (isAccountantPath && !roles.includes("accountant") && !roles.includes("admin")) {
+    if (isAccountantPath && !isUniversalAdmin && primaryRole !== "accountant") {
       const url = request.nextUrl.clone();
       url.pathname = `/${primaryRole}`;
       return NextResponse.redirect(url);
     }
 
-    // 4. Student routes: student or admin allowed
-    if (isStudentPath && !roles.includes("student") && !roles.includes("admin")) {
+    // 4. Student routes: only student or admin allowed (Instructors/Staff cannot use student portal)
+    if (isStudentPath && !isUniversalAdmin && primaryRole !== "student") {
       const url = request.nextUrl.clone();
       url.pathname = `/${primaryRole}`;
       return NextResponse.redirect(url);
@@ -168,8 +175,9 @@ export async function updateSession(request: NextRequest) {
         .eq("id", user.id)
         .single();
       if (profile && profile.is_active === false) {
+        await supabase.auth.signOut();
         const url = request.nextUrl.clone();
-        url.pathname = "/";
+        url.pathname = "/login";
         url.searchParams.set("error", "account_inactive");
         return NextResponse.redirect(url);
       }

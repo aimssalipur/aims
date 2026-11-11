@@ -54,13 +54,24 @@ export default function InstructorStudentsPage() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [courses, setCourses] = useState<any[]>([]);
   const [enrollments, setEnrollments] = useState<any[]>([]);
+  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   const fetchData = async () => {
     try {
-      const [coursesRes, enrollRes] = await Promise.all([
+      const [coursesRes, enrollRes, authRes] = await Promise.all([
         fetch("/api/courses", { cache: "no-store" }),
         fetch("/api/admin/enrollments", { cache: "no-store" }),
+        fetch("/api/auth/me", { cache: "no-store" }),
       ]);
+
+      if (authRes.ok) {
+        const authData = await authRes.json();
+        if (authData.authenticated) {
+          setCurrentUser(authData.user);
+          setIsAdmin(Boolean(authData.isAdmin));
+        }
+      }
 
       if (coursesRes.ok) {
         const cData = await coursesRes.json();
@@ -98,7 +109,19 @@ export default function InstructorStudentsPage() {
     setTimeout(() => setIsRefreshing(false), 500);
   };
 
-  const studentList = enrollments.map((enr) => ({
+  // Filter courses & enrollments based on user role:
+  // Universal Admins see all courses & students; regular instructors only see their assigned courses
+  const displayedCourses = isAdmin
+    ? courses
+    : courses.filter((c) => c.instructor_id === currentUser?.id);
+
+  const allowedCourseIds = new Set(displayedCourses.map((c) => c.id));
+
+  const displayedEnrollments = isAdmin
+    ? enrollments
+    : enrollments.filter((e) => allowedCourseIds.has(e.course_id || e.course?.id));
+
+  const studentList = displayedEnrollments.map((enr) => ({
     id: enr.id,
     studentId: enr.student?.id || enr.student_id,
     full_name: enr.student?.full_name || "Enrolled Student",
@@ -121,7 +144,7 @@ export default function InstructorStudentsPage() {
     return matchesSearch && matchesCourse;
   });
 
-  const uniqueStudentIds = new Set(enrollments.map((e) => e.student_id).filter(Boolean));
+  const uniqueStudentIds = new Set(displayedEnrollments.map((e) => e.student_id).filter(Boolean));
 
   const handleExportCSV = () => {
     if (filteredStudents.length === 0) {
@@ -161,9 +184,9 @@ export default function InstructorStudentsPage() {
   };
 
   const summary = [
-    { label: "Total Enrollments", value: enrollments.length, color: "text-aims-navy", bg: "bg-aims-navy/10", icon: Users },
+    { label: "Total Enrollments", value: displayedEnrollments.length, color: "text-aims-navy", bg: "bg-aims-navy/10", icon: Users },
     { label: "Unique Students", value: uniqueStudentIds.size, color: "text-aims-green", bg: "bg-aims-green/10", icon: GraduationCap },
-    { label: "Active Courses", value: courses.length, color: "text-blue-600", bg: "bg-blue-100", icon: BookOpen },
+    { label: "Assigned Courses", value: displayedCourses.length, color: "text-blue-600", bg: "bg-blue-100", icon: BookOpen },
     { label: "Verified Roster", value: "100%", color: "text-emerald-600", bg: "bg-emerald-50", icon: Calendar },
   ];
 
@@ -175,7 +198,7 @@ export default function InstructorStudentsPage() {
             My Students 👨‍🎓
           </h1>
           <p className="text-slate-500 mt-2 text-base">
-            {enrollments.length} active enrollments across {courses.length} courses
+            {displayedEnrollments.length} active enrollments across {displayedCourses.length} assigned courses
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -255,8 +278,8 @@ export default function InstructorStudentsPage() {
                 <SelectValue placeholder="Filter by course" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Courses ({courses.length})</SelectItem>
-                {courses.map((c) => (
+                <SelectItem value="all">All Assigned Courses ({displayedCourses.length})</SelectItem>
+                {displayedCourses.map((c) => (
                   <SelectItem key={c.id} value={c.id}>
                     {c.title}
                   </SelectItem>
@@ -290,7 +313,15 @@ export default function InstructorStudentsPage() {
                     {filteredStudents.length === 0 ? (
                       <TableRow>
                         <TableCell colSpan={6} className="text-center py-16 text-slate-400 font-semibold">
-                          No enrolled students found.
+                          <div className="flex flex-col items-center justify-center gap-2 max-w-sm mx-auto">
+                            <Users className="h-8 w-8 text-slate-300" />
+                            <p className="text-sm font-bold text-slate-700">No student enrollments found</p>
+                            <p className="text-xs text-slate-400">
+                              {displayedCourses.length === 0
+                                ? "You currently have 0 assigned courses. Once courses are assigned to you in the Admin Panel, your enrolled students will appear here."
+                                : "No students are currently enrolled in your assigned courses."}
+                            </p>
+                          </div>
                         </TableCell>
                       </TableRow>
                     ) : (
@@ -378,8 +409,13 @@ export default function InstructorStudentsPage() {
               {/* Mobile cards */}
               <div className="grid sm:grid-cols-2 lg:hidden gap-3 p-4">
                 {filteredStudents.length === 0 ? (
-                  <div className="col-span-full py-12 text-center text-slate-400 font-semibold text-sm">
-                    No enrolled students found.
+                  <div className="col-span-full py-12 text-center text-slate-400 font-semibold text-sm space-y-1">
+                    <p className="font-bold text-slate-700">No enrolled students found</p>
+                    <p className="text-xs text-slate-400">
+                      {displayedCourses.length === 0
+                        ? "You currently have 0 assigned courses. Once courses are assigned, students will appear here."
+                        : "No students are currently enrolled in your assigned courses."}
+                    </p>
                   </div>
                 ) : (
                   filteredStudents.map((s) => (

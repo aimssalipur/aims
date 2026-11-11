@@ -26,14 +26,22 @@ function getSupabaseClient() {
 }
 
 // 1. GET: List all courses with enrollment counts
-export async function GET() {
+export async function GET(request: Request) {
   try {
     const supabase = getSupabaseClient();
+    const { searchParams } = new URL(request.url);
+    const instructorId = searchParams.get("instructor_id");
 
-    const { data: courses, error } = await supabase
+    let query = supabase
       .from("courses")
       .select("id, title, description, thumbnail_url, instructor_id, youtube_playlist, created_at, instructor:profiles!instructor_id(id, full_name, email, whatsapp, avatar_url)")
       .order("created_at", { ascending: true });
+
+    if (instructorId) {
+      query = query.eq("instructor_id", instructorId);
+    }
+
+    const { data: courses, error } = await query;
 
     if (error) {
       console.error("[api/courses] Supabase error:", error);

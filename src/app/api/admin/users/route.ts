@@ -35,11 +35,18 @@ export async function GET() {
   }, {});
 
   // Format profiles to include roles and enrollments array
-  const formattedProfiles = (profiles || []).map((p: any) => ({
-    ...p,
-    roles: p.user_roles?.map((ur: any) => ur.role) || [p.role],
-    enrollments: enrollmentsByStudent[p.id] || [],
-  }));
+  const formattedProfiles = (profiles || []).map((p: any) => {
+    const rawRoles = p.user_roles?.map((ur: any) => ur.role) || [p.role];
+    const isAdmin = p.role === "admin" || rawRoles.includes("admin") || p.email === "aimssalipur@gmail.com";
+    // Non-admin users strictly have ONE role: their canonical profile.role (Staff cannot be Student, Student cannot be Staff)
+    const finalRoles = isAdmin ? rawRoles : [p.role || "student"];
+
+    return {
+      ...p,
+      roles: finalRoles,
+      enrollments: enrollmentsByStudent[p.id] || [],
+    };
+  });
 
   return NextResponse.json(formattedProfiles);
 }

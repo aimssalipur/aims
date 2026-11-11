@@ -42,12 +42,34 @@ export default async function StudentLayout({
     }
   }
 
-  const isAdmin = roles.includes("admin") || profile?.role === "admin" || user?.email === "aimssalipur@gmail.com";
+  const isAdmin =
+    roles.includes("admin") ||
+    profile?.role === "admin" ||
+    user?.email === "aimssalipur@gmail.com" ||
+    user?.email === "sahilsahoo68@gmail.com";
   if (isAdmin) {
     roles = ["student", "instructor", "accountant", "admin"];
   } else {
     // Regular student: never inherit staff, finance or admin roles
     roles = ["student"];
+  }
+
+  // Deactivated users cannot access student portal
+  if (profile && profile.is_active === false) {
+    redirect("/login?error=account_inactive");
+  }
+
+  // Strict role enforcement: staff/instructors and accountants cannot use the student portal
+  if (!isAdmin) {
+    if (profile?.role === "instructor") {
+      redirect("/instructor");
+    }
+    if (profile?.role === "accountant") {
+      redirect("/accountant");
+    }
+    if (profile?.role !== "student") {
+      redirect("/login");
+    }
   }
 
   // Check student approval (admins and staff are never blocked)

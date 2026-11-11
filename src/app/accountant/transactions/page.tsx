@@ -47,6 +47,10 @@ import {
   Landmark,
   Printer,
   Pencil,
+  GraduationCap,
+  TrendingUp,
+  TrendingDown,
+  Wallet,
 } from "lucide-react";
 import Link from "next/link";
 import { useToast } from "@/components/ui/use-toast";
@@ -513,6 +517,124 @@ export default function AccountantTransactionsPage() {
     }).format(val || 0);
   };
 
+  // Financial snapshot metrics
+  const stats = useMemo(() => {
+    let inflow = 0;
+    let outflow = 0;
+    txs.forEach((tx) => {
+      const amt = Number(tx.amount) || 0;
+      if (tx.type === "income") {
+        inflow += amt;
+      } else {
+        outflow += amt;
+      }
+    });
+    return {
+      inflow,
+      outflow,
+      net: inflow - outflow,
+      count: txs.length,
+    };
+  }, [txs]);
+
+  // Clean parser for ledger entries (splits long raw fee descriptions into student, course, roll, note)
+  const parseRecord = (tx: any) => {
+    const desc = (tx.description || "").trim();
+    const cat = (tx.category || "").trim();
+
+    if (/^fee received from/i.test(desc)) {
+      const fromIdx = desc.toLowerCase().indexOf("fee received from ");
+      const forIdx = desc.toLowerCase().indexOf(" for ", fromIdx);
+
+      let studentName = "";
+      let remainder = "";
+
+      if (forIdx > -1) {
+        studentName = desc.substring(fromIdx + 18, forIdx).trim();
+        remainder = desc.substring(forIdx + 5).trim();
+      } else {
+        studentName = desc.substring(fromIdx + 18).trim();
+      }
+
+      let courseName = "";
+      let rollNo = "";
+      let note = "";
+
+      const parenOpen = remainder.indexOf("(");
+      const parenClose = remainder.lastIndexOf(")");
+
+      if (parenOpen > -1 && parenClose > parenOpen) {
+        courseName = remainder.substring(0, parenOpen).trim();
+        const details = remainder.substring(parenOpen + 1, parenClose);
+
+        const parts = details.split("|").map((p) => p.trim());
+        for (const part of parts) {
+          if (/^roll:\s*/i.test(part)) {
+            rollNo = part.replace(/^roll:\s*/i, "").trim();
+          } else if (/^note:\s*/i.test(part)) {
+            note = part.replace(/^note:\s*/i, "").trim();
+          } else if (!rollNo && /AIMS-[A-Z0-9\/-]+/i.test(part)) {
+            rollNo = part;
+          } else if (!note && !/^guardian:/i.test(part) && !/^address:/i.test(part) && part) {
+            note = part;
+          }
+        }
+      } else {
+        courseName = remainder;
+      }
+
+      if (studentName && courseName.toLowerCase().endsWith(studentName.toLowerCase())) {
+        courseName = courseName.slice(0, -studentName.length).trim();
+      }
+
+      return {
+        isStudentFee: true,
+        title: studentName || "Student Fee",
+        subtitle: courseName || "AIMS Coaching Program",
+        rollNo,
+        note,
+        rawDesc: desc,
+      };
+    }
+
+    if (/^capital inflow:/i.test(desc)) {
+      return {
+        isStudentFee: false,
+        title: desc,
+        subtitle: cat || "Capital / Private Borrowing",
+        rollNo: "",
+        note: "",
+        rawDesc: desc,
+      };
+    }
+
+    return {
+      isStudentFee: false,
+      title: desc,
+      subtitle: tx.recipient_profile ? `Paid to: ${tx.recipient_profile.full_name}` : "",
+      rollNo: "",
+      note: "",
+      rawDesc: desc,
+    };
+  };
+
+  const getCategoryBadgeClass = (category: string, type: string) => {
+    const c = (category || "").toLowerCase();
+    if (type === "income" || c.includes("fee") || c.includes("capital")) {
+      return "bg-emerald-50 text-emerald-700 border-emerald-200";
+    }
+    if (c.includes("salary")) {
+      return "bg-purple-50 text-purple-700 border-purple-200";
+    }
+    if (c.includes("asset") || c.includes("furniture") || c.includes("equipment")) {
+      return "bg-amber-50 text-amber-800 border-amber-200";
+    }
+    if (c.includes("marketing")) {
+      return "bg-sky-50 text-sky-700 border-sky-200";
+    }
+    return "bg-slate-50 text-slate-700 border-slate-200";
+  };
+
   return (
     <div className="space-y-4 sm:space-y-6 lg:space-y-8 max-w-[1440px] mx-auto">
       {/* Top Banner Header */}
@@ -863,15 +985,109 @@ export default function AccountantTransactionsPage() {
         </div>
       </div>
 
+      {/* Financial Snapshot Summary Metrics */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4">
+        {/* Total Inflow */}
+        <Card className="border-slate-100 shadow-xs bg-gradient-to-br from-emerald-50/70 via-white to-white">
+          <CardContent className="p-3 sm:p-4 md:p-5">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-emerald-800">
+                Total Inflow
+              </span>
+              <div className="h-6 w-6 sm:h-8 sm:w-8 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center">
+                <ArrowUpRight className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+              </div>
+            </div>
+            <div className="mt-1.5 sm:mt-2">
+              <span className="text-base sm:text-xl lg:text-2xl font-black text-emerald-700 tracking-tight">
+                +{formatCurrency(stats.inflow)}
+              </span>
+            </div>
+            <p className="text-[10px] sm:text-xs text-slate-500 font-medium mt-0.5">
+              Course fees & capital inflows
+            </p>
+          </CardContent>
+        </Card>
+
+        {/* Total Outflow */}
+        <Card className="border-slate-100 shadow-xs bg-gradient-to-br from-rose-50/70 via-white to-white">
+          <CardContent className="p-3 sm:p-4 md:p-5">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-rose-800">
+                Total Outflow
+              </span>
+              <div className="h-6 w-6 sm:h-8 sm:w-8 rounded-lg bg-rose-100 text-rose-700 flex items-center justify-center">
+                <ArrowDownRight className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+              </div>
+            </div>
+            <div className="mt-1.5 sm:mt-2">
+              <span className="text-base sm:text-xl lg:text-2xl font-black text-rose-700 tracking-tight">
+                -{formatCurrency(stats.outflow)}
+              </span>
+            </div>
+            <p className="text-[10px] sm:text-xs text-slate-500 font-medium mt-0.5">
+              Salaries, assets & expenses
+            </p>
+          </CardContent>
+        </Card>
+
+        {/* Net Cash Balance */}
+        <Card className="border-slate-100 shadow-xs bg-gradient-to-br from-indigo-50/70 via-white to-white">
+          <CardContent className="p-3 sm:p-4 md:p-5">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-indigo-800">
+                Net Cash Balance
+              </span>
+              <div className="h-6 w-6 sm:h-8 sm:w-8 rounded-lg bg-indigo-100 text-indigo-700 flex items-center justify-center">
+                <Wallet className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+              </div>
+            </div>
+            <div className="mt-1.5 sm:mt-2">
+              <span className={cn(
+                "text-base sm:text-xl lg:text-2xl font-black tracking-tight",
+                stats.net >= 0 ? "text-indigo-900" : "text-rose-700"
+              )}>
+                {stats.net >= 0 ? "+" : ""}{formatCurrency(stats.net)}
+              </span>
+            </div>
+            <p className="text-[10px] sm:text-xs text-slate-500 font-medium mt-0.5">
+              Net ledger position
+            </p>
+          </CardContent>
+        </Card>
+
+        {/* Total Records */}
+        <Card className="border-slate-100 shadow-xs bg-white">
+          <CardContent className="p-3 sm:p-4 md:p-5">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-slate-600">
+                Total Records
+              </span>
+              <div className="h-6 w-6 sm:h-8 sm:w-8 rounded-lg bg-slate-100 text-slate-700 flex items-center justify-center">
+                <FileSpreadsheet className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+              </div>
+            </div>
+            <div className="mt-1.5 sm:mt-2">
+              <span className="text-base sm:text-xl lg:text-2xl font-black text-slate-900 tracking-tight">
+                {stats.count}
+              </span>
+            </div>
+            <p className="text-[10px] sm:text-xs text-slate-500 font-medium mt-0.5">
+              Active ledger entries
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+
       {/* Filter and Ledger Table */}
-      <Card className="border-slate-100 overflow-hidden bg-white">
+      <Card className="border-slate-100 overflow-hidden bg-white shadow-xs">
         <CardHeader className="p-3.5 sm:p-5 md:p-6 border-b border-slate-100 flex-col md:flex-row md:items-center md:justify-between gap-3 sm:gap-4">
           <div className="md:max-w-md flex-1">
             <div className="relative">
               <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
               <Input
-                placeholder="Search description..."
-                className="pl-10 h-10 sm:h-12 text-xs sm:text-sm font-semibold rounded-xl"
+                placeholder="Search description, student, staff..."
+                className="pl-10 h-10 sm:h-11 text-xs sm:text-sm font-semibold rounded-xl bg-slate-50/50 border-slate-200"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
@@ -880,7 +1096,7 @@ export default function AccountantTransactionsPage() {
           <div className="grid grid-cols-2 sm:flex sm:flex-wrap items-center gap-2 sm:gap-3 w-full md:w-auto">
             {/* Type Filter */}
             <Select value={typeFilter} onValueChange={setTypeFilter}>
-              <SelectTrigger className="h-9 sm:h-11 w-full sm:w-40 rounded-xl gap-1.5 text-xs sm:text-sm font-semibold">
+              <SelectTrigger className="h-9 sm:h-11 w-full sm:w-36 rounded-xl gap-1.5 text-xs sm:text-sm font-semibold">
                 <Filter className="h-3.5 w-3.5 text-slate-400 shrink-0" />
                 <SelectValue placeholder="All Entry Types" />
               </SelectTrigger>
@@ -915,99 +1131,300 @@ export default function AccountantTransactionsPage() {
               Fetching entries...
             </div>
           ) : txs.length === 0 ? (
-            <div className="p-8 sm:p-12 text-center text-slate-400 font-semibold text-xs sm:text-sm">No operational entries logged matching criteria.</div>
+            <div className="p-8 sm:p-12 text-center text-slate-400 font-semibold text-xs sm:text-sm">
+              No operational entries logged matching criteria.
+            </div>
           ) : (
-            <div className="w-full">
-              <table className="w-full text-left text-xs sm:text-sm border-collapse">
-                <thead>
-                  <tr className="border-b border-slate-100 text-slate-400 uppercase text-[9px] sm:text-[10px] font-bold tracking-wider bg-slate-50/50">
-                    <th className="py-2.5 sm:py-3.5 px-2 sm:px-4 w-[75px] sm:w-[95px]">Date</th>
-                    <th className="py-2.5 sm:py-3.5 px-2 sm:px-4">Description</th>
-                    <th className="py-2.5 sm:py-3.5 px-2 sm:px-4 hidden sm:table-cell w-[100px] lg:w-[130px]">Category</th>
-                    <th className="py-2.5 sm:py-3.5 px-2 sm:px-4 hidden md:table-cell w-[90px] lg:w-[110px]">Reference</th>
-                    <th className="py-2.5 sm:py-3.5 px-2 sm:px-4 text-right w-[85px] sm:w-[110px]">Amount</th>
-                    <th className="py-2.5 sm:py-3.5 px-2 sm:px-4 text-center w-[95px] sm:w-[115px]">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100 font-semibold text-slate-600 bg-white">
-                  {txs.map((tx: any) => (
-                    <tr key={tx.id} className="hover:bg-slate-50/50 transition-colors">
-                      <td className="py-2.5 sm:py-3.5 px-2 sm:px-4 font-medium text-slate-500 text-[11px] sm:text-xs">
-                        {new Date(tx.date).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}
-                      </td>
-                      <td className="py-2.5 sm:py-3.5 px-2 sm:px-4">
-                        <div className="flex flex-col gap-0.5">
-                          <span className="text-slate-900 font-bold text-xs sm:text-sm line-clamp-1">{tx.description}</span>
-                          <div className="flex items-center gap-1.5 flex-wrap sm:hidden">
-                            <Badge variant="outline" className="capitalize border-slate-200 py-0 px-1.5 text-[9px]">
-                              {tx.category}
+            <>
+              {/* Mobile View: Clean Card Layout (< md screens) */}
+              <div className="block md:hidden space-y-3 p-3 bg-slate-50/40">
+                {txs.map((tx: any) => {
+                  const parsed = parseRecord(tx);
+                  const isIncome = tx.type === "income";
+
+                  return (
+                    <div
+                      key={tx.id}
+                      className="bg-white border border-slate-200/80 rounded-2xl p-3.5 space-y-3 shadow-xs hover:border-indigo-200 transition-all"
+                    >
+                      {/* Top Header: Date, Category badge, Amount */}
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="text-xs font-bold text-slate-500">
+                            {new Date(tx.date).toLocaleDateString("en-IN", {
+                              day: "numeric",
+                              month: "short",
+                              year: "numeric",
+                            })}
+                          </span>
+                          <Badge
+                            variant="outline"
+                            className={cn(
+                              "text-[10px] font-extrabold px-2 py-0.5 rounded-full capitalize border",
+                              getCategoryBadgeClass(tx.category, tx.type)
+                            )}
+                          >
+                            {tx.category || "General"}
+                          </Badge>
+                        </div>
+                        <div
+                          className={cn(
+                            "text-sm font-black whitespace-nowrap",
+                            isIncome ? "text-emerald-600" : "text-rose-600"
+                          )}
+                        >
+                          {isIncome ? "+" : "-"}{formatCurrency(tx.amount)}
+                        </div>
+                      </div>
+
+                      {/* Main Description details */}
+                      <div className="space-y-1">
+                        {parsed.isStudentFee ? (
+                          <>
+                            <div className="font-extrabold text-slate-900 text-sm flex items-center gap-1.5">
+                              <GraduationCap className="h-4 w-4 text-indigo-600 shrink-0" />
+                              <span className="truncate">{parsed.title}</span>
+                            </div>
+                            <div className="text-xs font-semibold text-indigo-700">
+                              {parsed.subtitle}
+                            </div>
+                            {(parsed.rollNo || parsed.note) && (
+                              <div className="flex items-center gap-1.5 flex-wrap pt-1">
+                                {parsed.rollNo && (
+                                  <Badge
+                                    variant="outline"
+                                    className="bg-slate-50 font-mono text-[10px] text-slate-600 border-slate-200"
+                                  >
+                                    Roll: {parsed.rollNo}
+                                  </Badge>
+                                )}
+                                {parsed.note && (
+                                  <span className="text-[11px] text-slate-500 italic bg-slate-50 px-2 py-0.5 rounded-md border border-slate-100">
+                                    "{parsed.note}"
+                                  </span>
+                                )}
+                              </div>
+                            )}
+                          </>
+                        ) : (
+                          <>
+                            <div className="font-bold text-slate-900 text-sm">
+                              {parsed.title}
+                            </div>
+                            {parsed.subtitle && (
+                              <div className="text-xs text-indigo-700 font-semibold flex items-center gap-1">
+                                <UserCheck className="h-3 w-3 shrink-0" />
+                                <span>{parsed.subtitle}</span>
+                              </div>
+                            )}
+                          </>
+                        )}
+
+                        {tx.reference_no && (
+                          <div className="pt-0.5">
+                            <span className="inline-flex items-center text-[10px] font-mono text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md">
+                              Ref: {tx.reference_no}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Actions Footer - Always visible, never cut off */}
+                      <div className="flex items-center justify-end gap-1.5 pt-2 border-t border-slate-100">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleOpenReceipt(tx)}
+                          className="h-8 px-2.5 text-indigo-700 border-indigo-200 hover:bg-indigo-50 font-bold text-xs gap-1 rounded-xl"
+                        >
+                          <Printer className="h-3.5 w-3.5 text-indigo-600" />
+                          <span>Receipt</span>
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => openEditModal(tx)}
+                          className="h-8 px-2.5 text-amber-700 border-amber-200 hover:bg-amber-50 font-bold text-xs gap-1 rounded-xl"
+                        >
+                          <Pencil className="h-3.5 w-3.5 text-amber-600" />
+                          <span>Edit</span>
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          disabled={deletingId === tx.id}
+                          onClick={() => handleDelete(tx.id)}
+                          className="h-8 px-2.5 text-rose-600 border-rose-200 hover:bg-rose-50 font-bold text-xs gap-1 rounded-xl"
+                        >
+                          {deletingId === tx.id ? (
+                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          ) : (
+                            <Trash2 className="h-3.5 w-3.5" />
+                          )}
+                          <span>Delete</span>
+                        </Button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Desktop View: Ledger Table with Fixed/Sticky Actions column */}
+              <div className="hidden md:block w-full overflow-x-auto scrollbar-thin">
+                <table className="w-full text-left text-xs sm:text-sm border-collapse min-w-[760px]">
+                  <thead>
+                    <tr className="border-b border-slate-100 text-slate-400 uppercase text-[9px] sm:text-[10px] font-bold tracking-wider bg-slate-50/70">
+                      <th className="py-3 px-3 sm:px-4 w-[85px] sm:w-[95px] shrink-0">Date</th>
+                      <th className="py-3 px-3 sm:px-4 min-w-[240px]">Description & Particulars</th>
+                      <th className="py-3 px-3 sm:px-4 w-[120px] lg:w-[140px]">Category</th>
+                      <th className="py-3 px-3 sm:px-4 w-[100px] lg:w-[120px]">Reference</th>
+                      <th className="py-3 px-3 sm:px-4 text-right w-[100px] lg:w-[120px]">Amount</th>
+                      <th className="py-3 px-3 sm:px-4 text-center w-[120px] shrink-0 sticky right-0 bg-slate-50/95 backdrop-blur-xs shadow-[-6px_0_12px_-4px_rgba(0,0,0,0.06)]">
+                        Actions
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 font-semibold text-slate-600 bg-white">
+                    {txs.map((tx: any) => {
+                      const parsed = parseRecord(tx);
+                      const isIncome = tx.type === "income";
+
+                      return (
+                        <tr key={tx.id} className="group hover:bg-slate-50/60 transition-colors">
+                          {/* Date */}
+                          <td className="py-3 px-3 sm:px-4 font-medium text-slate-500 text-[11px] sm:text-xs whitespace-nowrap align-middle">
+                            {new Date(tx.date).toLocaleDateString("en-IN", {
+                              day: "numeric",
+                              month: "short",
+                            })}
+                          </td>
+
+                          {/* Description & Particulars */}
+                          <td className="py-3 px-3 sm:px-4 align-middle">
+                            <div className="flex flex-col gap-0.5">
+                              {parsed.isStudentFee ? (
+                                <>
+                                  <div className="flex items-center gap-1.5">
+                                    <GraduationCap className="h-3.5 w-3.5 text-indigo-600 shrink-0" />
+                                    <span className="text-slate-900 font-extrabold text-xs sm:text-sm">
+                                      {parsed.title}
+                                    </span>
+                                  </div>
+                                  <span className="text-[11px] font-bold text-indigo-700">
+                                    {parsed.subtitle}
+                                  </span>
+                                  {(parsed.rollNo || parsed.note) && (
+                                    <div className="flex items-center gap-1.5 flex-wrap pt-0.5">
+                                      {parsed.rollNo && (
+                                        <Badge
+                                          variant="outline"
+                                          className="bg-slate-50 font-mono text-[9px] text-slate-600 border-slate-200 py-0 px-1.5"
+                                        >
+                                          Roll: {parsed.rollNo}
+                                        </Badge>
+                                      )}
+                                      {parsed.note && (
+                                        <span className="text-[10px] text-slate-500 italic bg-slate-50 px-1.5 py-0.2 rounded border border-slate-100">
+                                          "{parsed.note}"
+                                        </span>
+                                      )}
+                                    </div>
+                                  )}
+                                </>
+                              ) : (
+                                <>
+                                  <span className="text-slate-900 font-bold text-xs sm:text-sm">
+                                    {parsed.title}
+                                  </span>
+                                  {parsed.subtitle && (
+                                    <span className="text-[11px] font-semibold text-indigo-700 flex items-center gap-1">
+                                      <UserCheck className="h-3 w-3 shrink-0" />
+                                      {parsed.subtitle}
+                                    </span>
+                                  )}
+                                </>
+                              )}
+                            </div>
+                          </td>
+
+                          {/* Category */}
+                          <td className="py-3 px-3 sm:px-4 align-middle">
+                            <Badge
+                              variant="outline"
+                              className={cn(
+                                "capitalize text-[10px] sm:text-xs font-bold py-0.5 px-2 truncate max-w-[130px] inline-block",
+                                getCategoryBadgeClass(tx.category, tx.type)
+                              )}
+                            >
+                              {tx.category || "General"}
                             </Badge>
-                            {tx.reference_no && (
-                              <span className="text-[9px] font-mono text-slate-400 truncate max-w-[100px]">
+                          </td>
+
+                          {/* Reference */}
+                          <td className="py-3 px-3 sm:px-4 text-slate-500 font-mono text-[10px] sm:text-xs truncate align-middle">
+                            {tx.reference_no ? (
+                              <span className="bg-slate-100 px-2 py-0.5 rounded text-slate-600 font-semibold">
                                 {tx.reference_no}
                               </span>
-                            )}
-                          </div>
-                          {tx.recipient_profile && (
-                            <div className="flex items-center gap-1 flex-wrap">
-                              <span className="inline-flex items-center gap-1 px-1.5 py-0.2 rounded bg-indigo-50 text-indigo-800 text-[10px] font-bold border border-indigo-100">
-                                <UserCheck className="h-2.5 w-2.5 text-indigo-600 shrink-0" />
-                                <span className="truncate max-w-[120px] sm:max-w-none">{tx.recipient_profile.full_name}</span>
-                              </span>
-                            </div>
-                          )}
-                        </div>
-                      </td>
-                      <td className="py-2.5 sm:py-3.5 px-2 sm:px-4 hidden sm:table-cell">
-                        <Badge variant="outline" className="capitalize border-slate-200 py-0.5 px-2 text-[10px] sm:text-xs truncate max-w-[120px] inline-block">
-                          {tx.category}
-                        </Badge>
-                      </td>
-                      <td className="py-2.5 sm:py-3.5 px-2 sm:px-4 text-slate-400 font-mono text-[10px] sm:text-xs truncate hidden md:table-cell">{tx.reference_no || "—"}</td>
-                      <td className={`py-2.5 sm:py-3.5 px-2 sm:px-4 text-right font-extrabold text-xs sm:text-sm whitespace-nowrap ${tx.type === "income" ? "text-emerald-600" : "text-rose-600"}`}>
-                        {tx.type === "income" ? "+" : "-"}{formatCurrency(tx.amount)}
-                      </td>
-                      <td className="py-2.5 sm:py-3.5 px-2 sm:px-4 text-center">
-                        <div className="flex items-center justify-center gap-0.5 sm:gap-1">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleOpenReceipt(tx)}
-                            className="h-7 w-7 text-indigo-600 hover:bg-indigo-50 hover:text-indigo-700 rounded-lg shrink-0"
-                            title="Print / Share Official Receipt"
-                          >
-                            <Printer className="h-3.5 w-3.5" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => openEditModal(tx)}
-                            className="h-7 w-7 text-amber-600 hover:bg-amber-50 hover:text-amber-700 rounded-lg shrink-0"
-                            title="Edit transaction"
-                          >
-                            <Pencil className="h-3.5 w-3.5" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            disabled={deletingId === tx.id}
-                            onClick={() => handleDelete(tx.id)}
-                            className="h-7 w-7 text-rose-500 hover:bg-rose-50 hover:text-rose-600 rounded-lg disabled:opacity-50 shrink-0"
-                            title="Delete entry"
-                          >
-                            {deletingId === tx.id ? (
-                              <Loader2 className="h-3.5 w-3.5 animate-spin text-rose-500" />
                             ) : (
-                              <Trash2 className="h-3.5 w-3.5" />
+                              "—"
                             )}
-                          </Button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                          </td>
+
+                          {/* Amount */}
+                          <td
+                            className={cn(
+                              "py-3 px-3 sm:px-4 text-right font-black text-xs sm:text-sm whitespace-nowrap align-middle",
+                              isIncome ? "text-emerald-600" : "text-rose-600"
+                            )}
+                          >
+                            {isIncome ? "+" : "-"}{formatCurrency(tx.amount)}
+                          </td>
+
+                          {/* Actions: Sticky to right side so it never disappears on any screen */}
+                          <td className="py-3 px-3 sm:px-4 text-center align-middle shrink-0 sticky right-0 bg-white/95 group-hover:bg-slate-50/95 backdrop-blur-xs transition-colors shadow-[-6px_0_12px_-4px_rgba(0,0,0,0.06)]">
+                            <div className="flex items-center justify-center gap-1">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => handleOpenReceipt(tx)}
+                                className="h-7 w-7 text-indigo-600 hover:bg-indigo-50 hover:text-indigo-700 rounded-lg shrink-0"
+                                title="Print / Share Official Receipt"
+                              >
+                                <Printer className="h-3.5 w-3.5" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => openEditModal(tx)}
+                                className="h-7 w-7 text-amber-600 hover:bg-amber-50 hover:text-amber-700 rounded-lg shrink-0"
+                                title="Edit transaction"
+                              >
+                                <Pencil className="h-3.5 w-3.5" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                disabled={deletingId === tx.id}
+                                onClick={() => handleDelete(tx.id)}
+                                className="h-7 w-7 text-rose-500 hover:bg-rose-50 hover:text-rose-600 rounded-lg disabled:opacity-50 shrink-0"
+                                title="Delete entry"
+                              >
+                                {deletingId === tx.id ? (
+                                  <Loader2 className="h-3.5 w-3.5 animate-spin text-rose-500" />
+                                ) : (
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                )}
+                              </Button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </>
           )}
         </div>
       </Card>

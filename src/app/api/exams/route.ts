@@ -32,9 +32,27 @@ export async function GET(request: Request) {
       query = query.eq("course_id", courseId);
     }
 
+    const isUniversalAdmin =
+      authContext.roles.includes("admin") ||
+      authContext.primaryRole === "admin" ||
+      authContext.profile?.role === "admin" ||
+      authContext.user.email === "aimssalipur@gmail.com" ||
+      authContext.user.email === "sahilsahoo68@gmail.com";
+
     if (!isStaff) {
       // Students only see published exams
       query = query.eq("is_published", true);
+    } else if (!isUniversalAdmin && (authContext.roles.includes("instructor") || authContext.primaryRole === "instructor")) {
+      // Non-admin instructors only see exams in courses assigned to them
+      const { data: taughtCourses } = await supabase
+        .from("courses")
+        .select("id")
+        .eq("instructor_id", authContext.user.id);
+      const taughtCourseIds = (taughtCourses || []).map((c) => c.id);
+      if (taughtCourseIds.length === 0) {
+        return NextResponse.json([]);
+      }
+      query = query.in("course_id", taughtCourseIds);
     }
 
     const { data: exams, error } = await query;

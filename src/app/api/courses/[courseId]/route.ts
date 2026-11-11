@@ -83,7 +83,9 @@ export async function PATCH(
       const thumb = String(body.thumbnail_url).trim();
       updateData.thumbnail_url = thumb.includes("unsplash.com") ? "" : thumb;
     }
-    if (body.instructor_id !== undefined) updateData.instructor_id = String(body.instructor_id).trim();
+    if (body.instructor_id !== undefined) {
+      updateData.instructor_id = body.instructor_id ? String(body.instructor_id).trim() : null;
+    }
     if (body.youtube_playlist !== undefined) updateData.youtube_playlist = body.youtube_playlist ? String(body.youtube_playlist).trim() : null;
 
     if (Object.keys(updateData).length === 0) {

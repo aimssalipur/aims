@@ -417,7 +417,11 @@ export function DashboardSidebar({ role, user }: DashboardSidebarProps) {
 
           {/* Active Panel Switcher Grid */}
           {(() => {
-            const isAdmin = user?.email === "aimssalipur@gmail.com" || role === "admin" || (user.roles && user.roles.includes("admin"));
+            const isAdmin =
+              user?.email === "aimssalipur@gmail.com" ||
+              user?.email === "sahilsahoo68@gmail.com" ||
+              role === "admin" ||
+              (user.roles && user.roles.includes("admin"));
             
             // Students and staff must never see finance and admin options
             let effectiveRoles: UserRole[] = isAdmin

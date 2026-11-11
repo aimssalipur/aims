@@ -29,32 +29,46 @@ export async function GET(request: Request) {
       const { data: { user } } = await supabase.auth.getUser();
       let redirectUrl = `${origin}${next}`;
 
-      if (user && user.email === "sahilsahoo68@gmail.com") {
-        // Automatically make admin!
-        
-        // 1. Assign admin and student roles in user_roles table
-        const { data: currentRoles } = await supabase
-          .from("user_roles")
-          .select("role")
-          .eq("user_id", user.id);
-        
-        const rolesList = currentRoles?.map((ur: any) => ur.role) || [];
-        
-        if (!rolesList.includes("admin")) {
-          await supabase.from("user_roles").insert({ user_id: user.id, role: "admin" });
-        }
-        
-        if (!rolesList.includes("student")) {
-          await supabase.from("user_roles").insert({ user_id: user.id, role: "student" });
-        }
-
-        // 2. Set active role in profiles table to admin
-        await supabase
+      if (user) {
+        const { data: profile } = await supabase
           .from("profiles")
-          .update({ role: "admin" })
-          .eq("id", user.id);
+          .select("role, approved, is_active")
+          .eq("id", user.id)
+          .single();
 
-        redirectUrl = `${origin}/admin`;
+        // Evict deactivated accounts immediately
+        if (profile && profile.is_active === false) {
+          await supabase.auth.signOut();
+          return NextResponse.redirect(`${origin}/login?error=account_inactive`);
+        }
+
+        const isUniversalAdmin =
+          user.email === "sahilsahoo68@gmail.com" ||
+          user.email === "aimssalipur@gmail.com" ||
+          profile?.role === "admin";
+
+        if (isUniversalAdmin) {
+          // Ensure admin role assigned in user_roles and profiles
+          const { data: currentRoles } = await supabase
+            .from("user_roles")
+            .select("role")
+            .eq("user_id", user.id);
+
+          const rolesList = currentRoles?.map((ur: any) => ur.role) || [];
+
+          if (!rolesList.includes("admin")) {
+            await supabase.from("user_roles").insert({ user_id: user.id, role: "admin" });
+          }
+
+          if (profile?.role !== "admin") {
+            await supabase.from("profiles").update({ role: "admin" }).eq("id", user.id);
+          }
+
+          redirectUrl = `${origin}/admin`;
+        } else if (profile?.role) {
+          // Strictly route to their canonical profile role (e.g. /instructor, /accountant, /student)
+          redirectUrl = `${origin}/${profile.role}`;
+        }
       }
 
       return NextResponse.redirect(redirectUrl);

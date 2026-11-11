@@ -42,13 +42,22 @@ export default async function AccountantLayout({
     }
   }
 
-  const isAdmin = roles.includes("admin") || profile?.role === "admin" || user?.email === "aimssalipur@gmail.com";
+  const isAdmin =
+    roles.includes("admin") ||
+    profile?.role === "admin" ||
+    user?.email === "aimssalipur@gmail.com" ||
+    user?.email === "sahilsahoo68@gmail.com";
   if (isAdmin) {
     roles = ["student", "instructor", "accountant", "admin"];
   }
 
+  // Deactivated users cannot access accountant portal
+  if (profile && profile.is_active === false) {
+    redirect("/login?error=account_inactive");
+  }
+
   // Reject unauthorized users (only accountant and admin allowed)
-  if (!isAdmin && !roles.includes("accountant") && profile?.role !== "accountant") {
+  if (!isAdmin && profile?.role !== "accountant") {
     redirect(`/${profile?.role || "student"}`);
   }
 
@@ -64,7 +73,7 @@ export default async function AccountantLayout({
       <DashboardSidebar role={role} user={currentUser} />
       <div className="flex-1 flex flex-col min-w-0 min-h-screen">
         <DashboardTopbar role={role} userName={currentUser.full_name} />
-        <main className="flex-1 pt-14 lg:pt-0 px-3 sm:px-6 xl:px-8 py-3.5 sm:py-6 lg:py-8 overflow-x-hidden">
+        <main className="flex-1 pt-14 lg:pt-0 px-3 sm:px-6 xl:px-8 py-3.5 sm:py-6 lg:py-8 min-w-0">
           {children}
         </main>
       </div>

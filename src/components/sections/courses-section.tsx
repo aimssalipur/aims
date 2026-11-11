@@ -144,7 +144,7 @@ export function CoursesSection() {
           {featuredCourses.map((course, i) => {
             const info = courseInfo[course.title] || { category: "Nursing", duration: "2 Yrs" };
             const cat = categoryMap[info.category] || { label: "Recruitment", variant: "default" };
-            const rawThumb = (course.thumbnail_url || frontendImages[`course_${i + 1}`] || "").trim();
+            const rawThumb = (course.thumbnail_url || frontendImages[`course_${course.id}`] || frontendImages[`course_${i + 1}`] || "").trim();
             const hasRealImage = rawThumb && !rawThumb.includes("unsplash.com");
 
             return (

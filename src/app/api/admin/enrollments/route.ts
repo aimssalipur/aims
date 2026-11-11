@@ -20,6 +20,26 @@ export async function GET(request: Request) {
       .select("id, student_id, course_id, enrolled_at, progress, student:profiles!student_id(id, full_name, email, whatsapp, role), course:courses!course_id(id, title)")
       .order("enrolled_at", { ascending: false });
 
+    // Restrict regular non-admin instructors to only see enrollments in courses assigned to them
+    const isUniversalAdmin =
+      context.roles.includes("admin") ||
+      context.primaryRole === "admin" ||
+      context.profile?.role === "admin" ||
+      context.user.email === "aimssalipur@gmail.com" ||
+      context.user.email === "sahilsahoo68@gmail.com";
+
+    if (!isUniversalAdmin && context.primaryRole === "instructor") {
+      const { data: taughtCourses } = await supabase
+        .from("courses")
+        .select("id")
+        .eq("instructor_id", context.user.id);
+      const taughtCourseIds = (taughtCourses || []).map((c) => c.id);
+      if (taughtCourseIds.length === 0) {
+        return NextResponse.json([]);
+      }
+      query = query.in("course_id", taughtCourseIds);
+    }
+
     if (studentId) query = query.eq("student_id", studentId);
     if (courseId) query = query.eq("course_id", courseId);
 

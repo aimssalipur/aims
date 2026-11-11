@@ -4,6 +4,10 @@ import { requireRole } from "@/lib/server-auth";
 
 export const dynamic = "force-dynamic";
 
+export async function GET() {
+  return NextResponse.json({ message: "Repayments API endpoint. Use POST to record payments." });
+}
+
 export async function POST(request: Request) {
   const { context, errorResponse } = await requireRole(["admin", "accountant"]);
   if (errorResponse) return errorResponse;

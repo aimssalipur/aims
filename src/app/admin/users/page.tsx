@@ -35,6 +35,7 @@ import {
   PowerOff,
   Activity,
   Clock,
+  ArrowRight,
 } from "lucide-react";
 import {
   Tabs,
@@ -73,13 +74,13 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useToast } from "@/components/ui/use-toast";
 import { initials, cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
 import type { UserRole } from "@/lib/types";
 import { getFriendlyErrorMessage } from "@/lib/friendly-error";
-import { subscribeToDataRefresh } from "@/lib/refresh-event";
+import { subscribeToDataRefresh, triggerDataRefresh } from "@/lib/refresh-event";
 import { formatLastSeen, formatDuration } from "@/lib/activity-utils";
 
 export default function AdminUsersPage() {
@@ -131,6 +132,15 @@ export default function AdminUsersPage() {
   const openStudentDetails = (student: any) => {
     setSelectedStudentForDetails(student);
     setDetailsModalOpen(true);
+  };
+
+  // Activity Breakdown Modal State (Online, DAU, MAU)
+  const [activityModalOpen, setActivityModalOpen] = useState(false);
+  const [activityModalType, setActivityModalType] = useState<"online" | "dau" | "mau">("dau");
+
+  const openActivityModal = (type: "online" | "dau" | "mau") => {
+    setActivityModalType(type);
+    setActivityModalOpen(true);
   };
 
   const fetchUsers = async () => {
@@ -317,6 +327,7 @@ export default function AdminUsersPage() {
         setSelectedCourseToAssign("");
         fetchCourses();
         fetchUsers();
+        triggerDataRefresh();
       }
     } catch (err: any) {
       toast({
@@ -651,7 +662,9 @@ export default function AdminUsersPage() {
   };
 
   const renderRoleBadges = (u: any) => {
-    const userRoles = u.roles || [u.role];
+    const isAdmin = u.role === "admin" || (u.roles && u.roles.includes("admin"));
+    // Non-admins strictly have ONE active designation (Staff cannot be Student, Student cannot be Staff)
+    const userRoles = isAdmin ? (u.roles || ["admin"]) : [u.role || "student"];
     return (
       <div className="flex flex-wrap items-center gap-1">
         {userRoles.map((role: string) => {
@@ -736,6 +749,12 @@ export default function AdminUsersPage() {
   const totalDau = users.filter(isUserActiveToday).length;
   const totalMau = users.filter(isUserActiveThisMonth).length;
 
+  const modalActivityUsers = useMemo(() => {
+    if (activityModalType === "online") return users.filter(isUserOnline);
+    if (activityModalType === "dau") return users.filter(isUserActiveToday);
+    return users.filter(isUserActiveThisMonth);
+  }, [activityModalType, users]);
+
   const stats = [
     { label: "Total Users", value: users.length, icon: Users, grad: "from-amber-500 to-orange-600", ring: "bg-amber-50", col: "text-amber-600" },
     { label: "Students", value: totalStudents, icon: UserCircle, grad: "from-aims-navy to-blue-700", ring: "bg-aims-navy/10", col: "text-aims-navy" },
@@ -754,6 +773,8 @@ export default function AdminUsersPage() {
     const matchesTab =
       activeTab === "all" ||
       (activeTab === "online" && isUserOnline(u)) ||
+      (activeTab === "dau" && isUserActiveToday(u)) ||
+      (activeTab === "mau" && isUserActiveThisMonth(u)) ||
       (activeTab === "admins" && (u.roles?.includes("admin") || u.role === "admin")) ||
       (activeTab === "instructors" && (u.roles?.includes("instructor") || u.role === "instructor")) ||
       (activeTab === "accountants" && (u.roles?.includes("accountant") || u.role === "accountant")) ||
@@ -931,36 +952,51 @@ export default function AdminUsersPage() {
           </div>
         </div>
 
-        <div className="flex items-center gap-4 sm:gap-6 flex-wrap">
+        <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+          {/* Online RN */}
           <button
             type="button"
-            onClick={() => setActiveTab("online")}
-            className="flex items-center gap-2 px-2.5 py-1 rounded-xl hover:bg-white/10 transition-colors text-left"
-            title="Click to view only online users"
+            onClick={() => openActivityModal("online")}
+            className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/5 hover:bg-emerald-500/20 border border-white/10 hover:border-emerald-500/40 transition-all text-left group cursor-pointer"
+            title="Click to see who is Online Right Now"
           >
             <span className="relative flex h-2.5 w-2.5">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
               <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500 shadow-[0_0_8px_rgba(52,211,153,0.9)]" />
             </span>
             <div>
-              <span className="text-[9px] uppercase font-bold text-slate-400 block leading-tight">Online RN</span>
-              <span className="text-xs sm:text-sm font-black text-emerald-400">{totalOnline} Active</span>
+              <span className="text-[9px] uppercase font-extrabold text-slate-400 block leading-tight group-hover:text-emerald-300 transition-colors">Online RN</span>
+              <span className="text-xs sm:text-sm font-black text-emerald-400">{totalOnline} Active →</span>
             </div>
           </button>
 
-          <div className="h-7 w-px bg-slate-800 hidden sm:block" />
+          {/* DAU Today */}
+          <button
+            type="button"
+            onClick={() => openActivityModal("dau")}
+            className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/5 hover:bg-sky-500/20 border border-white/10 hover:border-sky-500/40 transition-all text-left group cursor-pointer"
+            title="Click to see who is active today (DAU)"
+          >
+            <span className="h-2 w-2 rounded-full bg-sky-400 shrink-0" />
+            <div>
+              <span className="text-[9px] uppercase font-extrabold text-slate-400 block leading-tight group-hover:text-sky-300 transition-colors">DAU (Today)</span>
+              <span className="text-xs sm:text-sm font-black text-sky-300">{totalDau} Students →</span>
+            </div>
+          </button>
 
-          <div>
-            <span className="text-[9px] uppercase font-bold text-slate-400 block leading-tight">DAU (Today)</span>
-            <span className="text-xs sm:text-sm font-black text-sky-300">{totalDau} Students</span>
-          </div>
-
-          <div className="h-7 w-px bg-slate-800 hidden sm:block" />
-
-          <div>
-            <span className="text-[9px] uppercase font-bold text-slate-400 block leading-tight">MAU (Month)</span>
-            <span className="text-xs sm:text-sm font-black text-purple-300">{totalMau} Active</span>
-          </div>
+          {/* MAU Month */}
+          <button
+            type="button"
+            onClick={() => openActivityModal("mau")}
+            className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/5 hover:bg-purple-500/20 border border-white/10 hover:border-purple-500/40 transition-all text-left group cursor-pointer"
+            title="Click to see who is active this month (MAU)"
+          >
+            <span className="h-2 w-2 rounded-full bg-purple-400 shrink-0" />
+            <div>
+              <span className="text-[9px] uppercase font-extrabold text-slate-400 block leading-tight group-hover:text-purple-300 transition-colors">MAU (Month)</span>
+              <span className="text-xs sm:text-sm font-black text-purple-300">{totalMau} Active →</span>
+            </div>
+          </button>
         </div>
       </div>
 
@@ -997,7 +1033,7 @@ export default function AdminUsersPage() {
         <div className="px-5 md:px-6 pt-5 border-b border-slate-100">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <TabsList className="bg-transparent p-0 gap-1 h-auto flex-wrap">
-              {["all", "online", "students", "pending", "instructors", "accountants", "admins", "inactive"].map((t) => (
+              {["all", "online", "dau", "mau", "students", "pending", "instructors", "accountants", "admins", "inactive"].map((t) => (
                 <TabsTrigger
                   key={t}
                   value={t}
@@ -1010,6 +1046,8 @@ export default function AdminUsersPage() {
                       Online ({totalOnline})
                     </span>
                   )}
+                  {t === "dau" && `Active Today (${totalDau})`}
+                  {t === "mau" && `Active Month (${totalMau})`}
                   {t === "students" && "Students"}
                   {t === "pending" && `Pending Applications (${totalPending}) ⏳`}
                   {t === "instructors" && "Instructors"}
@@ -1260,21 +1298,36 @@ export default function AdminUsersPage() {
                                   <DropdownMenuSeparator />
                                 </>
                               )}
-                              <DropdownMenuItem className="gap-2" onClick={() => handleToggleRole(u.id, "admin", u.roles)}>
-                                <Shield className="h-4 w-4 text-purple-600" />
-                                {u.roles?.includes("admin") ? "✓ Admin (Click to Remove)" : "Add Admin Role"}
-                              </DropdownMenuItem>
-                              <DropdownMenuItem className="gap-2" onClick={() => handleToggleRole(u.id, "instructor", u.roles)}>
-                                <GraduationCap className="h-4 w-4 text-aims-green" />
-                                {u.roles?.includes("instructor") ? "✓ Instructor (Click to Remove)" : "Add Instructor Role"}
-                              </DropdownMenuItem>
-                              <DropdownMenuItem className="gap-2" onClick={() => handleToggleRole(u.id, "accountant", u.roles)}>
-                                <DollarSign className="h-4 w-4 text-indigo-600" />
-                                {u.roles?.includes("accountant") ? "✓ Accountant (Click to Remove)" : "Add Accountant Role"}
-                              </DropdownMenuItem>
-                              <DropdownMenuItem className="gap-2" onClick={() => handleToggleRole(u.id, "student", u.roles)}>
+                              <div className="px-2 py-1 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                                Set Role
+                              </div>
+                              <DropdownMenuItem
+                                className={cn("gap-2 cursor-pointer font-medium", u.role === "student" && "bg-blue-50/80 font-bold text-aims-navy")}
+                                onClick={() => handleSetPrimaryRole(u.id, "student")}
+                              >
                                 <UserCircle className="h-4 w-4 text-aims-navy" />
-                                {u.roles?.includes("student") ? "✓ Student (Click to Remove)" : "Add Student Role"}
+                                <span>Set Role as Student {u.role === "student" ? "✓" : ""}</span>
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                className={cn("gap-2 cursor-pointer font-medium", u.role === "instructor" && "bg-emerald-50/80 font-bold text-aims-green")}
+                                onClick={() => handleSetPrimaryRole(u.id, "instructor")}
+                              >
+                                <GraduationCap className="h-4 w-4 text-aims-green" />
+                                <span>Set Role as Instructor / Faculty {u.role === "instructor" ? "✓" : ""}</span>
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                className={cn("gap-2 cursor-pointer font-medium", u.role === "accountant" && "bg-indigo-50/80 font-bold text-indigo-700")}
+                                onClick={() => handleSetPrimaryRole(u.id, "accountant")}
+                              >
+                                <DollarSign className="h-4 w-4 text-indigo-600" />
+                                <span>Set Role as Accountant {u.role === "accountant" ? "✓" : ""}</span>
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                className={cn("gap-2 cursor-pointer font-medium", u.role === "admin" && "bg-purple-50/80 font-bold text-purple-700")}
+                                onClick={() => handleSetPrimaryRole(u.id, "admin")}
+                              >
+                                <Shield className="h-4 w-4 text-purple-600" />
+                                <span>Set Role as Administrator {u.role === "admin" ? "✓" : ""}</span>
                               </DropdownMenuItem>
                               <DropdownMenuSeparator />
                               <DropdownMenuItem className="gap-2 font-semibold text-aims-navy focus:bg-blue-50 cursor-pointer" onClick={() => openEnrollModal(u)}>
@@ -2002,6 +2055,186 @@ export default function AdminUsersPage() {
               </Button>
             </div>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Activity Breakdown Dialog (Online, DAU, MAU) */}
+      <Dialog open={activityModalOpen} onOpenChange={setActivityModalOpen}>
+        <DialogContent className="w-[95vw] sm:max-w-xl max-h-[90vh] overflow-hidden flex flex-col p-4 sm:p-6 rounded-2xl sm:rounded-3xl border-slate-200 bg-white">
+          <DialogHeader className="space-y-1 text-left pb-3 border-b border-slate-100 shrink-0">
+            <div className="flex items-center justify-between gap-3">
+              <DialogTitle className="text-lg sm:text-xl font-extrabold text-slate-900 flex items-center gap-2">
+                {activityModalType === "online" && (
+                  <>
+                    <span className="relative flex h-3 w-3">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                      <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500 shadow-[0_0_8px_rgba(52,211,153,0.9)]" />
+                    </span>
+                    <span>Online Right Now ({modalActivityUsers.length})</span>
+                  </>
+                )}
+                {activityModalType === "dau" && (
+                  <>
+                    <Activity className="h-5 w-5 text-sky-500" />
+                    <span>DAU — Active Today ({modalActivityUsers.length} Students)</span>
+                  </>
+                )}
+                {activityModalType === "mau" && (
+                  <>
+                    <Calendar className="h-5 w-5 text-purple-500" />
+                    <span>MAU — Active This Month ({modalActivityUsers.length} Users)</span>
+                  </>
+                )}
+              </DialogTitle>
+              <Badge
+                variant="outline"
+                className={cn(
+                  "font-bold text-xs uppercase px-2.5 py-0.5 rounded-full shrink-0",
+                  activityModalType === "online" && "bg-emerald-50 text-emerald-700 border-emerald-200",
+                  activityModalType === "dau" && "bg-sky-50 text-sky-700 border-sky-200",
+                  activityModalType === "mau" && "bg-purple-50 text-purple-700 border-purple-200"
+                )}
+              >
+                {modalActivityUsers.length} {modalActivityUsers.length === 1 ? "User" : "Users"}
+              </Badge>
+            </div>
+            <DialogDescription className="font-semibold text-slate-500 text-xs sm:text-sm">
+              {activityModalType === "online" && "Students and members with active live heartbeats in the last 5 minutes."}
+              {activityModalType === "dau" && "Students and members who logged activity or spent time on the platform today."}
+              {activityModalType === "mau" && "Students and members who logged activity or spent time on the platform this month."}
+            </DialogDescription>
+          </DialogHeader>
+
+          {/* List of active students */}
+          <div className="flex-1 overflow-y-auto py-3 space-y-2.5 max-h-[58vh] pr-1">
+            {modalActivityUsers.length === 0 ? (
+              <div className="py-12 text-center text-slate-400 font-semibold text-xs sm:text-sm">
+                No active students recorded for this period.
+              </div>
+            ) : (
+              modalActivityUsers.map((u: any) => {
+                const online = isUserOnline(u);
+                const roleBadge = u.role || "student";
+
+                return (
+                  <div
+                    key={u.id}
+                    className="p-3 sm:p-3.5 rounded-2xl bg-slate-50/70 border border-slate-200/80 hover:border-indigo-200 hover:bg-indigo-50/20 transition-all flex items-center justify-between gap-3 group"
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="relative shrink-0">
+                        <Avatar className="h-10 w-10 ring-2 ring-white shadow-xs">
+                          <AvatarImage src={u.avatar_url || ""} />
+                          <AvatarFallback className="text-xs font-black text-white bg-gradient-to-br from-aims-navy to-aims-green">
+                            {initials(u.full_name)}
+                          </AvatarFallback>
+                        </Avatar>
+                        {online && (
+                          <span
+                            className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-emerald-500 ring-2 ring-white animate-pulse"
+                            title="Online right now"
+                          />
+                        )}
+                      </div>
+                      <div className="min-w-0 space-y-0.5">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span
+                            onClick={() => {
+                              setActivityModalOpen(false);
+                              openStudentDetails(u);
+                            }}
+                            className="font-extrabold text-slate-900 text-xs sm:text-sm hover:text-blue-600 hover:underline cursor-pointer truncate"
+                          >
+                            {u.full_name}
+                          </span>
+                          <Badge
+                            variant="outline"
+                            className={cn(
+                              "text-[9px] font-bold px-1.5 py-0 capitalize",
+                              roleBadge === "instructor" && "bg-emerald-50 text-emerald-700 border-emerald-200",
+                              roleBadge === "student" && "bg-blue-50 text-blue-700 border-blue-200",
+                              roleBadge === "accountant" && "bg-indigo-50 text-indigo-700 border-indigo-200",
+                              roleBadge === "admin" && "bg-purple-50 text-purple-700 border-purple-200"
+                            )}
+                          >
+                            {roleBadge}
+                          </Badge>
+                        </div>
+                        <p className="text-[11px] text-slate-500 font-medium truncate">
+                          {u.email}
+                        </p>
+                        <p className="text-[11px] text-indigo-700 font-semibold truncate">
+                          {u.enrollments && u.enrollments.length > 0
+                            ? `📚 ${u.enrollments.map((e: any) => e.course?.title).filter(Boolean).join(", ")}`
+                            : u.course_of_interest || "AIMS Student"}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="text-right shrink-0 space-y-0.5">
+                      <div className="text-[11px] font-extrabold text-slate-700">
+                        {online ? (
+                          <span className="text-emerald-600 font-black flex items-center gap-1 justify-end">
+                            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                            Online now
+                          </span>
+                        ) : u.last_seen_at ? (
+                          <span className="text-slate-600">Active {formatLastSeen(u.last_seen_at).text}</span>
+                        ) : (
+                          <span className="text-slate-400">Offline</span>
+                        )}
+                      </div>
+                      {(u.time_spent_today_seconds || 0) > 0 && (
+                        <div className="text-[10px] font-bold text-sky-600">
+                          ⏱️ {formatDuration(u.time_spent_today_seconds)} today
+                        </div>
+                      )}
+                      {(u.time_spent_month_seconds || 0) > 0 && (u.time_spent_today_seconds || 0) === 0 && (
+                        <div className="text-[10px] font-bold text-purple-600">
+                          ⏱️ {formatDuration(u.time_spent_month_seconds)} this month
+                        </div>
+                      )}
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          setActivityModalOpen(false);
+                          openStudentDetails(u);
+                        }}
+                        className="h-6 px-2 text-[10px] text-aims-navy hover:bg-white hover:shadow-xs font-bold mt-0.5 rounded-lg"
+                      >
+                        Profile →
+                      </Button>
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+
+          {/* Footer Actions */}
+          <DialogFooter className="flex flex-col-reverse sm:flex-row sm:justify-between items-center gap-2 pt-3 border-t border-slate-100 shrink-0">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setActivityModalOpen(false);
+                setActiveTab(activityModalType);
+              }}
+              className="w-full sm:w-auto rounded-xl font-bold text-xs border-indigo-200 text-indigo-700 bg-indigo-50/60 hover:bg-indigo-100 gap-1.5"
+            >
+              <Users className="h-3.5 w-3.5 text-indigo-600" />
+              Filter Main Table by this Group
+            </Button>
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={() => setActivityModalOpen(false)}
+              className="w-full sm:w-auto rounded-xl font-bold text-xs px-5"
+            >
+              Done
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

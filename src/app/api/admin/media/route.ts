@@ -20,15 +20,20 @@ export async function GET() {
     const supabase = createAdminClient();
     const { data: courses, error } = await supabase
       .from("courses")
-      .select("id, title, thumbnail_url")
+      .select("id, title, thumbnail_url, description")
       .order("created_at", { ascending: true });
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
-    // Build key-to-thumbnail map based on database state
+    // Build key-to-thumbnail map based on database state for every course
     const courseImages: Record<string, string> = {};
+    (courses || []).forEach((c) => {
+      courseImages[`course_${c.id}`] = c.thumbnail_url || "";
+    });
+
+    // Also support legacy keys course_1..7 for backward compatibility
     for (const [key, mapping] of Object.entries(COURSE_KEY_MAPPINGS)) {
       const match = courses?.find(
         (c) => (mapping.id && c.id === mapping.id) || c.title.toLowerCase().includes(mapping.keyword.toLowerCase())
@@ -84,20 +89,27 @@ export async function POST(request: Request) {
 
       // Sync course covers directly to the database
       if (key.startsWith("course_")) {
-        const mapping = COURSE_KEY_MAPPINGS[key];
-        let targetId = mapping?.id;
+        const potentialId = key.replace("course_", "");
+        const directMatch = existingCourses?.find((c) => c.id === potentialId);
+        let targetId = directMatch ? directMatch.id : undefined;
 
-        if (!targetId && existingCourses && mapping) {
-          const match = existingCourses.find((c) =>
-            c.title.toLowerCase().includes(mapping.keyword.toLowerCase())
-          );
-          if (match) targetId = match.id;
+        if (!targetId) {
+          const mapping = COURSE_KEY_MAPPINGS[key];
+          targetId = mapping?.id;
+
+          if (!targetId && existingCourses && mapping) {
+            const match = existingCourses.find((c) =>
+              c.title.toLowerCase().includes(mapping.keyword.toLowerCase())
+            );
+            if (match) targetId = match.id;
+          }
         }
 
         if (targetId) {
+          const cleanThumb = url.includes("unsplash.com") ? "" : url;
           const { error: updateErr } = await supabase
             .from("courses")
-            .update({ thumbnail_url: url.includes("unsplash.com") ? "" : url })
+            .update({ thumbnail_url: cleanThumb })
             .eq("id", targetId);
 
           if (!updateErr) updatedCount++;

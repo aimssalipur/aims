@@ -92,13 +92,13 @@ export default function LoginPage() {
       }
 
       if (profile && profile.is_active === false) {
+        await supabase.auth.signOut();
         toast({
           title: "Account Inactive ⚠️",
-          description: "Your account is currently inactive. You can only view the public site. Please contact administration for assistance.",
+          description: "Your account is currently inactive and blocked from accessing AIMS portals. Please contact administration for assistance.",
           variant: "destructive",
         });
-        router.push("/?error=account_inactive");
-        router.refresh();
+        setIsLoading(false);
         return;
       }
 

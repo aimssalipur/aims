@@ -59,11 +59,20 @@ export async function getAuthenticatedContext(): Promise<AuthenticatedContext | 
     }
 
     // Supreme Admin Privilege: universal access across all roles (Admin, Instructor, Accountant, Student)
-    if (rolesSet.has("admin") || profile?.role === "admin" || user?.email === "aimssalipur@gmail.com") {
+    const isUniversalAdmin =
+      rolesSet.has("admin") ||
+      profile?.role === "admin" ||
+      user?.email === "aimssalipur@gmail.com" ||
+      user?.email === "sahilsahoo68@gmail.com";
+    if (isUniversalAdmin) {
       rolesSet.add("admin");
       rolesSet.add("instructor");
       rolesSet.add("accountant");
       rolesSet.add("student");
+    } else {
+      // Non-admins strictly possess ONLY their canonical profile role (Staff cannot access student endpoints, and vice versa)
+      rolesSet.clear();
+      rolesSet.add((profile?.role as UserRole) || "student");
     }
 
     const roles = Array.from(rolesSet);

@@ -182,38 +182,74 @@ export function ContactSection() {
         <div className="contact-grid grid lg:grid-cols-5 gap-5 sm:gap-8 lg:gap-10">
           {/* Left Column: WhatsApp CTA + Info Cards */}
           <div className="contact-col-left lg:col-span-2 space-y-3 sm:space-y-4">
-            {/* WhatsApp CTA Card */}
+            {/* New Official Office Helpline Card */}
+            <a
+              href="tel:+918480405956"
+              className="block group relative overflow-hidden rounded-2xl sm:rounded-3xl bg-gradient-to-br from-aims-navy via-blue-900 to-indigo-950 p-4 sm:p-5 md:p-6 text-white shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-0.5"
+            >
+              <div className="relative">
+                <div className="flex items-center justify-between mb-2 sm:mb-2.5">
+                  <div className="h-9 w-9 sm:h-11 sm:w-11 rounded-xl bg-white/15 backdrop-blur flex items-center justify-center ring-2 ring-white/25">
+                    <Phone className="h-4.5 w-4.5 sm:h-5 sm:w-5 text-white" />
+                  </div>
+                  <Badge className="bg-aims-gold text-slate-900 text-[10px] sm:text-xs font-bold px-2 py-0.5">
+                    OFFICE HELPLINE
+                  </Badge>
+                </div>
+                <h3 className="text-base sm:text-lg md:text-xl font-extrabold mb-0.5 leading-tight">
+                  Call Office Directly
+                </h3>
+                <p className="text-white/85 mb-2.5 sm:mb-3 leading-snug text-[11px] sm:text-xs">
+                  Speak directly with our administration desk for batch admissions and inquiries.
+                </p>
+                <div className="flex items-center justify-between pt-2 border-t border-white/15">
+                  <div>
+                    <div className="text-[9px] font-semibold uppercase tracking-wider text-white/70">
+                      Official Office Line
+                    </div>
+                    <div className="text-base sm:text-lg font-extrabold text-white">
+                      +91 84804 05956
+                    </div>
+                  </div>
+                  <div className="h-8 w-8 sm:h-9 sm:w-9 rounded-full bg-white text-aims-navy flex items-center justify-center shadow transition-transform group-hover:translate-x-1">
+                    <ArrowRight className="h-4 w-4" />
+                  </div>
+                </div>
+              </div>
+            </a>
+
+            {/* Direct WhatsApp Admissions Card */}
             <a
               href="https://wa.me/919437959054"
               target="_blank"
               rel="noopener noreferrer"
-              className="block group relative overflow-hidden rounded-2xl sm:rounded-3xl bg-gradient-to-br from-emerald-500 via-green-500 to-teal-600 p-4 sm:p-6 md:p-7 text-white shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-0.5"
+              className="block group relative overflow-hidden rounded-2xl sm:rounded-3xl bg-gradient-to-br from-emerald-500 via-green-500 to-teal-600 p-4 sm:p-5 md:p-6 text-white shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-0.5"
             >
               <div className="relative">
-                <div className="flex items-center justify-between mb-2.5 sm:mb-3">
-                  <div className="h-9 w-9 sm:h-12 sm:w-12 rounded-xl bg-white/20 backdrop-blur flex items-center justify-center ring-2 ring-white/30">
-                    <Phone className="h-4.5 w-4.5 sm:h-6 sm:w-6" />
+                <div className="flex items-center justify-between mb-2 sm:mb-2.5">
+                  <div className="h-9 w-9 sm:h-11 sm:w-11 rounded-xl bg-white/20 backdrop-blur flex items-center justify-center ring-2 ring-white/30">
+                    <MessageCircle className="h-4.5 w-4.5 sm:h-5 sm:w-5 text-white" />
                   </div>
-                  <Badge className="bg-white text-emerald-700 text-[10px] sm:text-xs font-bold px-2 py-0.5 sm:px-2.5 sm:py-1">
+                  <Badge className="bg-white text-emerald-700 text-[10px] sm:text-xs font-bold px-2 py-0.5">
                     INSTANT RESPONSE
                   </Badge>
                 </div>
-                <h3 className="text-base sm:text-xl md:text-2xl font-extrabold mb-1 leading-tight">
+                <h3 className="text-base sm:text-lg md:text-xl font-extrabold mb-0.5 leading-tight">
                   Chat on WhatsApp
                 </h3>
-                <p className="text-white/90 mb-3 sm:mb-4 leading-snug text-xs sm:text-sm">
+                <p className="text-white/90 mb-2.5 sm:mb-3 leading-snug text-[11px] sm:text-xs">
                   Get instant replies from our counselors. Available 9 AM - 9 PM daily.
                 </p>
                 <div className="flex items-center justify-between pt-2 border-t border-white/20">
                   <div>
-                    <div className="text-[9px] sm:text-[10px] font-semibold uppercase tracking-wider text-white/70">
-                      Direct WhatsApp
+                    <div className="text-[9px] font-semibold uppercase tracking-wider text-white/70">
+                      Admissions WhatsApp
                     </div>
-                    <div className="text-sm sm:text-lg font-extrabold">
+                    <div className="text-base sm:text-lg font-extrabold text-white">
                       +91 94379 59054
                     </div>
                   </div>
-                  <div className="h-8 w-8 sm:h-10 sm:w-10 rounded-full bg-white text-emerald-600 flex items-center justify-center shadow transition-transform group-hover:translate-x-1">
+                  <div className="h-8 w-8 sm:h-9 sm:w-9 rounded-full bg-white text-emerald-600 flex items-center justify-center shadow transition-transform group-hover:translate-x-1">
                     <ArrowRight className="h-4 w-4" />
                   </div>
                 </div>

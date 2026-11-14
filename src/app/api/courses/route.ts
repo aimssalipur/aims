@@ -41,14 +41,56 @@ export async function GET(request: Request) {
       query = query.eq("instructor_id", instructorId);
     }
 
-    const { data: courses, error } = await query;
+    const [coursesRes, liveRes, youtubeRes] = await Promise.all([
+      query,
+      supabase.from("live_classes").select("course_id"),
+      supabase.from("youtube_resources").select("course_id"),
+    ]);
 
-    if (error) {
-      console.error("[api/courses] Supabase error:", error);
-      return NextResponse.json({ error: error.message }, { status: 500 });
+    if (coursesRes.error) {
+      console.error("[api/courses] Supabase error:", coursesRes.error);
+      return NextResponse.json({ error: coursesRes.error.message }, { status: 500 });
     }
 
-    return NextResponse.json({ courses: courses || [] });
+    const liveCounts: Record<string, number> = {};
+    if (liveRes.data) {
+      for (const row of liveRes.data) {
+        if (row.course_id) {
+          liveCounts[row.course_id] = (liveCounts[row.course_id] || 0) + 1;
+        }
+      }
+    }
+
+    const youtubeCounts: Record<string, number> = {};
+    if (youtubeRes.data) {
+      for (const row of youtubeRes.data) {
+        if (row.course_id) {
+          youtubeCounts[row.course_id] = (youtubeCounts[row.course_id] || 0) + 1;
+        }
+      }
+    }
+
+    const enrichedCourses = (coursesRes.data || []).map((c) => {
+      const liveCount = liveCounts[c.id] || 0;
+      const youtubeCount = youtubeCounts[c.id] || 0;
+      return {
+        ...c,
+        live_classes_count: liveCount,
+        youtube_resources_count: youtubeCount,
+        total_classes_count: liveCount + youtubeCount,
+      };
+    });
+
+    return NextResponse.json(
+      { courses: enrichedCourses },
+      {
+        headers: {
+          "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+          Pragma: "no-cache",
+          Expires: "0",
+        },
+      }
+    );
   } catch (err: any) {
     console.error("[api/courses] Unexpected error:", err);
     return NextResponse.json(

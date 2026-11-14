@@ -175,7 +175,7 @@ export function Footer() {
 
               <li>
                 <a
-                  href="tel:+919437959054"
+                  href="tel:+918480405956"
                   className="group flex items-start gap-2.5 sm:gap-3 text-slate-400 hover:text-white transition-colors"
                 >
                   <div className="h-8 w-8 sm:h-9 sm:w-9 shrink-0 rounded-lg bg-white/10 flex items-center justify-center text-aims-green group-hover:bg-aims-green group-hover:text-white transition-colors">
@@ -183,7 +183,28 @@ export function Footer() {
                   </div>
                   <div className="min-w-0">
                     <p className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold">
-                      Call / WhatsApp
+                      Office Helpline
+                    </p>
+                    <p className="text-xs sm:text-sm text-slate-300 group-hover:text-white font-medium">
+                      +91 84804 05956
+                    </p>
+                  </div>
+                </a>
+              </li>
+
+              <li>
+                <a
+                  href="https://wa.me/919437959054"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="group flex items-start gap-2.5 sm:gap-3 text-slate-400 hover:text-white transition-colors"
+                >
+                  <div className="h-8 w-8 sm:h-9 sm:w-9 shrink-0 rounded-lg bg-white/10 flex items-center justify-center text-aims-green group-hover:bg-aims-green group-hover:text-white transition-colors">
+                    <Phone className="h-4 w-4" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold">
+                      Admissions / WhatsApp
                     </p>
                     <p className="text-xs sm:text-sm text-slate-300 group-hover:text-white font-medium">
                       +91 94379 59054

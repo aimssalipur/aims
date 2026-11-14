@@ -98,6 +98,25 @@ export default function SignupPage() {
     };
   }, []);
 
+  // Pre-select course if specified in URL query (?course=... or ?courseId=...)
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const paramCourse = params.get("course");
+      const paramCourseId = params.get("courseId");
+      if (paramCourseId) {
+        setSelectedCourses([paramCourseId]);
+      } else if (paramCourse) {
+        const match = (courses.length > 0 ? courses : fallbackCourses).find(
+          (c) => c.title.toLowerCase() === paramCourse.toLowerCase()
+        );
+        if (match) {
+          setSelectedCourses([match.id]);
+        }
+      }
+    }
+  }, [courses]);
+
   const coursesToDisplay = courses.length > 0 ? courses : fallbackCourses;
 
   const filteredCoursesToDisplay = coursesToDisplay.filter((c) => {

@@ -33,6 +33,7 @@ import {
   Loader2,
   RefreshCw,
   GraduationCap,
+  BookOpen,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -404,11 +405,17 @@ export default function InstructorCoursesPage() {
 
   const myCourses = displayedCourses.map((c) => {
     const enrolled = enrollmentCounts[c.id] || 0;
+    const liveCount = Number(c.live_classes_count) || 0;
+    const youtubeCount = Number(c.youtube_resources_count) || 0;
+    const totalClasses = Number(c.total_classes_count) || (liveCount + youtubeCount);
     return {
       ...c,
       enrolled,
+      live_classes_count: liveCount,
+      youtube_resources_count: youtubeCount,
+      total_classes_count: totalClasses,
       avgProgress: 0,
-      lectures: 0,
+      lectures: totalClasses,
       badge: "Active",
       badgeVariant: "default" as const,
     };
@@ -493,6 +500,8 @@ export default function InstructorCoursesPage() {
         setLiveClassForm({ title: "", scheduled_start: "", scheduled_end: "", youtube_url: "" });
         setShowScheduleForm(false);
         fetchLiveClasses(selectedCourse.id);
+        fetchCourses();
+        triggerDataRefresh();
       }
     } catch (err: any) {
       toast({
@@ -522,6 +531,7 @@ export default function InstructorCoursesPage() {
           variant: "success"
         });
         fetchLiveClasses(selectedCourse.id);
+        fetchCourses();
         triggerDataRefresh();
       } else {
         const data = await res.json().catch(() => ({}));
@@ -575,6 +585,8 @@ export default function InstructorCoursesPage() {
         });
         setResourceForm({ title: "", youtube_url: "", description: "" });
         fetchResources(selectedCourse.id);
+        fetchCourses();
+        triggerDataRefresh();
       }
     } catch (err: any) {
       toast({
@@ -601,6 +613,8 @@ export default function InstructorCoursesPage() {
           variant: "success"
         });
         fetchResources(selectedCourse.id);
+        fetchCourses();
+        triggerDataRefresh();
       }
     } catch (err) {
       console.error(err);
@@ -615,7 +629,7 @@ export default function InstructorCoursesPage() {
             Manage My Courses 📝
           </h1>
           <p className="text-slate-500 mt-1 text-xs sm:text-base">
-            {myCourses.length} active courses · {myCourses.reduce((a, b) => a + (b.enrolled || 0), 0)} total students
+            {myCourses.length} active courses · {myCourses.reduce((a, b) => a + (b.enrolled || 0), 0)} total students · {myCourses.reduce((a, b) => a + (b.total_classes_count || 0), 0)} total classes ({myCourses.reduce((a, b) => a + (b.live_classes_count || 0), 0)} Live · {myCourses.reduce((a, b) => a + (b.youtube_resources_count || 0), 0)} Recorded)
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -962,26 +976,38 @@ export default function InstructorCoursesPage() {
               className="group overflow-hidden border-slate-100 hover:shadow-2xl transition-all duration-500 hover:-translate-y-1.5 flex flex-col"
             >
               <div className="relative overflow-hidden aspect-[16/10]">
-                <CoursePosterBanner
-                  title={course.title}
-                  thumbnailUrl={course.thumbnail_url}
-                />
-                <div className="absolute top-3 left-3 sm:top-4 sm:left-4 flex gap-2 z-10">
+                <Link
+                  href={`/instructor/courses/${course.id}`}
+                  className="block w-full h-full group-hover:opacity-95 transition-opacity"
+                  title={`Open ${course.title}`}
+                >
+                  <CoursePosterBanner
+                    title={course.title}
+                    thumbnailUrl={course.thumbnail_url}
+                  />
+                </Link>
+                <div className="absolute top-3 left-3 sm:top-4 sm:left-4 flex gap-2 z-10 pointer-events-none">
                   <Badge
                     variant={(course as any).badgeVariant || "default"}
-                    className="text-[10px] sm:text-xs font-bold px-2 sm:px-3 py-0.5 sm:py-1 shadow-sm border-0"
+                    className="text-[10px] sm:text-xs font-bold px-2 sm:px-3 py-0.5 sm:py-1 shadow-sm border-0 pointer-events-auto"
                   >
                     {(course as any).badge || "Active"}
                   </Badge>
                 </div>
-                <div className="absolute top-3 right-3 sm:top-4 sm:right-4">
+                <div className="absolute top-3 right-3 sm:top-4 sm:right-4 z-10">
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <button className="h-7 w-7 sm:h-9 sm:w-9 rounded-xl bg-white/90 backdrop-blur text-slate-700 flex items-center justify-center shadow-md hover:bg-white transition-colors">
                         <MoreHorizontal className="h-3.5 w-3.5 sm:h-4.5 sm:w-4.5" />
                       </button>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-52">
+                    <DropdownMenuContent align="end" className="w-56">
+                      <DropdownMenuItem asChild className="gap-2 font-bold text-aims-navy focus:text-aims-navy focus:bg-slate-50 cursor-pointer">
+                        <Link href={`/instructor/courses/${course.id}`}>
+                          <BookOpen className="h-4 w-4 text-aims-green" /> Open Course & Content
+                        </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
                       <DropdownMenuItem className="gap-2" onClick={() => handleOpenLiveDialog(course)}>
                         <Video className="h-4 w-4 text-emerald-600" /> Schedule Live Class
                       </DropdownMenuItem>
@@ -998,7 +1024,7 @@ export default function InstructorCoursesPage() {
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </div>
-              <div className="absolute bottom-3 left-3 right-3 sm:bottom-4 sm:left-4 sm:right-4 flex items-center justify-between text-white">
+              <div className="absolute bottom-3 left-3 right-3 sm:bottom-4 sm:left-4 sm:right-4 flex items-center justify-between text-white pointer-events-none">
                 <div className="flex items-center gap-2 sm:gap-3 text-[11px] sm:text-xs font-bold drop-shadow-md">
                   <span className="flex items-center gap-1 bg-black/40 backdrop-blur-xs px-2 py-0.5 rounded-md">
                     <Users className="h-3.5 w-3.5" />
@@ -1011,8 +1037,14 @@ export default function InstructorCoursesPage() {
               </div>
             </div>
             <CardHeader className="p-3.5 sm:p-5 pb-2 sm:pb-3">
-              <CardTitle className="text-base sm:text-lg font-extrabold leading-tight line-clamp-2 group-hover:text-aims-green transition-colors">
-                {course.title}
+              <CardTitle className="text-base sm:text-lg font-extrabold leading-tight line-clamp-2">
+                <Link
+                  href={`/instructor/courses/${course.id}`}
+                  className="hover:text-aims-green transition-colors inline-block"
+                  title={`Open ${course.title}`}
+                >
+                  {course.title}
+                </Link>
               </CardTitle>
               <div className="text-xs font-semibold text-slate-500 pt-1">
                 <span className="text-aims-green font-bold">Faculty Lead:</span> {course.instructor?.full_name || "Unassigned"}
@@ -1022,32 +1054,84 @@ export default function InstructorCoursesPage() {
               <CardDescription className="text-xs sm:text-sm text-slate-600 leading-relaxed line-clamp-2 min-h-0 sm:min-h-[2.5rem]">
                 {course.description}
               </CardDescription>
-              <div className="space-y-1.5 sm:space-y-2">
-                <div className="flex items-center justify-between text-[11px] sm:text-xs font-bold">
-                  <span className="text-slate-500 flex items-center gap-1">
-                    <Users className="h-3 w-3" /> Active Enrolled Students
+
+              <div className="space-y-2 pt-1 border-t border-slate-100">
+                <div className="flex items-center justify-between text-[11px] sm:text-xs font-semibold">
+                  <span className="text-slate-500 flex items-center gap-1.5">
+                    <Users className="h-3.5 w-3.5 text-slate-400" /> Active Enrolled Students
                   </span>
-                  <span className="text-emerald-600 font-extrabold">{course.enrolled}</span>
+                  <span className="text-emerald-700 font-extrabold">{course.enrolled}</span>
+                </div>
+
+                {/* Class count matrix */}
+                <div className="grid grid-cols-3 gap-1.5 pt-1">
+                  <div className="flex flex-col items-center justify-center p-2 rounded-lg bg-emerald-50/70 border border-emerald-100 text-center">
+                    <span className="text-[10px] font-bold text-emerald-700 flex items-center gap-1">
+                      <Video className="h-3 w-3 text-emerald-600" /> Live
+                    </span>
+                    <span className="text-sm font-extrabold text-emerald-800 mt-0.5">
+                      {course.live_classes_count || 0}
+                    </span>
+                  </div>
+
+                  <div className="flex flex-col items-center justify-center p-2 rounded-lg bg-rose-50/70 border border-rose-100 text-center">
+                    <span className="text-[10px] font-bold text-rose-700 flex items-center gap-1">
+                      <Youtube className="h-3 w-3 text-rose-600" /> IFrame
+                    </span>
+                    <span className="text-sm font-extrabold text-rose-800 mt-0.5">
+                      {course.youtube_resources_count || 0}
+                    </span>
+                  </div>
+
+                  <div className="flex flex-col items-center justify-center p-2 rounded-lg bg-slate-50 border border-slate-200 text-center">
+                    <span className="text-[10px] font-bold text-slate-600 flex items-center gap-1">
+                      <BookOpen className="h-3 w-3 text-slate-500" /> Total
+                    </span>
+                    <span className="text-sm font-extrabold text-slate-800 mt-0.5">
+                      {course.total_classes_count || 0}
+                    </span>
+                  </div>
                 </div>
               </div>
             </CardContent>
-            <CardFooter className="p-3.5 sm:p-5 pt-0 mt-auto flex gap-2 sm:gap-3">
-              <Button 
-                variant="outline" 
-                onClick={() => handleOpenLiveDialog(course)}
-                className="flex-1 gap-1.5 sm:gap-2 h-9 sm:h-10 border-slate-200 hover:bg-slate-50 font-bold text-[11px] sm:text-xs"
+            <CardFooter className="p-3.5 sm:p-5 pt-0 mt-auto flex flex-col gap-2">
+              <Button
+                asChild
+                className="w-full bg-slate-900 hover:bg-aims-navy text-white font-bold text-xs h-9 shadow-xs gap-1.5 transition-colors"
               >
-                <Video className="h-3.5 w-3.5 text-emerald-600" />
-                Live Session
+                <Link href={`/instructor/courses/${course.id}`}>
+                  <BookOpen className="h-4 w-4 text-emerald-400" />
+                  Open Course & Check Content
+                </Link>
               </Button>
-              <Button 
-                variant="outline" 
-                onClick={() => handleOpenResourceDialog(course)}
-                className="flex-1 gap-1.5 sm:gap-2 h-9 sm:h-10 border-slate-200 hover:bg-slate-50 font-bold text-[11px] sm:text-xs"
-              >
-                <Youtube className="h-3.5 w-3.5 text-red-500" />
-                Upload IFrame
-              </Button>
+              <div className="flex gap-2 w-full">
+                <Button 
+                  variant="outline" 
+                  onClick={() => handleOpenLiveDialog(course)}
+                  className="flex-1 justify-between px-2.5 sm:px-3 h-8.5 border-slate-200 hover:bg-slate-50 font-bold text-[11px]"
+                >
+                  <span className="flex items-center gap-1.5 truncate">
+                    <Video className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
+                    Live Session
+                  </span>
+                  <span className="text-[10px] font-extrabold bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded-full shrink-0">
+                    {course.live_classes_count || 0}
+                  </span>
+                </Button>
+                <Button 
+                  variant="outline" 
+                  onClick={() => handleOpenResourceDialog(course)}
+                  className="flex-1 justify-between px-2.5 sm:px-3 h-8.5 border-slate-200 hover:bg-slate-50 font-bold text-[11px]"
+                >
+                  <span className="flex items-center gap-1.5 truncate">
+                    <Youtube className="h-3.5 w-3.5 text-red-500 shrink-0" />
+                    Upload IFrame
+                  </span>
+                  <span className="text-[10px] font-extrabold bg-rose-100 text-rose-800 px-1.5 py-0.5 rounded-full shrink-0">
+                    {course.youtube_resources_count || 0}
+                  </span>
+                </Button>
+              </div>
             </CardFooter>
           </Card>
         ))}

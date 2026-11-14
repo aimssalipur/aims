@@ -9,7 +9,7 @@ export default function Home() {
   return (
     <>
       <Navbar />
-      <main className="flex-1 flex flex-col">
+      <main className="flex-1 flex flex-col w-full overflow-x-hidden">
         <HeroSection />
         <CoursesSection />
         <ValuesSection />

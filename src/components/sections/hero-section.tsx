@@ -261,7 +261,7 @@ I want to apply for: ${coursesString}.
     <section
       id="home"
       ref={containerRef}
-      className="relative overflow-x-clip hero-gradient pt-4 pb-10 sm:pt-8 sm:pb-16 md:pt-12 md:pb-20 w-full max-w-full"
+      className="relative overflow-hidden hero-gradient pt-4 pb-10 sm:pt-8 sm:pb-16 md:pt-12 md:pb-20 w-full max-w-full"
     >
       {/* Decorative gradient blobs */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden">
@@ -385,7 +385,7 @@ I want to apply for: ${coursesString}.
             className="hero-visual lg:col-span-5 relative mt-6 lg:mt-0 w-full min-w-0 scroll-mt-20 sm:scroll-mt-24"
           >
             <div className="relative mx-auto w-full max-w-md lg:max-w-none min-w-0">
-              <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xl shadow-slate-900/5 p-4 sm:p-6 lg:p-7 w-full min-w-0 overflow-hidden box-border">
+              <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xl shadow-slate-900/5 p-3.5 sm:p-6 lg:p-7 w-full min-w-0 overflow-hidden box-border">
                 {/* Header */}
                 <div className="border-b border-slate-100 pb-3 mb-3.5">
                   <div className="flex items-center justify-between gap-2 mb-1">
@@ -519,12 +519,10 @@ I want to apply for: ${coursesString}.
                         <label className="text-xs font-semibold text-slate-700 shrink-0">
                           Select Course(s) <span className="text-red-500">*</span>
                         </label>
-                        <span className="text-[10px] sm:text-[11px] font-bold text-aims-navy bg-aims-navy/10 px-2 py-0.5 rounded shrink-0 max-w-[140px] truncate">
+                        <span className="text-[10px] sm:text-[11px] font-bold text-aims-navy bg-aims-navy/10 px-2 py-0.5 rounded shrink-0 whitespace-nowrap">
                           {selectedCourses.length === 0
-                            ? "Select at least 1"
-                            : `${selectedCourses.length} course${
-                                selectedCourses.length > 1 ? "s" : ""
-                              } selected`}
+                            ? "Choose at least 1"
+                            : `${selectedCourses.length} selected`}
                         </span>
                       </div>
 
@@ -576,14 +574,14 @@ I want to apply for: ${coursesString}.
                     </Button>
 
                     {/* Clean Footer Strip */}
-                    <div className="pt-2.5 sm:pt-3 border-t border-slate-100 flex items-center justify-between text-[11px] sm:text-xs text-slate-500 gap-2 flex-wrap">
+                    <div className="pt-2.5 sm:pt-3 border-t border-slate-100 flex items-center justify-between text-[11px] sm:text-xs text-slate-500 gap-2 min-w-0 w-full">
                       <div className="flex items-center gap-1.5 shrink-0">
-                        <Phone className="h-3.5 w-3.5 text-aims-navy" />
+                        <Phone className="h-3.5 w-3.5 text-aims-navy shrink-0" />
                         <span className="font-medium text-slate-600">Office Line:</span>
                       </div>
                       <a
                         href="tel:+918480405956"
-                        className="font-bold text-slate-900 hover:text-aims-navy transition-colors shrink-0"
+                        className="font-bold text-slate-900 hover:text-aims-navy transition-colors shrink-0 whitespace-nowrap"
                       >
                         +91 84804 05956
                       </a>

@@ -33,19 +33,50 @@ export async function GET() {
     let totalRevenue = 0;
     let totalExpenses = 0;
     const categoryBreakdown: Record<string, number> = {};
-    const monthlyFlows: Record<string, { month: string; revenue: number; expenses: number }> = {};
+    const monthlyFlows: Record<
+      string,
+      {
+        month: string;
+        yearMonth: string;
+        fullMonth: string;
+        revenue: number;
+        expenses: number;
+        incomeCount: number;
+        expenseCount: number;
+        categoryBreakdown: Record<string, number>;
+      }
+    > = {};
 
-    // Pre-initialize last 6 months to ensure correct chronological ordering
+    const getMonthMeta = (dateObj: Date) => {
+      const year = dateObj.getFullYear();
+      const monthNum = String(dateObj.getMonth() + 1).padStart(2, "0");
+      const yearMonth = `${year}-${monthNum}`;
+      const month = dateObj.toLocaleDateString("en-IN", { month: "short", year: "2-digit" });
+      const fullMonth = dateObj.toLocaleDateString("en-IN", { month: "long", year: "numeric" });
+      return { yearMonth, month, fullMonth };
+    };
+
+    // Pre-initialize last 6 months to ensure chronological display
     for (let i = 5; i >= 0; i--) {
       const d = new Date();
+      d.setDate(1);
       d.setMonth(d.getMonth() - i);
-      const label = d.toLocaleDateString("en-IN", { month: "short", year: "2-digit" });
-      monthlyFlows[label] = { month: label, revenue: 0, expenses: 0 };
+      const { yearMonth, month, fullMonth } = getMonthMeta(d);
+      monthlyFlows[yearMonth] = {
+        month,
+        yearMonth,
+        fullMonth,
+        revenue: 0,
+        expenses: 0,
+        incomeCount: 0,
+        expenseCount: 0,
+        categoryBreakdown: {},
+      };
     }
 
     if (txs) {
       txs.forEach((t: any) => {
-        const amt = parseFloat(t.amount);
+        const amt = parseFloat(t.amount) || 0;
         if (t.type === "income") {
           totalRevenue += amt;
         } else {
@@ -53,14 +84,31 @@ export async function GET() {
           categoryBreakdown[t.category] = (categoryBreakdown[t.category] || 0) + amt;
         }
 
-        // Parse date and bucket into month-year label
+        // Parse date and bucket into month-year
         const dateObj = new Date(t.date);
-        const label = dateObj.toLocaleDateString("en-IN", { month: "short", year: "2-digit" });
-        if (monthlyFlows[label]) {
+        if (!isNaN(dateObj.getTime())) {
+          const { yearMonth, month, fullMonth } = getMonthMeta(dateObj);
+          if (!monthlyFlows[yearMonth]) {
+            monthlyFlows[yearMonth] = {
+              month,
+              yearMonth,
+              fullMonth,
+              revenue: 0,
+              expenses: 0,
+              incomeCount: 0,
+              expenseCount: 0,
+              categoryBreakdown: {},
+            };
+          }
+
           if (t.type === "income") {
-            monthlyFlows[label].revenue += amt;
+            monthlyFlows[yearMonth].revenue += amt;
+            monthlyFlows[yearMonth].incomeCount += 1;
           } else {
-            monthlyFlows[label].expenses += amt;
+            monthlyFlows[yearMonth].expenses += amt;
+            monthlyFlows[yearMonth].expenseCount += 1;
+            monthlyFlows[yearMonth].categoryBreakdown[t.category] =
+              (monthlyFlows[yearMonth].categoryBreakdown[t.category] || 0) + amt;
           }
         }
       });
@@ -72,8 +120,10 @@ export async function GET() {
 
     const netProfit = totalRevenue - totalExpenses;
 
-    // Convert monthly flows object to array list
-    const chartData = Object.values(monthlyFlows);
+    // Convert monthly flows object to array list sorted chronologically
+    const chartData = Object.values(monthlyFlows).sort((a, b) =>
+      a.yearMonth.localeCompare(b.yearMonth)
+    );
 
     // Format category breakdown for pie chart
     const pieData = Object.entries(categoryBreakdown).map(([name, value]) => ({

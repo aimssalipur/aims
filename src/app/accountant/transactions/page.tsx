@@ -51,6 +51,9 @@ import {
   TrendingUp,
   TrendingDown,
   Wallet,
+  SlidersHorizontal,
+  ArrowUpDown,
+  X,
 } from "lucide-react";
 import Link from "next/link";
 import { useToast } from "@/components/ui/use-toast";
@@ -58,6 +61,39 @@ import { getFriendlyErrorMessage } from "@/lib/friendly-error";
 import { subscribeToDataRefresh } from "@/lib/refresh-event";
 import { cn } from "@/lib/utils";
 import { ReceiptModal, ReceiptData } from "@/components/finance/receipt-modal";
+
+function getLocalDateString(dateInput?: string | Date | null): string {
+  if (typeof dateInput === "string" && /^\d{4}-\d{2}-\d{2}$/.test(dateInput.trim())) {
+    return dateInput.trim();
+  }
+  const d = dateInput ? new Date(dateInput) : new Date();
+  if (isNaN(d.getTime())) return "";
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
+const MONTH_OPTIONS = [
+  { value: "all", label: "All Months" },
+  { value: "0", label: "January (01)" },
+  { value: "1", label: "February (02)" },
+  { value: "2", label: "March (03)" },
+  { value: "3", label: "April (04)" },
+  { value: "4", label: "May (05)" },
+  { value: "5", label: "June (06)" },
+  { value: "6", label: "July (07)" },
+  { value: "7", label: "August (08)" },
+  { value: "8", label: "September (09)" },
+  { value: "9", label: "October (10)" },
+  { value: "10", label: "November (11)" },
+  { value: "11", label: "December (12)" },
+];
+
+const SORT_OPTIONS = [
+  { value: "date_desc", label: "Date: Newest First" },
+  { value: "date_asc", label: "Date: Oldest First" },
+  { value: "amount_desc", label: "Amount: Highest to Smallest" },
+  { value: "amount_asc", label: "Amount: Smallest to Highest" },
+];
 
 const PRESET_EXPENSE_CATEGORIES = [
   "Salary",
@@ -93,6 +129,9 @@ export default function AccountantTransactionsPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [typeFilter, setTypeFilter] = useState("all");
   const [categoryFilter, setCategoryFilter] = useState("all");
+  const [yearFilter, setYearFilter] = useState("all");
+  const [monthFilter, setMonthFilter] = useState("all");
+  const [sortBy, setSortBy] = useState("date_desc");
   const [addOpen, setAddOpen] = useState(false);
 
   // Receipt Modal State
@@ -114,7 +153,7 @@ export default function AccountantTransactionsPage() {
     amount: "",
     description: "",
     reference_no: "",
-    date: new Date().toISOString().split("T")[0],
+    date: getLocalDateString(),
     recipient_id: "",
   });
   const [updating, setUpdating] = useState(false);
@@ -125,7 +164,7 @@ export default function AccountantTransactionsPage() {
     amount: "",
     description: "",
     reference_no: "",
-    date: new Date().toISOString().split("T")[0],
+    date: getLocalDateString(),
     recipient_id: "",
   });
 
@@ -304,7 +343,7 @@ export default function AccountantTransactionsPage() {
       amount: String(tx.amount || ""),
       description: tx.description || "",
       reference_no: tx.reference_no || "",
-      date: tx.date ? new Date(tx.date).toISOString().split("T")[0] : new Date().toISOString().split("T")[0],
+      date: getLocalDateString(tx.date),
       recipient_id: tx.recipient_id || "",
     });
     setEditOpen(true);
@@ -453,7 +492,7 @@ export default function AccountantTransactionsPage() {
           amount: "",
           description: "",
           reference_no: "",
-          date: new Date().toISOString().split("T")[0],
+          date: getLocalDateString(),
           recipient_id: "",
         });
         setCustomCategory("");
@@ -517,11 +556,89 @@ export default function AccountantTransactionsPage() {
     }).format(val || 0);
   };
 
-  // Financial snapshot metrics
+  // Dynamically extract all unique years from transactions
+  const availableYears = useMemo(() => {
+    const set = new Set<string>();
+    txs.forEach((t) => {
+      if (t.date) {
+        const d = new Date(t.date);
+        if (!isNaN(d.getTime())) {
+          set.add(String(d.getFullYear()));
+        }
+      }
+    });
+    set.add(String(new Date().getFullYear()));
+    return Array.from(set).sort((a, b) => Number(b) - Number(a));
+  }, [txs]);
+
+  // Instant, zero-latency multi-attribute filtering and sorting
+  const displayedTxs = useMemo(() => {
+    let result = [...txs];
+
+    // 1. Year Filter
+    if (yearFilter !== "all") {
+      result = result.filter((tx) => {
+        if (!tx.date) return false;
+        const d = new Date(tx.date);
+        return !isNaN(d.getTime()) && String(d.getFullYear()) === yearFilter;
+      });
+    }
+
+    // 2. Month Filter
+    if (monthFilter !== "all") {
+      result = result.filter((tx) => {
+        if (!tx.date) return false;
+        const d = new Date(tx.date);
+        return !isNaN(d.getTime()) && String(d.getMonth()) === monthFilter;
+      });
+    }
+
+    // 3. Sorting (Smallest to highest, highest to smallest, newest, oldest)
+    result.sort((a, b) => {
+      const amtA = Number(a.amount) || 0;
+      const amtB = Number(b.amount) || 0;
+      const dateA = new Date(a.date).getTime() || 0;
+      const dateB = new Date(b.date).getTime() || 0;
+
+      switch (sortBy) {
+        case "amount_asc":
+          return amtA - amtB; // Smallest to highest
+        case "amount_desc":
+          return amtB - amtA; // Highest to smallest
+        case "date_asc":
+          return dateA - dateB; // Oldest first
+        case "date_desc":
+        default:
+          return dateB - dateA; // Newest first
+      }
+    });
+
+    return result;
+  }, [txs, yearFilter, monthFilter, sortBy]);
+
+  // Active filters helper
+  const hasActiveFilters =
+    typeFilter !== "all" ||
+    categoryFilter !== "all" ||
+    yearFilter !== "all" ||
+    monthFilter !== "all" ||
+    sortBy !== "date_desc" ||
+    Boolean(searchTerm);
+
+  const handleClearFilters = () => {
+    setTypeFilter("all");
+    setCategoryFilter("all");
+    setYearFilter("all");
+    setMonthFilter("all");
+    setSortBy("date_desc");
+    setSearchTerm("");
+  };
+
+  // Financial snapshot metrics calculated from active filtered transactions
   const stats = useMemo(() => {
     let inflow = 0;
     let outflow = 0;
-    txs.forEach((tx) => {
+    displayedTxs.forEach((tx) => {
       const amt = Number(tx.amount) || 0;
       if (tx.type === "income") {
         inflow += amt;
@@ -533,9 +650,9 @@ export default function AccountantTransactionsPage() {
       inflow,
       outflow,
       net: inflow - outflow,
-      count: txs.length,
+      count: displayedTxs.length,
     };
-  }, [txs]);
+  }, [displayedTxs]);
 
   // Clean parser for ledger entries (splits long raw fee descriptions into student, course, roll, note)
   const parseRecord = (tx: any) => {
@@ -1081,24 +1198,50 @@ export default function AccountantTransactionsPage() {
 
       {/* Filter and Ledger Table */}
       <Card className="border-slate-100 overflow-hidden bg-white shadow-xs">
-        <CardHeader className="p-3.5 sm:p-5 md:p-6 border-b border-slate-100 flex-col md:flex-row md:items-center md:justify-between gap-3 sm:gap-4">
-          <div className="md:max-w-md flex-1">
-            <div className="relative">
+        <CardHeader className="p-3.5 sm:p-5 md:p-6 border-b border-slate-100 space-y-3">
+          {/* Top row: Search input + Active filter status & Reset button */}
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2.5">
+            <div className="relative flex-1 max-w-md">
               <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
               <Input
-                placeholder="Search description, student, staff..."
-                className="pl-10 h-10 sm:h-11 text-xs sm:text-sm font-semibold rounded-xl bg-slate-50/50 border-slate-200"
+                placeholder="Search description, student, staff, ref..."
+                className="pl-10 pr-8 h-9 sm:h-10 text-xs sm:text-sm font-semibold rounded-xl bg-slate-50/70 border-slate-200"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
+              {searchTerm && (
+                <button
+                  type="button"
+                  onClick={() => setSearchTerm("")}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              )}
+            </div>
+
+            <div className="flex items-center gap-2 self-start sm:self-center">
+              {hasActiveFilters && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleClearFilters}
+                  className="h-8 px-2.5 text-xs font-bold text-rose-600 border-rose-200 hover:bg-rose-50 hover:text-rose-700 gap-1 rounded-lg"
+                >
+                  <X className="h-3 w-3" />
+                  <span>Reset All Filters</span>
+                </Button>
+              )}
             </div>
           </div>
-          <div className="grid grid-cols-2 sm:flex sm:flex-wrap items-center gap-2 sm:gap-3 w-full md:w-auto">
-            {/* Type Filter */}
+
+          {/* Filter Bar Grid: Responsive controls with Month-wise, Year-wise, and Smallest/Highest Sorting */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 sm:gap-2.5 pt-1">
+            {/* 1. Type Filter */}
             <Select value={typeFilter} onValueChange={setTypeFilter}>
-              <SelectTrigger className="h-9 sm:h-11 w-full sm:w-36 rounded-xl gap-1.5 text-xs sm:text-sm font-semibold">
+              <SelectTrigger className="h-8 sm:h-9 w-full rounded-xl gap-1.5 text-xs font-semibold bg-white border-slate-200">
                 <Filter className="h-3.5 w-3.5 text-slate-400 shrink-0" />
-                <SelectValue placeholder="All Entry Types" />
+                <SelectValue placeholder="All Types" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Types</SelectItem>
@@ -1107,16 +1250,56 @@ export default function AccountantTransactionsPage() {
               </SelectContent>
             </Select>
 
-            {/* Category Filter */}
+            {/* 2. Category Filter */}
             <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-              <SelectTrigger className="h-9 sm:h-11 w-full sm:w-44 rounded-xl gap-1.5 text-xs sm:text-sm font-semibold">
-                <Filter className="h-3.5 w-3.5 text-slate-400 shrink-0" />
+              <SelectTrigger className="h-8 sm:h-9 w-full rounded-xl gap-1.5 text-xs font-semibold bg-white border-slate-200">
+                <Tag className="h-3.5 w-3.5 text-slate-400 shrink-0" />
                 <SelectValue placeholder="All Categories" />
               </SelectTrigger>
               <SelectContent className="max-h-64">
                 <SelectItem value="all">All Categories</SelectItem>
                 {allFilterCategories.map((c) => (
                   <SelectItem key={c} value={c}>{c}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            {/* 3. Year Filter (Year-wise) */}
+            <Select value={yearFilter} onValueChange={setYearFilter}>
+              <SelectTrigger className="h-8 sm:h-9 w-full rounded-xl gap-1.5 text-xs font-semibold bg-white border-slate-200">
+                <Calendar className="h-3.5 w-3.5 text-slate-400 shrink-0" />
+                <SelectValue placeholder="All Years" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Years</SelectItem>
+                {availableYears.map((yr) => (
+                  <SelectItem key={yr} value={yr}>{yr}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            {/* 4. Month Filter (Month-wise) */}
+            <Select value={monthFilter} onValueChange={setMonthFilter}>
+              <SelectTrigger className="h-8 sm:h-9 w-full rounded-xl gap-1.5 text-xs font-semibold bg-white border-slate-200">
+                <Calendar className="h-3.5 w-3.5 text-slate-400 shrink-0" />
+                <SelectValue placeholder="All Months" />
+              </SelectTrigger>
+              <SelectContent className="max-h-64">
+                {MONTH_OPTIONS.map((m) => (
+                  <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            {/* 5. Sort Order Filter (Smallest to Highest / Highest to Smallest / Date) */}
+            <Select value={sortBy} onValueChange={setSortBy}>
+              <SelectTrigger className="h-8 sm:h-9 w-full rounded-xl gap-1.5 text-xs font-semibold bg-white border-slate-200 col-span-2 sm:col-span-1">
+                <ArrowUpDown className="h-3.5 w-3.5 text-slate-400 shrink-0" />
+                <SelectValue placeholder="Sort Order" />
+              </SelectTrigger>
+              <SelectContent>
+                {SORT_OPTIONS.map((s) => (
+                  <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -1130,15 +1313,25 @@ export default function AccountantTransactionsPage() {
               <span className="h-4 w-4 rounded-full border-2 border-indigo-600 border-t-transparent animate-spin" />
               Fetching entries...
             </div>
-          ) : txs.length === 0 ? (
-            <div className="p-8 sm:p-12 text-center text-slate-400 font-semibold text-xs sm:text-sm">
-              No operational entries logged matching criteria.
+          ) : displayedTxs.length === 0 ? (
+            <div className="p-8 sm:p-12 text-center text-slate-400 font-semibold text-xs sm:text-sm space-y-2">
+              <p>No operational entries found matching the current filters.</p>
+              {hasActiveFilters && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={handleClearFilters}
+                  className="text-xs font-bold text-slate-700"
+                >
+                  Clear Filters
+                </Button>
+              )}
             </div>
           ) : (
             <>
               {/* Mobile View: Clean Card Layout (< md screens) */}
               <div className="block md:hidden space-y-3 p-3 bg-slate-50/40">
-                {txs.map((tx: any) => {
+                {displayedTxs.map((tx: any) => {
                   const parsed = parseRecord(tx);
                   const isIncome = tx.type === "income";
 
@@ -1285,7 +1478,7 @@ export default function AccountantTransactionsPage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 font-semibold text-slate-600 bg-white">
-                    {txs.map((tx: any) => {
+                    {displayedTxs.map((tx: any) => {
                       const parsed = parseRecord(tx);
                       const isIncome = tx.type === "income";
 

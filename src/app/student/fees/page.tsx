@@ -31,6 +31,23 @@ import { ReceiptModal, ReceiptData } from "@/components/finance/receipt-modal";
 import { subscribeToDataRefresh } from "@/lib/refresh-event";
 import { cn } from "@/lib/utils";
 
+function formatPaymentDateTime(dateVal: string | Date | null | undefined) {
+  if (!dateVal) return { date: "—", time: null };
+  const isDateOnly = typeof dateVal === "string" && /^\d{4}-\d{2}-\d{2}$/.test(dateVal.trim());
+  let d: Date;
+  if (isDateOnly) {
+    const [y, m, day] = (dateVal as string).trim().split("-").map(Number);
+    d = new Date(y, m - 1, day);
+  } else {
+    d = new Date(dateVal);
+  }
+  if (isNaN(d.getTime())) return { date: "—", time: null };
+  return {
+    date: d.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }),
+    time: !isDateOnly ? d.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: true }) : null,
+  };
+}
+
 export default function StudentFeesPage() {
   const { toast } = useToast();
   const [fees, setFees] = useState<any[]>([]);
@@ -339,15 +356,7 @@ export default function StudentFeesPage() {
                     {filteredFees.map((fee) => {
                       const cleanId = fee.id ? fee.id.replace(/-/g, "").slice(0, 8).toUpperCase() : "";
                       const receiptNo = `AIMS-FEE-${cleanId}`;
-                      const formattedDate = new Date(fee.payment_date || fee.created_at).toLocaleDateString("en-IN", {
-                        day: "numeric",
-                        month: "short",
-                        year: "numeric",
-                      });
-                      const formattedTime = new Date(fee.payment_date || fee.created_at).toLocaleTimeString("en-IN", {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      });
+                      const { date: formattedDate, time: formattedTime } = formatPaymentDateTime(fee.payment_date || fee.created_at);
 
                       return (
                         <tr key={fee.id} className="hover:bg-slate-50/80 transition-colors">
@@ -356,7 +365,7 @@ export default function StudentFeesPage() {
                           </td>
                           <td className="py-4 px-4 lg:px-6">
                             <div className="font-bold text-slate-900">{formattedDate}</div>
-                            <div className="text-[11px] text-slate-400 font-medium">{formattedTime}</div>
+                            {formattedTime && <div className="text-[11px] text-slate-400 font-medium">{formattedTime}</div>}
                           </td>
                           <td className="py-4 px-4 lg:px-6 max-w-[240px]">
                             <div className="font-bold text-slate-900 truncate">
@@ -420,15 +429,7 @@ export default function StudentFeesPage() {
                 {filteredFees.map((fee) => {
                   const cleanId = fee.id ? fee.id.replace(/-/g, "").slice(0, 8).toUpperCase() : "";
                   const receiptNo = `AIMS-FEE-${cleanId}`;
-                  const formattedDate = new Date(fee.payment_date || fee.created_at).toLocaleDateString("en-IN", {
-                    day: "numeric",
-                    month: "short",
-                    year: "numeric",
-                  });
-                  const formattedTime = new Date(fee.payment_date || fee.created_at).toLocaleTimeString("en-IN", {
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  });
+                  const { date: formattedDate, time: formattedTime } = formatPaymentDateTime(fee.payment_date || fee.created_at);
 
                   return (
                     <div key={fee.id} className="p-3.5 rounded-2xl border border-slate-200 bg-white shadow-2xs space-y-3">
@@ -457,7 +458,7 @@ export default function StudentFeesPage() {
                         </div>
                         <div className="text-[11px] text-slate-500 flex items-center gap-2 mt-1">
                           <Calendar className="h-3 w-3 text-slate-400" />
-                          <span>{formattedDate} at {formattedTime}</span>
+                          <span>{formattedDate}{formattedTime ? ` at ${formattedTime}` : ""}</span>
                         </div>
                       </div>
 

@@ -54,6 +54,14 @@ import { subscribeToDataRefresh } from "@/lib/refresh-event";
 import { cn } from "@/lib/utils";
 import { ReceiptModal, ReceiptData } from "@/components/finance/receipt-modal";
 
+// Formats a Date or timestamp string into local YYYY-MM-DDTHH:mm for <input type="datetime-local">
+function getLocalDateTimeString(dateInput?: string | Date | null): string {
+  const d = dateInput ? new Date(dateInput) : new Date();
+  if (isNaN(d.getTime())) return "";
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
 export default function AccountantFeesPage() {
   const { toast } = useToast();
   const [fees, setFees] = useState<any[]>([]);
@@ -110,7 +118,7 @@ export default function AccountantFeesPage() {
     transaction_id: "",
     remarks: "",
     status: "verified", // Manual logging by accountant is pre-verified
-    payment_date: new Date().toISOString().slice(0, 16),
+    payment_date: getLocalDateTimeString(),
     roll_no: "",
     guardian_name: "",
     address: "",
@@ -278,9 +286,7 @@ export default function AccountantFeesPage() {
       }
     }
 
-    const dateStr = fee.payment_date
-      ? new Date(fee.payment_date).toISOString().slice(0, 16)
-      : new Date().toISOString().slice(0, 16);
+    const dateStr = getLocalDateTimeString(fee.payment_date);
 
     setEditForm({
       id: fee.id,
@@ -559,7 +565,7 @@ export default function AccountantFeesPage() {
           transaction_id: "",
           remarks: "",
           status: "verified",
-          payment_date: new Date().toISOString().slice(0, 16),
+          payment_date: getLocalDateTimeString(),
           roll_no: "",
           guardian_name: "",
           address: "",

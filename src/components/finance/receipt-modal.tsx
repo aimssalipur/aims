@@ -55,16 +55,32 @@ export function ReceiptModal({ open, onOpenChange, data }: ReceiptModalProps) {
 
   if (!data) return null;
 
-  const formattedDate = new Date(data.date).toLocaleDateString("en-IN", {
+  const isDateOnly = typeof data.date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(data.date.trim());
+
+  let dateObj: Date;
+  if (isDateOnly) {
+    const [y, m, d] = (data.date as string).trim().split("-").map(Number);
+    dateObj = new Date(y, m - 1, d);
+  } else {
+    dateObj = new Date(data.date);
+    if (isNaN(dateObj.getTime())) {
+      dateObj = new Date();
+    }
+  }
+
+  const formattedDate = dateObj.toLocaleDateString("en-IN", {
     day: "numeric",
     month: "long",
     year: "numeric",
   });
 
-  const formattedTime = new Date(data.date).toLocaleTimeString("en-IN", {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+  const formattedTime = !isDateOnly
+    ? dateObj.toLocaleTimeString("en-IN", {
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: true,
+      })
+    : null;
 
   const formattedCurrency = (val: number) => {
     return new Intl.NumberFormat("en-IN", {
@@ -243,7 +259,7 @@ ACHYUTANANDA INSTITUTE OF MEDICAL SCIENCE (AIMS)
 OFFICIAL PAYMENT RECEIPT
 ===========================================
 Receipt No  : ${data.receiptNo}
-Date & Time : ${formattedDate} at ${formattedTime}
+Date & Time : ${formattedDate}${formattedTime ? ` at ${formattedTime}` : ""}
 Title       : ${data.title}
 Party       : ${data.partyName} ${data.studentRollNo ? `[Roll: ${data.studentRollNo}]` : ""} ${data.partyRoleOrCourse ? `(${data.partyRoleOrCourse})` : ""}
 ${data.guardianName ? `Guardian    : ${data.guardianName}\n` : ""}${data.studentAddress ? `Address     : ${data.studentAddress}\n` : ""}Category    : ${data.category}
@@ -268,7 +284,7 @@ aimsacademy.vercel.app | 0671-2505956 / +91 84804 05956`;
   const handleShareWhatsApp = () => {
     const message = `*AIMS SALIPUR - OFFICIAL RECEIPT* 🏥
 *Receipt No:* ${data.receiptNo}
-*Date & Time:* ${formattedDate} at ${formattedTime}
+*Date & Time:* ${formattedDate}${formattedTime ? ` at ${formattedTime}` : ""}
 *Student / Party:* ${data.partyName} ${data.studentRollNo ? `(Roll: ${data.studentRollNo})` : ""}
 ${data.guardianName ? `*Guardian:* ${data.guardianName}\n` : ""}*Course / Program:* ${data.partyRoleOrCourse || data.category}
 *Amount Paid:* ₹${data.amount.toLocaleString("en-IN")} (${amountInWords})
@@ -387,9 +403,11 @@ Official Accounts Department`;
               <div className="text-[11px] text-slate-500 font-semibold mt-0.5">
                 Date: {formattedDate}
               </div>
-              <div className="text-[10px] text-slate-400">
-                Time: {formattedTime}
-              </div>
+              {formattedTime && (
+                <div className="text-[10px] text-slate-400">
+                  Time: {formattedTime}
+                </div>
+              )}
             </div>
           </div>
 
